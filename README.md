@@ -1,0 +1,13 @@
+# A Aventura do Matheus
+
+Jogo de aventura 3D para navegador (Vite + TypeScript + Three.js).
+
+```bash
+npm install
+npm run dev      # abre em http://localhost:5173 e também na rede local (para testar no celular)
+npm run build    # gera dist/ para hospedagem estática
+```
+
+Parâmetros de URL úteis: `?debug` (mostra FPS), `?q=low` / `?q=high` (força qualidade).
+
+Textos do jogo: [src/content.ts](src/content.ts). Plano de construção: [docs/PLANO.md](docs/PLANO.md).

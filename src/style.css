@@ -1,0 +1,312 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Lora:ital@0;1&display=swap');
+
+:root {
+  --gold: #e8b65a;
+  --gold-soft: #f3d79a;
+  --ink: #120d09;
+  --parchment: rgba(24, 17, 11, 0.88);
+  --cyan: #4fd8ff;
+  --title-font: 'Cinzel', 'Georgia', serif;
+  --body-font: 'Lora', 'Georgia', serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  color: var(--gold-soft);
+  font-family: var(--body-font);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+#app,
+canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.ui {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* ---------- tela inicial ---------- */
+.start-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  padding: 2rem;
+  text-align: center;
+  background: radial-gradient(ellipse at center, rgba(40, 22, 8, 0.85) 0%, #000 70%);
+  cursor: pointer;
+  transition: opacity 0.9s ease;
+}
+.start-screen.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+.start-title {
+  margin: 0;
+  font-family: var(--title-font);
+  font-weight: 700;
+  font-size: clamp(1.8rem, 7vw, 3.6rem);
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  text-shadow: 0 0 24px rgba(232, 160, 60, 0.55);
+}
+.start-sub {
+  margin: 0;
+  font-style: italic;
+  font-size: clamp(1rem, 3.6vw, 1.25rem);
+  opacity: 0.85;
+  max-width: 28rem;
+}
+.loading-track {
+  width: min(16rem, 60vw);
+  height: 2px;
+  margin-top: 1rem;
+  background: rgba(232, 182, 90, 0.15);
+  overflow: hidden;
+  transition: opacity 0.6s;
+}
+.loading-track.done {
+  opacity: 0;
+}
+.loading-bar {
+  height: 100%;
+  background: var(--gold);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+.start-cta.loading {
+  animation: none;
+  opacity: 0.6;
+  text-transform: none;
+  font-style: italic;
+  letter-spacing: 0.05em;
+}
+.start-cta.error {
+  animation: none;
+  color: #ff9a7a;
+}
+.start-cta {
+  margin-top: 2.5rem;
+  font-family: var(--title-font);
+  font-size: 0.95rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  animation: pulse 2.2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ---------- nome da área e dica ---------- */
+.area-title {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 12vh);
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: var(--title-font);
+  font-size: clamp(1.4rem, 5vw, 2.4rem);
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  text-shadow: 0 0 18px rgba(0, 0, 0, 0.9);
+  opacity: 0;
+}
+.area-title.show {
+  animation: area-title 5s ease forwards;
+}
+@keyframes area-title {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  20%,
+  70% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.controls-hint {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 1.2rem);
+  left: 1rem;
+  right: 1rem;
+  text-align: center;
+  font-size: 0.85rem;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+  text-shadow: 0 1px 4px #000;
+}
+.controls-hint.show {
+  opacity: 0.7;
+}
+
+/* ---------- interação ---------- */
+.interact-prompt {
+  position: absolute;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 18%);
+  transform: translateX(-50%);
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(232, 182, 90, 0.5);
+  border-radius: 6px;
+  background: var(--parchment);
+  font-size: 1rem;
+  white-space: nowrap;
+}
+kbd {
+  display: inline-block;
+  min-width: 1.5em;
+  margin-right: 0.4em;
+  padding: 0.05em 0.4em;
+  border: 1px solid var(--gold);
+  border-radius: 4px;
+  font-family: var(--title-font);
+  color: var(--gold);
+  text-align: center;
+}
+
+.action-btn {
+  position: absolute;
+  right: calc(env(safe-area-inset-right, 0px) + 1.4rem);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 2.4rem);
+  min-width: 5.5rem;
+  min-height: 5.5rem;
+  max-width: 9rem;
+  padding: 0.6rem;
+  border-radius: 50%;
+  border: 2px solid var(--gold);
+  background: radial-gradient(circle, rgba(70, 40, 12, 0.92), rgba(20, 12, 6, 0.92));
+  color: var(--gold-soft);
+  font-family: var(--title-font);
+  font-size: 0.8rem;
+  line-height: 1.15;
+  box-shadow: 0 0 18px rgba(232, 160, 60, 0.45);
+  pointer-events: auto;
+  touch-action: none;
+  animation: btn-in 0.25s ease;
+}
+.action-btn:active {
+  transform: scale(0.94);
+}
+@keyframes btn-in {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+}
+
+/* ---------- joystick virtual ---------- */
+.joystick {
+  position: fixed;
+  z-index: 5;
+  width: 110px;
+  height: 110px;
+  margin: -55px 0 0 -55px;
+  border-radius: 50%;
+  border: 2px solid rgba(243, 215, 154, 0.35);
+  background: rgba(20, 12, 6, 0.25);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.joystick.active {
+  opacity: 1;
+}
+.joystick-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(232, 182, 90, 0.75);
+  box-shadow: 0 0 14px rgba(232, 160, 60, 0.6);
+  transform: translate(-50%, -50%);
+}
+
+/* ---------- diálogo ---------- */
+.dialog {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 1rem 1rem calc(env(safe-area-inset-bottom, 0px) + 1.5rem);
+  pointer-events: auto;
+  cursor: pointer;
+}
+.dialog-box {
+  position: relative;
+  width: min(40rem, 100%);
+  min-height: 6.5rem;
+  padding: 1.1rem 1.3rem 1.8rem;
+  border: 1px solid rgba(232, 182, 90, 0.55);
+  border-radius: 8px;
+  background: var(--parchment);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+  animation: btn-in 0.2s ease;
+}
+.dialog-text {
+  margin: 0;
+  font-size: clamp(1rem, 3.8vw, 1.15rem);
+  line-height: 1.5;
+}
+.dialog-hint {
+  position: absolute;
+  right: 1rem;
+  bottom: 0.5rem;
+  font-size: 0.75rem;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.dialog-hint.show {
+  opacity: 0.6;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.fps {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
+  left: 0.5rem;
+  font: 12px monospace;
+  color: #8f8;
+}
