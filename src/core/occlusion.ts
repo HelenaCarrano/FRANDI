@@ -52,6 +52,12 @@ export class OcclusionFader {
     }
   }
 
+  /** Libera os materiais clonados (ao sair da área). */
+  dispose() {
+    for (const occ of this.occluders) occ.materials.forEach((m) => m.dispose());
+    this.occluders.length = 0;
+  }
+
   private apply(occ: Occluder, opacity: number) {
     occ.opacity = opacity;
     const transparent = opacity < 0.999;

@@ -121,6 +121,12 @@ export class GameRenderer {
     this.bloomPass.enabled = !!env.bloom && this.quality.bloom && this.bloomAllowed;
   }
 
+  /** Troca a cena desenhada (troca de área). */
+  setScene(scene: THREE.Scene) {
+    this.renderPass.scene = scene;
+    this.aoPass.scene = scene;
+  }
+
   /** Degraus de redução de qualidade usados pelo AdaptiveQuality. */
   downgrade(step: number) {
     if (step === 1) {

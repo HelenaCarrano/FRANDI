@@ -113,6 +113,13 @@ export class Player {
     this.rig.mixer.clipAction(clip).play();
   }
 
+  /** Para o movimento e vira o personagem para `rot` (usado ao entrar numa área). */
+  face(rot: number) {
+    this.velocity.set(0, 0, 0);
+    this.heading = rot;
+    this.object.rotation.y = rot;
+  }
+
   get position() {
     return this.object.position;
   }

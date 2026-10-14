@@ -8,7 +8,7 @@ npm run dev      # abre em http://localhost:5173 e também na rede local (para t
 npm run build    # gera dist/ para hospedagem estática
 ```
 
-Parâmetros de URL úteis: `?debug` (mostra FPS), `?q=low` / `?q=high` (força qualidade), `?area=teste` (salão de testes), `?personagem` (visualizador do Matheus).
+Parâmetros de URL úteis: `?debug` (mostra FPS), `?q=low` / `?q=high` (força qualidade), `?area=teste` (salão de testes), `?area=mapa` (abre direto no Mapa do Reino), `?libera=tudo` (mapa com tudo aberto), `?personagem` (visualizador do Matheus).
 O progresso é salvo no navegador; a tela inicial oferece Continuar ou Recomeçar.
 
 Textos do jogo: [src/content.ts](src/content.ts). Plano de construção: [docs/PLANO.md](docs/PLANO.md).

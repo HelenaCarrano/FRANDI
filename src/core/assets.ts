@@ -10,6 +10,12 @@ import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 const BASE = `${import.meta.env.BASE_URL}models/`;
 const loader = new GLTFLoader();
 const cache = new Map<string, GLTF>();
+/** Geometrias e materiais dos modelos em cache: as cópias de `model()` os dividem, então nunca se descartam. */
+const shared = new WeakSet<object>();
+
+export function isSharedResource(resource: object) {
+  return shared.has(resource);
+}
 
 export async function preload(paths: readonly string[], onProgress?: (done: number, total: number) => void) {
   let done = 0;
@@ -43,8 +49,10 @@ function prepare(root: THREE.Object3D) {
     if (!mesh.isMesh) return;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
+    shared.add(mesh.geometry);
     const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     for (const m of mats) {
+      shared.add(m);
       const std = m as THREE.MeshStandardMaterial;
       if (!std.isMeshStandardMaterial) continue;
       // Sem mapa de ambiente, metal puro fica preto no escuro; limitamos para ele ainda refletir a tocha.
