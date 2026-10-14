@@ -259,6 +259,8 @@ export interface PrintRegion {
   mirrorX?: boolean;
   /** Plano da projeção: 'xy' (frente/costas), 'xz' (de cima) ou 'zy' (laterais). Padrão 'xy'. */
   plane?: 'xy' | 'xz' | 'zy';
+  /** Borda suave e translúcida (sobrancelhas, rosado) em vez de recorte duro; não escreve profundidade. */
+  soft?: boolean;
 }
 
 /**
@@ -314,7 +316,8 @@ export function projectPrint(mesh: THREE.SkinnedMesh, region: PrintRegion, textu
   const base = new THREE.MeshStandardMaterial({
     map: texture,
     transparent: true,
-    alphaTest: 0.4,
+    alphaTest: region.soft ? 0.003 : 0.4,
+    depthWrite: !region.soft,
     roughness: 0.9,
     polygonOffset: true,
     polygonOffsetFactor: -2,

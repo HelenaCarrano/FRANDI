@@ -3,19 +3,20 @@ import { CHARACTER, gltf, model } from '../core/assets';
 import { customizeHead, HEAD_STYLE } from './matheusHead';
 import { backPrintTexture, frontPrintTexture, projectPrint, sleevePrintTexture } from './hoodiePrint';
 import { buildHoodieMesh } from './hoodieMesh';
-import { faceTattooTexture, handTattooTexture, neckBandTexture, neckTattooTexture } from './tattoos';
+import { handTattooTexture, neckBandTexture } from './tattoos';
 
 /**
  * Matheus, montado com peças do KayKit Adventurers (CC0) que compartilham o mesmo esqueleto:
  *  - corpo, braços e pernas do Mage (o capuz caído atrás do pescoço vira o moletom com capuz)
  *  - cabeça do Knight (cabelo curto), recolorida para castanho escuro
- *  - cabelo cacheado, barba curta e nariz menor feitos sobre essa cabeça (matheusHead.ts)
+ *  - cabelo ondulado, barba curta, nariz menor, olhos grandes e rosto pintado (sobrancelhas,
+ *    brilho, rosado) feitos sobre essa cabeça (matheusHead.ts)
  * O corpo do moletom é gerado sob medida (hoodieMesh.ts); por cima vão as estampas
  * (hoodiePrint.ts) e as tatuagens (tattoos.ts).
  */
 
 export const MATHEUS_LOOK = {
-  hair: HEAD_STYLE.hairBase, // castanho escuro (cachos e barba ficam em matheusHead.ts)
+  hair: HEAD_STYLE.hairBase, // castanho escuro (mechas e barba ficam em matheusHead.ts)
   hoodie: 0x26262b, // preto (levemente acinzentado para a tocha revelar o volume)
   hoodieTrim: 0x3a3a41, // barra, punhos e borda do capuz
   pants: 0x1f1f23,
@@ -270,7 +271,7 @@ export function buildMatheus(): MatheusRig {
   // Daqui em diante tudo é medido na pose de repouso, na superfície do modelo.
   root.updateMatrixWorld(true);
 
-  // cabelo cacheado, barba curta, nariz menor e sobrancelhas suaves
+  // cabelo ondulado, barba curta, nariz menor, olhos grandes e rosto pintado
   const headParts = customizeHead(head, bones.head, paletteColor(head.material as THREE.MeshStandardMaterial, 'r0c0'));
   materials.push(clampCloseLights(headParts.hairMaterial), clampCloseLights(headParts.beardMaterial));
   headParts.extraMaterials.forEach((mm) => materials.push(clampCloseLights(mm)));
@@ -298,12 +299,25 @@ export function buildMatheus(): MatheusRig {
     const headBottom = head.geometry.boundingBox!.min.y;
     const hbb = head.geometry.boundingBox!;
     const neckH = headBottom - bodyTop + 0.12;
-    // pescoço fechado de tatuagens (escrita na frente, cruzes na nuca)
+    // pescoço fechado de tatuagens (escrita na frente, escrita vertical no lado direito, cruzes
+    // na nuca). Só o trecho entre o capuz e a cabeça aparece: a base fica sob o moletom e a borda
+    // do capuz (0.06 + 0.03) e o topo dentro da cabeça (0.06).
+    const NECK_TOP_R = 0.13;
+    const NECK_BOTTOM_R = 0.15;
+    const hiddenBottom = 0.09;
+    const hiddenTop = 0.06;
     const neckMat = clampCloseLights(
-      new THREE.MeshStandardMaterial({ map: neckBandTexture(paletteColor(head.material as THREE.MeshStandardMaterial, 'r0c0')), roughness: 0.85 }),
+      new THREE.MeshStandardMaterial({
+        map: neckBandTexture(paletteColor(head.material as THREE.MeshStandardMaterial, 'r0c0'), {
+          aspect: (Math.PI * (NECK_TOP_R + NECK_BOTTOM_R)) / neckH,
+          visibleFrom: hiddenBottom / neckH,
+          visibleTo: 1 - hiddenTop / neckH,
+        }),
+        roughness: 0.85,
+      }),
     );
     materials.push(neckMat);
-    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.15, neckH, 16), neckMat);
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(NECK_TOP_R, NECK_BOTTOM_R, neckH, 24, 1, true), neckMat);
     neck.position.set(0, bodyTop - 0.06 + neckH / 2, (hbb.min.z + hbb.max.z) / 2 - 0.04);
     neck.castShadow = false;
     neck.updateMatrixWorld();
@@ -402,38 +416,6 @@ export function buildMatheus(): MatheusRig {
       );
     }
   }
-
-  // ---------- tatuagem na lateral direita do pescoço (base da cabeça, atrás da barba) ----------
-  head.geometry.computeBoundingBox();
-  const hb = head.geometry.boundingBox!;
-  const hs = hb.getSize(new THREE.Vector3());
-  const hcz = (hb.min.z + hb.max.z) / 2;
-  projectPrint(
-    head,
-    {
-      minX: hcz - hs.z * 0.32,
-      maxX: hcz + hs.z * 0.02,
-      minY: hb.min.y,
-      maxY: hb.min.y + hs.y * 0.45,
-      facing: new THREE.Vector3(-1, 0, 0),
-      plane: 'zy',
-    },
-    neckTattooTexture(),
-    clampCloseLights,
-  );
-  // tatuagem pequena no rosto, ao lado do olho direito (lado -X)
-  projectPrint(
-    head,
-    {
-      minX: hb.min.x + hs.x * 0.14,
-      maxX: hb.min.x + hs.x * 0.24,
-      minY: hb.min.y + hs.y * 0.3,
-      maxY: hb.min.y + hs.y * 0.4,
-      facing: new THREE.Vector3(0, 0, 1),
-    },
-    faceTattooTexture(),
-    clampCloseLights,
-  );
 
   const mixer = new THREE.AnimationMixer(root);
   const clips = new Map(gltf(MATHEUS_BASE).animations.map((c) => [c.name, c]));

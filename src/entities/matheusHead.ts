@@ -1,29 +1,88 @@
 import * as THREE from 'three';
+import { projectPrint } from './hoodiePrint';
+import { faceDecalTexture } from './tattoos';
 
 /**
- * Personaliza a cabeça do Knight (KayKit) para ficar parecida com o Matheus:
+ * Personaliza a cabeça do Knight (KayKit) para ficar parecida com o Matheus (estilo fofo):
  *  - tira o topete e as sobrancelhas "bravas" do original
- *  - diminui o nariz
- *  - cabelo: mechas bagunçadas no topo caindo para a frente + degradê na pele nas laterais
- *  - barba curta e bigode colados ao rosto (uma casca que acompanha a pele)
- *  - sobrancelhas grossas e retas, piercing na sobrancelha direita, brincos pretos
+ *  - arredonda o maxilar, aumenta os olhos e diminui o nariz
+ *  - cabelo: mechas onduladas em posições fixas (franja para o lado, volume no topo, nuca)
+ *    + degradê na pele nas laterais
+ *  - barba curta e bigode colados ao rosto (uma casca que acompanha a pele), com borda esfumada
+ *  - sobrancelhas, brilho dos olhos, bochechas rosadas e os dois traços do rosto são PINTADOS na
+ *    pele (projeção sobre a malha), então nada flutua; piercing na sobrancelha direita e brincos
  * Tudo é medido na própria malha, na pose de repouso, e preso ao osso da cabeça.
  */
 
+/** Uma mecha: caminho sobre a cabeça a partir do centro, em azimute/elevação (graus). */
+interface HairLock {
+  /** Azimute inicial e final: 0 = frente, +90 = lado esquerdo dele (+X), 180 = nuca. */
+  az: [number, number];
+  /** Elevação inicial e final acima da horizontal (90 = topo). */
+  el: [number, number];
+  /** Meia largura na raiz (fração da largura da cabeça). */
+  w: number;
+  /** Altura sobre o couro cabeludo na raiz e na ponta (fração da largura da cabeça). */
+  lift: [number, number];
+  /** Quantas ondas ao longo da mecha e a amplitude delas (fração da largura da cabeça). */
+  waves: number;
+  amp: number;
+  /** Onde a mecha para: 'brow' = acima das sobrancelhas; número = fração da altura do rosto acima dos olhos. */
+  limit?: 'brow' | number;
+}
+
+const FRINGE = { w: 0.085, lift: [0.012, 0.03] as [number, number], waves: 1.25, amp: 0.045, limit: 'brow' as const };
+const TOP = { w: 0.1, lift: [0.03, 0.05] as [number, number], waves: 1, amp: 0.05, limit: 0.12 };
+const BACK = { w: 0.11, lift: [0.015, 0.03] as [number, number], waves: 1.25, amp: 0.035, limit: 0.12 };
+const SIDE = { w: 0.08, lift: [0.012, 0.022] as [number, number], waves: 1, amp: 0.025, limit: 0.14 };
+
+const HAIR_LOCKS: HairLock[] = [
+  // franja: sai do alto da cabeça e cai na testa, penteada para o lado +X
+  { ...FRINGE, az: [-40, -22], el: [78, -4] },
+  { ...FRINGE, az: [-24, -4], el: [82, 2] },
+  { ...FRINGE, az: [-8, 14], el: [84, -6] },
+  { ...FRINGE, az: [8, 32], el: [84, 0] },
+  { ...FRINGE, az: [24, 48], el: [82, -2] },
+  { ...FRINGE, az: [40, 66], el: [78, 8] },
+  // topo: volume
+  { ...TOP, az: [-50, -34], el: [88, 56] },
+  { ...TOP, az: [-20, -6], el: [90, 52] },
+  { ...TOP, az: [10, 24], el: [90, 54] },
+  { ...TOP, az: [38, 56], el: [86, 50] },
+  { ...TOP, az: [-80, -64], el: [82, 46] },
+  { ...TOP, az: [66, 86], el: [82, 46] },
+  // nuca: descem da coroa até o início do degradê
+  { ...BACK, az: [105, 115], el: [74, 20] },
+  { ...BACK, az: [128, 138], el: [78, 20] },
+  { ...BACK, az: [151, 161], el: [76, 20] },
+  { ...BACK, az: [174, 184], el: [80, 20] },
+  { ...BACK, az: [197, 207], el: [76, 20] },
+  { ...BACK, az: [220, 230], el: [78, 20] },
+  { ...BACK, az: [243, 253], el: [74, 20] },
+  // laterais: curtas, acabam onde o degradê começa
+  { ...SIDE, az: [72, 84], el: [62, 28] },
+  { ...SIDE, az: [98, 110], el: [52, 26] },
+  { ...SIDE, az: [276, 288], el: [62, 28] },
+  { ...SIDE, az: [250, 262], el: [52, 26] },
+];
+
 export const HEAD_STYLE = {
-  hair: 0x2a1a11, // mechas do topo
+  hair: 0x2a1a11, // mechas
   hairBase: 0x2e1d13, // base do cabelo (o degradê das laterais parte desta cor)
-  beard: 0x35221a,
+  beard: 0x47301f,
   noseSize: 0.45, // 1 = nariz original
-  eyeSize: 0.6, // olhos menores e simples (1 = original)
-  mouthSize: 0.55, // largura visível da boca (a barba cobre os cantos)
-  tuftCount: 170, // mechas do topo
-  tuftLength: [0.13, 0.24] as [number, number],
-  tuftWidth: [0.045, 0.07] as [number, number],
+  eyeSize: 1.05, // olhos grandes e fofos (1 = original)
+  eyeStretchY: 1.12, // olho um pouco mais alto que largo
+  jawRound: 0.35, // 0 = maxilar quadrado do original … 1 = bem redondo
+  neckLift: 0.08, // a cabeça sobe isso para sobrar pescoço (senão a tatuagem do pescoço não aparece)
+  mouthSize: 0.5, // largura visível da boca (a barba cobre os cantos)
   fadeLow: -0.38, // degradê: pele na altura dos olhos + fadeLow…
   fadeHigh: 0.2, // …até cabelo cheio em fadeHigh (frações da altura da cabeça)
-  tuftStart: 0.3, // mechas só acima desta altura
-  beardThickness: 0.018, // barba rente ao rosto
+  beardThickness: 0.012, // barba rente ao rosto
+  beardCheekDrop: 0.12, // nas bochechas a barba só começa tanto abaixo do nariz (fração da altura do rosto)
+  beardFuzz: 0.03, // largura da borda esfumada da barba
+  brow: { len: 0.17, thick: 0.05, gap: 0.045 }, // frações: largura, altura e altura (folga acima do olho)
+  locks: HAIR_LOCKS,
 };
 
 const cellOf = (u: number, v: number) => `r${Math.min(3, Math.floor(v * 4))}c${Math.min(7, Math.floor(u * 8))}`;
@@ -68,9 +127,9 @@ export function customizeHead(head: THREE.SkinnedMesh, headBone: THREE.Bone, ski
   const S = HEAD_STYLE;
   const rand = seeded(7);
   const base = head.geometry.index ? head.geometry.toNonIndexed() : head.geometry.clone();
+  base.translate(0, S.neckLift, 0); // tudo o que é medido daqui em diante já conta com o pescoço
   const pos = base.attributes.position;
   const uv = base.attributes.uv;
-  const nrm = base.attributes.normal;
   const cell = (i: number) => cellOf(uv.getX(i), uv.getY(i));
   const centroid = (t: number, out: THREE.Vector3) =>
     out.set(
@@ -81,10 +140,43 @@ export function customizeHead(head: THREE.SkinnedMesh, headBone: THREE.Bone, ski
 
   // Na pose de repouso, posição da geometria → mundo é só a matrixWorld da malha.
   const toWorld = head.matrixWorld.clone();
-  const box = new THREE.Box3();
-  for (let i = 0; i < pos.count; i++) if (cell(i) === 'r0c0') box.expandByPoint(new THREE.Vector3().fromBufferAttribute(pos, i));
-  const size = box.getSize(new THREE.Vector3());
-  const center = box.getCenter(new THREE.Vector3());
+  const skinBox = () => {
+    const b = new THREE.Box3();
+    for (let i = 0; i < pos.count; i++) if (cell(i) === 'r0c0') b.expandByPoint(new THREE.Vector3().fromBufferAttribute(pos, i));
+    return b;
+  };
+  let box = skinBox();
+  let size = box.getSize(new THREE.Vector3());
+  let center = box.getCenter(new THREE.Vector3());
+
+  // ---------- maxilar arredondado: "esferifica" só a metade de baixo da cabeça ----------
+  {
+    let eyeY0 = 0;
+    let n = 0;
+    for (let i = 0; i < pos.count; i++) {
+      if (cell(i) !== 'r0c2') continue;
+      eyeY0 += pos.getY(i);
+      n++;
+    }
+    eyeY0 = n ? eyeY0 / n : center.y;
+    const half = size.clone().multiplyScalar(0.5);
+    const span = Math.max(1e-4, eyeY0 - box.min.y);
+    const q = new THREE.Vector3();
+    for (let i = 0; i < pos.count; i++) {
+      const t = THREE.MathUtils.clamp((eyeY0 - pos.getY(i)) / span, 0, 1);
+      if (t <= 0) continue;
+      const weight = t * t * (3 - 2 * t) * S.jawRound;
+      q.set((pos.getX(i) - center.x) / half.x, (pos.getY(i) - center.y) / half.y, (pos.getZ(i) - center.z) / half.z);
+      const len = q.length();
+      if (len < 1e-4) continue;
+      const f = 1 + (Math.max(Math.abs(q.x), Math.abs(q.y), Math.abs(q.z)) / len - 1) * weight;
+      pos.setXYZ(i, center.x + q.x * half.x * f, center.y + q.y * half.y * f, center.z + q.z * half.z * f);
+    }
+    // as medidas seguintes já usam a forma nova
+    box = skinBox();
+    size = box.getSize(new THREE.Vector3());
+    center = box.getCenter(new THREE.Vector3());
+  }
 
   // ---------- olhos ----------
   const eyeL = new THREE.Vector3();
@@ -107,13 +199,28 @@ export function customizeHead(head: THREE.SkinnedMesh, headBone: THREE.Bone, ski
   eyeL.divideScalar(Math.max(1, nL));
   eyeR.divideScalar(Math.max(1, nR));
   const eyeY = (eyeL.y + eyeR.y) / 2;
-  // olhos menores (minimalistas): encolhe cada olho em torno do próprio centro
+  // olhos maiores e um pouco mais altos: escala cada olho em torno do próprio centro
+  const eyeBoxes = [new THREE.Box3(), new THREE.Box3()]; // [lado +X, lado −X]
   for (let i = 0; i < pos.count; i++) {
     if (cell(i) !== 'r0c2') continue;
-    const e = pos.getX(i) > center.x ? eyeL : eyeR;
+    const left = pos.getX(i) > center.x;
+    const e = left ? eyeL : eyeR;
     pos.setX(i, e.x + (pos.getX(i) - e.x) * S.eyeSize);
-    pos.setY(i, e.y + (pos.getY(i) - e.y) * S.eyeSize);
+    pos.setY(i, e.y + (pos.getY(i) - e.y) * S.eyeSize * S.eyeStretchY);
+    eyeBoxes[left ? 0 : 1].expandByPoint(new THREE.Vector3().fromBufferAttribute(pos, i));
   }
+  const eyes = eyeBoxes.map((b) => {
+    const s = b.getSize(new THREE.Vector3());
+    const c = b.getCenter(new THREE.Vector3());
+    return { x: c.x, y: c.y, rx: s.x / 2, ry: s.y / 2 };
+  });
+  const eyeRy = (eyes[0].ry + eyes[1].ry) / 2;
+
+  // sobrancelhas: medidas em unidades da cabeça (o desenho é feito na textura do rosto)
+  const browLen = size.x * S.brow.len;
+  const browThick = size.y * S.brow.thick;
+  const browOff = eyeRy + size.y * S.brow.gap + browThick / 2; // do centro do olho ao centro do traço
+  const browTop = eyeY + browOff + browThick * 0.9;
 
   // ---------- nariz menor ----------
   const noseHalfW = size.x * 0.13;
@@ -149,31 +256,27 @@ export function customizeHead(head: THREE.SkinnedMesh, headBone: THREE.Bone, ski
 
   // ---------- boca: relevo abaixo do nariz com a face virada para cima ----------
   const mouth = new THREE.Box3();
+  const c = new THREE.Vector3();
   {
     const tri = new THREE.Triangle();
     const fn = new THREE.Vector3();
-    const cc = new THREE.Vector3();
     for (let t = 0; t < pos.count; t += 3) {
       if (cell(t) !== 'r0c0') continue;
-      centroid(t, cc);
-      if (Math.abs(cc.x - center.x) > size.x * 0.22) continue;
-      if (cc.y > noseBottom || cc.y < noseBottom - size.y * 0.22) continue;
-      if (cc.z < center.z + size.z * 0.25) continue;
+      centroid(t, c);
+      if (Math.abs(c.x - center.x) > size.x * 0.22) continue;
+      if (c.y > noseBottom || c.y < noseBottom - size.y * 0.22) continue;
+      if (c.z < center.z + size.z * 0.25) continue;
       tri.setFromAttributeAndIndices(pos, t, t + 1, t + 2).getNormal(fn);
-      if (fn.y > 0.45) mouth.expandByPoint(cc);
+      if (fn.y > 0.45) mouth.expandByPoint(c);
     }
     if (!mouth.isEmpty()) mouth.expandByVector(new THREE.Vector3(0.03, 0.025, 0.2));
   }
 
-  // ---------- separa cabelo, sobrancelhas originais e resto ----------
-  const c = new THREE.Vector3();
+  // ---------- tira as sobrancelhas originais; o couro cabeludo (r0c1) fica ----------
   const isBrow = (t: number) => {
     centroid(t, c);
     return c.y < eyeY + size.y * 0.22 && c.z > center.z;
   };
-  const hairTris: number[] = [];
-  for (let t = 0; t < pos.count; t += 3) if (cell(t) === 'r0c1' && !isBrow(t)) hairTris.push(t);
-
   // a malha da cabeça fica só com pele, olhos, boca e a base do cabelo (couro cabeludo)
   const headGeo = filterTriangles(base, (t) => !(cell(t) === 'r0c1' && isBrow(t)));
   head.geometry = headGeo;
@@ -215,74 +318,181 @@ export function customizeHead(head: THREE.SkinnedMesh, headBone: THREE.Bone, ski
     (head.material as THREE.MeshStandardMaterial).vertexColors = true;
   }
 
-  // ---------- mechas bagunçadas no topo, caindo para a frente ----------
-  const hairMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, flatShading: true });
-  const tuftGeo = new THREE.ConeGeometry(1, 1, 5).translate(0, 0.5, 0); // base na origem, ponta em +Y
-  const tufts = new THREE.InstancedMesh(tuftGeo, hairMaterial, S.tuftCount);
-  const areas = hairTris.map((t) => {
-    const a = new THREE.Vector3().fromBufferAttribute(pos, t);
-    const b = new THREE.Vector3().fromBufferAttribute(pos, t + 1);
-    const d = new THREE.Vector3().fromBufferAttribute(pos, t + 2);
-    return new THREE.Triangle(a, b, d).getArea();
+  // ---------- pintura do rosto: sobrancelhas, brilho dos olhos, bochechas e traços ----------
+  const decalRect = {
+    minX: center.x - size.x * 0.46,
+    maxX: center.x + size.x * 0.46,
+    minY: eyeY - size.y * 0.44,
+    maxY: eyeY + size.y * 0.26,
+  };
+  const decal = projectPrint(
+    head,
+    { ...decalRect, facing: new THREE.Vector3(0, 0, 1), soft: true },
+    faceDecalTexture({
+      rect: decalRect,
+      eyes,
+      brow: { len: browLen, thick: browThick, y: browOff, color: '#2a1a11' },
+      blush: { drop: eyeRy + size.y * 0.1, rx: size.x * 0.075, ry: size.y * 0.05, out: size.x * 0.02 },
+      tattoo: { x: eyes[1].x - eyes[1].rx - size.x * 0.07, y: eyeY - size.y * 0.01, h: size.y * 0.075, gap: size.x * 0.028 },
+      smile: mouth.isEmpty()
+        ? undefined
+        : { x: mouth.getCenter(c).x, y: mouth.getCenter(c).y, w: size.x * 0.085, thick: size.y * 0.012 },
+    }),
+  );
+  decal.name = 'Matheus_FaceDecal';
+  const decalMaterial = decal.material as THREE.MeshStandardMaterial;
+
+  // ---------- cabelo: mechas onduladas sobre o couro cabeludo ----------
+  const hairMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    vertexColors: true,
+    roughness: 0.9,
+    flatShading: true,
+    side: THREE.DoubleSide,
   });
-  const total = areas.reduce((s, a) => s + a, 0);
   const boneInv = headBone.matrixWorld.clone().invert();
-  const m = new THREE.Matrix4();
-  const q = new THREE.Quaternion();
-  const scl = new THREE.Vector3();
-  const p = new THREE.Vector3();
-  const n = new THREE.Vector3();
-  const dir = new THREE.Vector3();
-  const col = new THREE.Color();
-  const UP = new THREE.Vector3(0, 1, 0);
-  for (let k = 0, tries = 0; k < S.tuftCount && tries < S.tuftCount * 30; tries++) {
-    let r = rand() * total;
-    let idx = 0;
-    while (idx < areas.length - 1 && r > areas[idx]) r -= areas[idx++];
-    const t = hairTris[idx];
-    let u = rand();
-    let v = rand();
-    if (u + v > 1) {
-      u = 1 - u;
-      v = 1 - v;
+  {
+    const hp = headGeo.attributes.position;
+    // todos os triângulos da cabeça, para lançar raios a partir do centro
+    const tris: { a: THREE.Vector3; b: THREE.Vector3; c: THREE.Vector3; n: THREE.Vector3 }[] = [];
+    const origin = new THREE.Box3().setFromBufferAttribute(hp as THREE.BufferAttribute).getCenter(new THREE.Vector3());
+    for (let t = 0; t < hp.count; t += 3) {
+      const a = new THREE.Vector3().fromBufferAttribute(hp, t);
+      const b = new THREE.Vector3().fromBufferAttribute(hp, t + 1);
+      const d = new THREE.Vector3().fromBufferAttribute(hp, t + 2);
+      const n = new THREE.Triangle(a, b, d).getNormal(new THREE.Vector3());
+      const mid = a.clone().add(b).add(d).divideScalar(3);
+      if (n.dot(mid.sub(origin)) < 0) n.negate();
+      tris.push({ a, b, c: d, n });
     }
-    const w = 1 - u - v;
-    p.set(0, 0, 0)
-      .addScaledVector(new THREE.Vector3().fromBufferAttribute(pos, t), w)
-      .addScaledVector(new THREE.Vector3().fromBufferAttribute(pos, t + 1), u)
-      .addScaledVector(new THREE.Vector3().fromBufferAttribute(pos, t + 2), v);
-    n.set(0, 0, 0)
-      .addScaledVector(new THREE.Vector3().fromBufferAttribute(nrm, t), w)
-      .addScaledVector(new THREE.Vector3().fromBufferAttribute(nrm, t + 1), u)
-      .addScaledVector(new THREE.Vector3().fromBufferAttribute(nrm, t + 2), v)
-      .normalize();
-    if (p.y < eyeY + size.y * S.tuftStart) continue;
-    // direção da mecha: deitada sobre a cabeça, penteada para a frente e um pouco para baixo
-    const front = (p.z - center.z) / (size.z * 0.5); // -1 nuca … +1 testa
-    dir.set((p.x - center.x) / size.x * 0.6 + (rand() - 0.5) * 0.5, -0.15 - Math.max(0, front) * 0.5, 1)
-      .normalize()
-      .addScaledVector(n, 0.35 + rand() * 0.25)
-      .normalize();
-    p.addScaledVector(n, -0.01);
-    p.applyMatrix4(toWorld);
-    q.setFromUnitVectors(UP, dir.transformDirection(toWorld));
-    q.multiply(new THREE.Quaternion().setFromAxisAngle(UP, rand() * Math.PI));
-    const wdt = S.tuftWidth[0] + rand() * (S.tuftWidth[1] - S.tuftWidth[0]);
-    const len = S.tuftLength[0] + rand() * (S.tuftLength[1] - S.tuftLength[0]);
-    scl.set(wdt, len, wdt * 0.55);
-    m.compose(p, q, scl).premultiply(boneInv);
-    tufts.setMatrixAt(k, m);
-    col.setHex(S.hair).offsetHSL(0, 0, (rand() - 0.5) * 0.05);
-    tufts.setColorAt(k, col);
-    k++;
+    const ray = new THREE.Ray(origin, new THREE.Vector3());
+    const tmp = new THREE.Vector3();
+    const DEG = Math.PI / 180;
+    /** Ponto da superfície da cabeça e normal suave, na direção (azimute, elevação) a partir do centro. */
+    const surface = (az: number, el: number) => {
+      const a = az * DEG;
+      const e = el * DEG;
+      ray.direction.set(Math.sin(a) * Math.cos(e), Math.sin(e), Math.cos(a) * Math.cos(e));
+      let best = Infinity;
+      const p = new THREE.Vector3();
+      const n = new THREE.Vector3();
+      for (const t of tris) {
+        if (!ray.intersectTriangle(t.a, t.b, t.c, false, tmp)) continue;
+        const d = tmp.distanceToSquared(origin);
+        if (d < best) {
+          best = d;
+          p.copy(tmp);
+          n.copy(t.n);
+        }
+      }
+      if (!isFinite(best)) return null;
+      // mistura a normal da face com a direção radial: a mecha não "pula" entre faces planas
+      n.multiplyScalar(0.4).addScaledVector(ray.direction, 0.6).normalize();
+      return { p, n };
+    };
+
+    const W = size.x;
+    const positions: number[] = [];
+    const colors: number[] = [];
+    const indices: number[] = [];
+    const root = new THREE.Color();
+    const tip = new THREE.Color();
+    const col = new THREE.Color();
+    const SEG = 6; // seção em forma de lente
+
+    for (const lock of S.locks) {
+      const limitY = lock.limit === 'brow' || lock.limit === undefined ? browTop + size.y * 0.035 : eyeY + size.y * lock.limit;
+      // caminho sobre a superfície (para ao chegar no limite)
+      const N = 18;
+      let pts: THREE.Vector3[] = [];
+      const nrm: THREE.Vector3[] = [];
+      for (let i = 0; i < N; i++) {
+        const t = i / (N - 1);
+        const hit = surface(THREE.MathUtils.lerp(lock.az[0], lock.az[1], t), THREE.MathUtils.lerp(lock.el[0], lock.el[1], t));
+        if (!hit || (i > 0 && hit.p.y < limitY)) break;
+        pts.push(hit.p);
+        nrm.push(hit.n);
+      }
+      if (pts.length < 4) continue;
+      // suaviza o caminho (a superfície é cheia de quinas)
+      for (let pass = 0; pass < 2; pass++) {
+        pts = pts.map((p, i) => (i === 0 || i === pts.length - 1 ? p : pts[i - 1].clone().add(p.clone().multiplyScalar(2)).add(pts[i + 1]).multiplyScalar(0.25)));
+      }
+      const M = pts.length;
+      const phase = rand() * Math.PI * 2;
+      // linha central: sobe da pele (lift) e balança para o lado (onda)
+      const cl: THREE.Vector3[] = [];
+      const lat = new THREE.Vector3();
+      const tan = new THREE.Vector3();
+      for (let i = 0; i < M; i++) {
+        const t = i / (M - 1);
+        tan.copy(pts[Math.min(M - 1, i + 1)]).sub(pts[Math.max(0, i - 1)]).normalize();
+        lat.crossVectors(tan, nrm[i]).normalize();
+        const lift = THREE.MathUtils.lerp(lock.lift[0], lock.lift[1], t) * W;
+        const wave = Math.sin(t * lock.waves * Math.PI * 2 + phase) * lock.amp * W * THREE.MathUtils.smoothstep(t, 0, 0.3);
+        cl.push(pts[i].clone().addScaledVector(nrm[i], lift).addScaledVector(lat, wave));
+      }
+      // variação de tom multiplicativa (offsetHSL em espaço linear clareia demais cores escuras)
+      root.setHex(S.hair).multiplyScalar(0.85 + rand() * 0.3);
+      tip.copy(root).multiplyScalar(1.35);
+
+      const first = positions.length / 3;
+      const up = new THREE.Vector3();
+      for (let i = 0; i < M; i++) {
+        const t = i / (M - 1);
+        tan.copy(cl[Math.min(M - 1, i + 1)]).sub(cl[Math.max(0, i - 1)]).normalize();
+        lat.crossVectors(tan, nrm[i]).normalize();
+        up.crossVectors(lat, tan).normalize();
+        const w = lock.w * W * Math.max(0.2, 1 - 0.78 * Math.pow(t, 1.6));
+        const thick = w * 0.5 + 0.004;
+        col.copy(root).lerp(tip, t);
+        for (let k = 0; k < SEG; k++) {
+          const a = (k / SEG) * Math.PI * 2;
+          positions.push(
+            cl[i].x + lat.x * Math.cos(a) * w + up.x * Math.sin(a) * thick,
+            cl[i].y + lat.y * Math.cos(a) * w + up.y * Math.sin(a) * thick,
+            cl[i].z + lat.z * Math.cos(a) * w + up.z * Math.sin(a) * thick,
+          );
+          colors.push(col.r, col.g, col.b);
+        }
+      }
+      // ponta
+      const last = cl[M - 1];
+      tan.copy(last).sub(cl[M - 2]).normalize();
+      positions.push(last.x + tan.x * lock.w * W * 0.5, last.y + tan.y * lock.w * W * 0.5, last.z + tan.z * lock.w * W * 0.5);
+      colors.push(tip.r, tip.g, tip.b);
+      const tipIndex = first + M * SEG;
+      for (let i = 0; i < M - 1; i++) {
+        for (let k = 0; k < SEG; k++) {
+          const a = first + i * SEG + k;
+          const b = first + i * SEG + ((k + 1) % SEG);
+          const cc2 = first + (i + 1) * SEG + k;
+          const d = first + (i + 1) * SEG + ((k + 1) % SEG);
+          indices.push(a, cc2, b, b, cc2, d);
+        }
+      }
+      for (let k = 0; k < SEG; k++) {
+        indices.push(first + (M - 1) * SEG + k, tipIndex, first + (M - 1) * SEG + ((k + 1) % SEG));
+      }
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    geo.applyMatrix4(boneInv.clone().multiply(toWorld)); // espaço da geometria → osso da cabeça
+    geo.computeBoundingSphere();
+    const hair = new THREE.Mesh(geo, hairMaterial);
+    hair.name = 'Matheus_Hair';
+    hair.castShadow = false;
+    hair.frustumCulled = false;
+    headBone.add(hair);
   }
-  tufts.castShadow = false;
-  tufts.name = 'Matheus_Hair';
-  headBone.add(tufts);
 
   // ---------- barba curta e bigode: casca sobre a pele de baixo do rosto ----------
-  // A casca cobre toda a parte de baixo do rosto; o desenho da barba (linha das bochechas,
-  // vão da boca) é recortado por pixel no shader, para a borda ficar suave.
+  // A casca cobre toda a parte de baixo do rosto; o desenho da barba (bochechas livres, vão da
+  // boca, borda esfumada) é recortado por pixel no shader, para a borda ficar suave.
   const beardMaterial = new THREE.MeshStandardMaterial({ color: S.beard, roughness: 1, flatShading: true });
   {
     const mouthC = mouth.isEmpty() ? new THREE.Vector2(0, -99) : new THREE.Vector2(mouth.getCenter(c).x, c.y);
@@ -292,6 +502,8 @@ export function customizeHead(head: THREE.SkinnedMesh, headBone: THREE.Bone, ski
       uSize: { value: size.clone() },
       uNoseBottom: { value: noseBottom },
       uEyeY: { value: eyeY },
+      uCheekY: { value: noseBottom - size.y * S.beardCheekDrop },
+      uFuzz: { value: S.beardFuzz },
       uMouthC: { value: mouthC },
       uMouthR: { value: new THREE.Vector2(ms.x * 0.5 * S.mouthSize + 0.01, ms.y * 0.5 + 0.02) },
     };
@@ -306,8 +518,9 @@ export function customizeHead(head: THREE.SkinnedMesh, headBone: THREE.Bone, ski
           `#include <common>
           varying vec3 vBeardPos;
           uniform vec3 uCenter, uSize;
-          uniform float uNoseBottom, uEyeY;
-          uniform vec2 uMouthC, uMouthR;`,
+          uniform float uNoseBottom, uEyeY, uCheekY, uFuzz;
+          uniform vec2 uMouthC, uMouthR;
+          float beardHash(vec2 v) { return fract(sin(dot(v, vec2(127.1, 311.7))) * 43758.5453); }`,
         )
         .replace(
           'void main() {',
@@ -315,9 +528,13 @@ export function customizeHead(head: THREE.SkinnedMesh, headBone: THREE.Bone, ski
           {
             vec3 p = vBeardPos;
             float dx = abs(p.x - uCenter.x) / (uSize.x * 0.5);
-            // linha de cima: rente ao nariz no meio, subindo até as costeletas nas laterais
-            float topY = mix(uNoseBottom - 0.004, uEyeY - uSize.y * 0.05, smoothstep(0.3, 0.72, dx));
-            if (p.y > topY) discard;
+            // linha de cima: bigode rente ao nariz no meio, bochechas livres (a barba só começa
+            // lá embaixo) e uma costeleta fina subindo junto da orelha
+            float topY = mix(uNoseBottom - 0.004, uCheekY, smoothstep(0.2, 0.42, dx));
+            topY = mix(topY, uEyeY - uSize.y * 0.22, smoothstep(0.72, 0.84, dx));
+            // borda esfumada, como barba por fazer
+            float fuzz = (beardHash(floor(p.xy * 160.0)) - 0.5) * uFuzz;
+            if (p.y > topY + fuzz) discard;
             if (dx > 0.86) discard; // antes das orelhas
             if (p.z < uCenter.z - uSize.z * 0.15) discard; // nuca
             vec2 m = (p.xy - uMouthC) / uMouthR;
@@ -325,7 +542,7 @@ export function customizeHead(head: THREE.SkinnedMesh, headBone: THREE.Bone, ski
           }`,
         );
     };
-    beardMaterial.customProgramCacheKey = () => 'matheus-beard';
+    beardMaterial.customProgramCacheKey = () => 'matheus-beard-2';
 
     const shell = filterTriangles(headGeo, (t) => {
       const hp = headGeo.attributes.position;
@@ -356,9 +573,6 @@ export function customizeHead(head: THREE.SkinnedMesh, headBone: THREE.Bone, ski
     beard.bind(head.skeleton, head.bindMatrix);
   }
 
-  // ---------- sobrancelhas: grossas e retas ----------
-  const browMat = new THREE.MeshStandardMaterial({ color: S.hair, roughness: 0.9 });
-  const browGeo = new THREE.BoxGeometry(size.x * 0.16, size.y * 0.045, 0.025);
   /** z da superfície do rosto em (x, y), medido nos triângulos de pele (espaço da geometria). */
   const surfaceZ = (x: number, y: number) => {
     const ray = new THREE.Ray(new THREE.Vector3(x, y, box.max.z + 1), new THREE.Vector3(0, 0, -1));
@@ -374,25 +588,16 @@ export function customizeHead(head: THREE.SkinnedMesh, headBone: THREE.Bone, ski
     }
     return isFinite(best) ? best : eyeFront;
   };
-  for (const eye of [eyeL, eyeR]) {
-    const brow = new THREE.Mesh(browGeo, browMat);
-    const by = eye.y + size.y * 0.1;
-    const bp = new THREE.Vector3(eye.x, by, surfaceZ(eye.x, by) + 0.01).applyMatrix4(toWorld);
-    brow.position.copy(bp);
-    brow.updateMatrixWorld();
-    headBone.attach(brow);
-  }
 
-  // ---------- piercing na ponta de fora da sobrancelha direita (lado -X) ----------
+  // ---------- piercing na ponta de fora da sobrancelha direita (lado −X) ----------
   const metal = new THREE.MeshStandardMaterial({ color: 0xd8d8dc, roughness: 0.3, metalness: 0.6 });
   const black = new THREE.MeshStandardMaterial({ color: 0x111114, roughness: 0.4, metalness: 0.3 });
   {
-    const bx = eyeR.x - size.x * 0.07;
-    const byTop = eyeR.y + size.y * 0.14;
-    for (const dy of [0, -size.y * 0.08]) {
+    const bx = eyes[1].x - browLen * 0.36;
+    const byc = eyes[1].y + browOff;
+    for (const dy of [browThick * 0.85, -browThick * 0.85]) {
       const ball = new THREE.Mesh(new THREE.SphereGeometry(size.x * 0.016, 8, 6), metal);
-      const y = byTop + dy;
-      ball.position.set(bx, y, surfaceZ(bx, y) + 0.012).applyMatrix4(toWorld);
+      ball.position.set(bx, byc + dy, surfaceZ(bx, byc + dy) + 0.012).applyMatrix4(toWorld);
       ball.updateMatrixWorld();
       headBone.attach(ball);
     }
@@ -434,5 +639,5 @@ export function customizeHead(head: THREE.SkinnedMesh, headBone: THREE.Bone, ski
     }
   }
 
-  return { hairMaterial, beardMaterial, extraMaterials: [browMat, metal, black] };
+  return { hairMaterial, beardMaterial, extraMaterials: [decalMaterial, metal, black] };
 }
