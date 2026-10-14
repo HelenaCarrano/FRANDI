@@ -9,6 +9,8 @@ export type QuestStatus = 'new' | 'active' | 'done';
 export interface SaveData {
   v: 1;
   area: string;
+  /** Ponto de chegada na área (ex.: `portao`); vazio = começo da área. */
+  entry?: string;
   coins: number;
   /** id do item -> quantidade */
   items: Record<string, number>;
@@ -59,9 +61,10 @@ export class GameState {
     this.commit();
   }
 
-  /** Chamado a cada mudança (a interface se atualiza por aqui). */
-  onChange(fn: () => void) {
+  /** Chamado a cada mudança (a interface se atualiza por aqui). Devolve a função que cancela a assinatura. */
+  onChange(fn: () => void): () => void {
     this.listeners.add(fn);
+    return () => void this.listeners.delete(fn);
   }
 
   private commit() {
@@ -127,8 +130,15 @@ export class GameState {
     Object.assign(this.data.equipped, part);
     this.commit();
   }
-  setArea(id: string) {
+  setArea(id: string, entry?: string) {
     this.data.area = id;
+    this.data.entry = entry;
     this.commit();
+  }
+  get area() {
+    return this.data.area;
+  }
+  get entry() {
+    return this.data.entry;
   }
 }

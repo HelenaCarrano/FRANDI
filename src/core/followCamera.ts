@@ -36,6 +36,11 @@ export class FollowCamera {
     this.updateOffset();
   }
 
+  /** Distância normal da câmera (o mapa usa uma câmera mais afastada que as outras áreas). */
+  setBaseDistance(d: number) {
+    this.baseDistance = d;
+  }
+
   /** Altura para onde a câmera mira no zoom máximo (padrão: rosto). */
   setFocusHeight(y: number) {
     this.faceHeight = y;

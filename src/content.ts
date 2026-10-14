@@ -61,7 +61,6 @@ export const content = {
     gotCoins: '+{n} moedas',
     spentCoins: '-{n} moedas',
     usedIn: 'Usado em: {where}',
-    backToVillage: 'Voltar para a vila',
   },
 
   // ---------- itens ----------
@@ -244,6 +243,8 @@ export const content = {
 
     gate: {
       prompt: 'Examinar o portão',
+      /** Texto do botão quando o portão já está aberto. */
+      promptOpen: 'Seguir para o mapa',
       noKey: [
         'O portão está trancado. A fechadura tem formato de espiga de trigo.',
         'Quem sabe o Ferreiro tenha uma chave assim?',
@@ -256,8 +257,6 @@ export const content = {
         'A chave de trigo gira na fechadura. Com o mapa na mão, você respira fundo.',
         'O portão se abre devagar. A aventura de verdade começa agora.',
       ],
-      endTitle: 'A vila ficou para trás',
-      endText: 'A floresta espera por você. (A aventura continua na próxima etapa.)',
     },
 
     objective: {
@@ -268,8 +267,57 @@ export const content = {
       needMap: 'Compre um mapa com a Dona Pimenta',
       needCoins: 'Ganhe moedas ajudando os moradores (cartas, o gatinho Fubá)',
       gate: 'Atravesse o portão da vila',
-      done: 'Siga para a floresta',
+      done: 'Siga pelo portão até o mapa do reino',
     },
+  },
+
+  // ---------- Mapa do Reino ----------
+  // Textos de exemplo ([EXEMPLO]): troque pelos nomes e piadas reais.
+  worldMap: {
+    areaName: 'Mapa do Reino',
+    intro: [
+      'Do outro lado do portão, o reino inteiro se abre diante de você, pequeno como uma maquete.',
+      'Uma estrada de terra segue até a floresta. Todo o resto está coberto por uma névoa espessa.',
+    ],
+    enter: 'Entrar: {name}',
+    examine: 'Examinar o caminho',
+    toVillage: 'Voltar para a vila',
+    /** Quando uma área nova abre, as nuvens somem e aparece este aviso. */
+    newPath: 'Novo caminho: {name}',
+    preparing: [
+      'Este caminho ainda está sendo preparado...',
+      'Volte em breve: o resto da aventura está chegando.',
+    ],
+    locked: {
+      middle: [
+        'Uma névoa espessa cobre este lugar. Não dá nem para ver o caminho.',
+        'Talvez a floresta guarde uma pista de como dissipá-la.',
+      ],
+      castle: [
+        'Nuvens escuras envolvem o castelo. As portas não vão se mostrar a qualquer um.',
+        'Só quem passar por todos os lugares do reino chegará até aqui.',
+      ],
+      ending: ['Ainda não é hora de abrir este lugar.'],
+      forest: ['O portão da vila ainda não se abriu para este caminho.'],
+    },
+    objective: {
+      forest: 'Siga a estrada até a Floresta',
+      explore: 'Explore o reino: {n} de 4 lugares concluídos',
+      castle: 'O Castelo espera por você',
+      ending: 'Entre na Sala do Tesouro',
+    },
+  },
+
+  areas: {
+    village: 'Vila do Amanhecer',
+    map: 'Mapa do Reino',
+    forest: 'Floresta dos Sussurros',
+    ruins: 'Ruínas Esquecidas',
+    tower: 'Torre do Saber',
+    tavern: 'Taverna do Zé',
+    vineyard: 'Vinhedo Dourado',
+    castle: 'Castelo',
+    ending: 'Sala do Tesouro',
   },
 } as const;
 

@@ -23,5 +23,6 @@ menor gerados em `src/entities/matheusHead.ts`).
   com as animações usadas (Idle, Interact, Cheer, Walking_A, PickUp, Use_Item).
 - `characters/sword_1handed.glb`, `axe_1handed.glb`, `mug_full.glb`, `dagger.glb`,
   `shield_round_barbarian.glb`: armas e objetos do pacote Adventurers.
-- `village/*.glb`: peças escolhidas do Medieval Hexagon Pack, convertidas de glTF para GLB.
+- `village/*.glb`: peças escolhidas do Medieval Hexagon Pack, convertidas de glTF para GLB (textura embutida). O Mapa do Reino
+  acrescentou castelo, torres, construção destruída, montanhas e colinas.
 - O gatinho e a mochila do Matheus são gerados em código (`src/entities/cat.ts`, `backpack.ts`).

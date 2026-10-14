@@ -35,6 +35,7 @@ export interface ShopConfig {
 }
 
 const TYPE_SPEED = 38; // caracteres por segundo
+const FADE_MS = 550; // mesma duração da transição de .fade-overlay em hud.css
 
 export class UI {
   private readonly root: HTMLDivElement;
@@ -453,6 +454,33 @@ export class UI {
         this.endEl = null;
         resolve();
       });
+    });
+  }
+
+  // ---------- fade entre áreas ----------
+
+  private fadeEl: HTMLDivElement | null = null;
+  private fadeLabel: HTMLDivElement | null = null;
+
+  /** Escurece (`on`) ou clareia a tela, com o nome do destino no escuro. Resolve ao terminar a transição. */
+  fade(on: boolean, label = ''): Promise<void> {
+    if (!this.fadeEl) {
+      this.fadeEl = el('div', 'fade-overlay', this.root);
+      this.fadeLabel = el('div', 'fade-label', this.fadeEl);
+      this.fadeEl.addEventListener('pointerdown', (e) => e.stopPropagation());
+    }
+    const node = this.fadeEl;
+    if (on && this.fadeLabel) this.fadeLabel.textContent = label;
+    return new Promise((resolve) => {
+      const done = () => {
+        node.removeEventListener('transitionend', done);
+        clearTimeout(timer);
+        resolve();
+      };
+      // se o navegador não disparar transitionend (aba em segundo plano), segue mesmo assim
+      const timer = window.setTimeout(done, FADE_MS + 150);
+      node.addEventListener('transitionend', done);
+      node.classList.toggle('on', on);
     });
   }
 

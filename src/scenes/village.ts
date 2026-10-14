@@ -7,11 +7,8 @@ import { createFlame } from '../entities/torch';
 import { Npc, NPC_ASSETS } from '../entities/npc';
 import { makeCat } from '../entities/cat';
 import { content, fmt, type ItemId } from '../content';
-import type { Area, AreaEnv, Interactable } from './types';
-import type { UI } from '../ui/ui';
-import type { GameState } from '../core/gameState';
-import type { Player } from '../entities/player';
-import type { QualitySettings } from '../core/quality';
+import type { Area, AreaContext, Interactable } from './types';
+import { DAY_ENV, skyTexture } from './hexKit';
 
 /**
  * Vila do Amanhecer: diorama de peças hexagonais do KayKit Medieval Hexagon Pack (CC0),
@@ -40,45 +37,16 @@ const PROP = 4.2;
 const H = Math.sqrt(3);
 const BOUNDS_R = 14;
 
-export interface VillageContext {
-  ui: UI;
-  game: GameState;
-  player: Player;
-  quality: QualitySettings;
-}
-
-const ENV: AreaEnv = {
-  exposure: 1.05,
-  vignette: 0.8,
-  grain: 0.03,
-  bloom: { strength: 0.22, radius: 0.5, threshold: 1.1 },
-};
-
-function skyTexture() {
-  const c = document.createElement('canvas');
-  c.width = 4;
-  c.height = 256;
-  const g = c.getContext('2d')!;
-  const grad = g.createLinearGradient(0, 0, 0, 256);
-  grad.addColorStop(0, '#7fa6da');
-  grad.addColorStop(0.55, '#d9d3c4');
-  grad.addColorStop(1, '#f6dca6');
-  g.fillStyle = grad;
-  g.fillRect(0, 0, 4, 256);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-
 const MATERIALS: ItemId[] = ['ferro', 'carvao', 'couro'];
 const MAIL_HOUSES = ['rosa', 'antonio', 'ze'] as const;
 const MAP_PRICE = content.village.shop.find((s) => s.id === 'mapa')!.price;
 
-export function createVillage(ctx: VillageContext): Area {
-  const { ui, game, player, quality } = ctx;
+export function createVillage(ctx: AreaContext): Area {
+  const { ui, game, player, quality, goTo } = ctx;
   const T = content.village;
   const scene = new THREE.Scene();
-  scene.background = skyTexture();
+  const sky = skyTexture();
+  scene.background = sky;
   const world = new CollisionWorld();
   const occluders: THREE.Object3D[] = [];
   const interactables: Interactable[] = [];
@@ -409,7 +377,7 @@ export function createVillage(ctx: VillageContext): Area {
       gateBarrier = null;
     }
   }
-  game.onChange(refresh);
+  const stopRefresh = game.onChange(refresh);
 
   // ---------- diálogos ----------
   const toastItem = (id: ItemId) => ui.toast(fmt(content.ui.gotItem, { name: content.items[id].name }));
@@ -570,7 +538,7 @@ export function createVillage(ctx: VillageContext): Area {
   async function useGate() {
     const g = T.gate;
     if (game.flag('villageDone')) {
-      await ui.showEndCard(g.endTitle, g.endText, content.ui.backToVillage);
+      await goTo('map', 'village'); // entrada do mapa: o marco da vila
       return;
     }
     if (!game.has('chave_trigo')) await ui.tell(g.noKey);
@@ -578,12 +546,12 @@ export function createVillage(ctx: VillageContext): Area {
     else {
       await ui.tell(g.open);
       game.setFlag('villageDone');
-      await ui.showEndCard(g.endTitle, g.endText, content.ui.backToVillage);
+      await goTo('map', 'village');
     }
   }
 
   // ---------- interações ----------
-  const add = (position: THREE.Vector3, radius: number, prompt: string, onInteract: () => void, enabled?: () => boolean) =>
+  const add = (position: THREE.Vector3, radius: number, prompt: Interactable['prompt'], onInteract: () => void, enabled?: () => boolean) =>
     interactables.push({ position, radius, prompt, onInteract, enabled });
 
   add(messenger.position, 2.6, T.npcs.messenger.prompt, () => void talkMessenger());
@@ -632,7 +600,7 @@ export function createVillage(ctx: VillageContext): Area {
   }
 
   const gateFront = new THREE.Vector3(gatePos.x + Math.sin(gateRot) * 2.2, 0, gatePos.z + Math.cos(gateRot) * 2.2);
-  add(gateFront, 3.2, T.gate.prompt, () => void useGate());
+  add(gateFront, 3.2, () => (game.flag('villageDone') ? T.gate.promptOpen : T.gate.prompt), () => void useGate());
 
   // ---------- estado inicial ----------
   player.setEquipment(game.data.equipped);
@@ -645,10 +613,21 @@ export function createVillage(ctx: VillageContext): Area {
     scene,
     world,
     spawn: new THREE.Vector3(4, 0, 4),
+    entries: {
+      // volta do mapa: logo dentro do portão, olhando para a praça
+      gate: { x: gatePos.x + Math.sin(gateRot) * 3.6, z: gatePos.z + Math.cos(gateRot) * 3.6, rot: gateRot },
+    },
     interactables,
     occluders,
-    env: ENV,
+    env: DAY_ENV,
     torchLit: false,
+    onEnter() {
+      if (!game.flag('letterRead')) ui.say(T.intro);
+    },
+    dispose() {
+      stopRefresh();
+      sky.dispose();
+    },
     update(dt, time, playerPos) {
       // sol acompanha o jogador (arredondado ao texel para a sombra não tremer)
       sunTarget.set(Math.round(playerPos.x / texel) * texel, 0, Math.round(playerPos.z / texel) * texel);

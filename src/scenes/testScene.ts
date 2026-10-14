@@ -240,6 +240,7 @@ export function createTestScene(opts: Options): Area {
     spawn: new THREE.Vector3(0, 0, 8),
     interactables,
     occluders,
+    onEnter: () => opts.say(content.testScene.intro),
     update(dt, time, playerPos) {
       crystal.rotation.y = time * 0.6;
       crystal.position.y = 2.0 + Math.sin(time * 1.5) * 0.08;
