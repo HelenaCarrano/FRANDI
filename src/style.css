@@ -306,7 +306,7 @@ kbd {
 .fps {
   position: absolute;
   top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
-  left: 0.5rem;
+  right: 0.5rem;
   font: 12px monospace;
   color: #8f8;
 }

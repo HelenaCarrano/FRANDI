@@ -2,18 +2,57 @@ import { content } from '../content';
 import { debug } from '../core/quality';
 
 /**
- * Interface HTML sobre o canvas: tela inicial, nome da área, dica de controles,
- * aviso de interação, botão de ação (toque) e caixa de diálogo com texto digitado.
+ * Interface HTML sobre o canvas: tela inicial (continuar/recomeçar), nome da área, dica de
+ * controles, aviso de interação, botão de ação (toque), diálogos com nome e escolhas,
+ * carta animada, loja, inventário, objetivo atual e avisos curtos.
  */
+
+export interface InventoryEntry {
+  id: string;
+  icon: string;
+  name: string;
+  desc: string;
+  usedIn: string;
+  count: number;
+}
+
+export interface ShopEntry {
+  id: string;
+  icon: string;
+  name: string;
+  desc: string;
+  price: number;
+  owned: boolean;
+}
+
+export interface ShopConfig {
+  title: string;
+  hint: string;
+  entries: () => ShopEntry[];
+  coins: () => number;
+  /** Tenta comprar; devolve true se a compra foi feita. */
+  onBuy: (id: string) => boolean;
+}
+
+const TYPE_SPEED = 38; // caracteres por segundo
+
 export class UI {
   private readonly root: HTMLDivElement;
   private readonly prompt: HTMLDivElement;
   private readonly actionBtn: HTMLButtonElement;
   private readonly dialog: HTMLDivElement;
+  private readonly dialogSpeaker: HTMLDivElement;
   private readonly dialogText: HTMLParagraphElement;
+  private readonly dialogOptions: HTMLDivElement;
   private readonly dialogHint: HTMLDivElement;
   private readonly areaTitle: HTMLDivElement;
   private readonly hint: HTMLDivElement;
+  private readonly objective: HTMLDivElement;
+  private readonly objectiveText: HTMLSpanElement;
+  private readonly inventory: HTMLDivElement;
+  private readonly coinsBadge: HTMLDivElement;
+  private readonly popover: HTMLDivElement;
+  private readonly toasts: HTMLDivElement;
   private readonly fps: HTMLDivElement | null = null;
 
   private lines: readonly string[] = [];
@@ -21,6 +60,14 @@ export class UI {
   private typed = 0;
   private typing = false;
   private onDialogEnd: (() => void) | null = null;
+  private asking: ((i: number) => void) | null = null;
+  private optionButtons: HTMLButtonElement[] = [];
+
+  private letterEl: HTMLDivElement | null = null;
+  private letterState: { paras: HTMLElement[]; texts: string[]; index: number; typed: number; done: boolean; close: () => void } | null = null;
+  private shopEl: HTMLDivElement | null = null;
+  private shopClose: (() => void) | null = null;
+  private popoverTimer = 0;
 
   constructor(
     private readonly isTouch: boolean,
@@ -34,6 +81,19 @@ export class UI {
     this.areaTitle = el('div', 'area-title', root);
     this.hint = el('div', 'controls-hint', root);
     this.hint.textContent = isTouch ? content.controls.mobile : content.controls.desktop;
+
+    this.objective = el('div', 'objective', root);
+    this.objective.hidden = true;
+    el('span', 'objective-label', this.objective).textContent = 'Objetivo';
+    this.objectiveText = el('span', 'objective-text', this.objective);
+
+    this.toasts = el('div', 'toasts', root);
+
+    this.inventory = el('div', 'inventory', root);
+    this.coinsBadge = el('div', 'coins', this.inventory);
+    this.popover = el('div', 'item-popover', root);
+    this.popover.hidden = true;
+    this.popover.addEventListener('pointerdown', (e) => e.stopPropagation());
 
     this.prompt = el('div', 'interact-prompt', root);
     this.prompt.hidden = true;
@@ -50,15 +110,18 @@ export class UI {
     this.dialog = el('div', 'dialog', root);
     this.dialog.hidden = true;
     const box = el('div', 'dialog-box', this.dialog);
+    this.dialogSpeaker = el('div', 'dialog-speaker', box);
     this.dialogText = el('p', 'dialog-text', box);
+    this.dialogOptions = el('div', 'dialog-options', box);
     this.dialogHint = el('div', 'dialog-hint', box);
     this.dialogHint.textContent = isTouch ? content.controls.dialogContinue : 'E / Espaço ▸';
     this.dialog.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      onAction();
+      if (!this.asking) onAction();
     });
 
+    window.addEventListener('keydown', (e) => this.onKey(e));
     if (debug) this.fps = el('div', 'fps', root);
   }
 
@@ -79,8 +142,9 @@ export class UI {
   /**
    * Tela de abertura. Mostra o carregamento e resolve no primeiro toque/tecla depois que
    * `ready` terminar (o toque também libera o áudio, por regra dos navegadores).
+   * Com progresso salvo, oferece "Continuar" e "Recomeçar" (com confirmação).
    */
-  showStartScreen(ready: Promise<unknown>): Promise<void> {
+  showStartScreen(ready: Promise<unknown>, hasSave = false): Promise<'continue' | 'new'> {
     return new Promise((resolve) => {
       const screen = el('div', 'start-screen', document.body);
       const title = el('h1', 'start-title', screen);
@@ -93,21 +157,55 @@ export class UI {
       this.startCta = cta;
       const track = el('div', 'loading-track', screen);
       this.loadingBar = el('div', 'loading-bar', track);
+      const choices = el('div', 'start-choices', screen);
+      choices.hidden = true;
 
-      const go = () => {
-        window.removeEventListener('keydown', go);
-        screen.removeEventListener('pointerdown', go);
+      const go = (choice: 'continue' | 'new') => {
+        window.removeEventListener('keydown', onKey);
+        screen.removeEventListener('pointerdown', onTap);
         screen.classList.add('fade-out');
         setTimeout(() => screen.remove(), 900);
-        resolve();
+        resolve(choice);
       };
-      ready.then(() => {
-        cta.textContent = this.isTouch ? content.game.start : content.game.startDesktop;
-        cta.classList.remove('loading');
-        track.classList.add('done');
-        window.addEventListener('keydown', go);
-        screen.addEventListener('pointerdown', go);
-      }, () => {});
+      const onKey = () => go('continue');
+      const onTap = () => go('continue');
+
+      const showMenu = () => {
+        choices.replaceChildren();
+        choices.hidden = false;
+        const cont = el('button', 'btn primary', choices);
+        cont.textContent = content.ui.continue;
+        cont.addEventListener('click', () => go('continue'));
+        const fresh = el('button', 'btn', choices);
+        fresh.textContent = content.ui.newGame;
+        fresh.addEventListener('click', () => {
+          choices.replaceChildren();
+          const msg = el('p', 'start-confirm', choices);
+          msg.textContent = content.ui.confirmNew;
+          const yes = el('button', 'btn danger', choices);
+          yes.textContent = content.ui.yes;
+          yes.addEventListener('click', () => go('new'));
+          const back = el('button', 'btn primary', choices);
+          back.textContent = content.ui.no;
+          back.addEventListener('click', showMenu);
+        });
+      };
+
+      ready.then(
+        () => {
+          track.classList.add('done');
+          cta.classList.remove('loading');
+          if (hasSave) {
+            cta.textContent = '';
+            showMenu();
+          } else {
+            cta.textContent = this.isTouch ? content.game.start : content.game.startDesktop;
+            window.addEventListener('keydown', onKey);
+            screen.addEventListener('pointerdown', onTap);
+          }
+        },
+        () => {},
+      );
     });
   }
 
@@ -131,25 +229,83 @@ export class UI {
     }
   }
 
+  /** Verdadeiro enquanto qualquer janela (diálogo, escolha, carta, loja) estiver aberta. */
   get inDialog() {
-    return !this.dialog.hidden;
+    return !this.dialog.hidden || this.letterEl !== null || this.shopEl !== null || this.endEl !== null;
   }
 
-  say(lines: readonly string[], onEnd?: () => void) {
-    if (lines.length === 0) return;
+  // ---------- diálogo ----------
+
+  say(lines: readonly string[], onEnd?: () => void, speaker?: string) {
+    if (lines.length === 0) {
+      onEnd?.();
+      return;
+    }
     this.lines = lines;
     this.lineIndex = 0;
     this.onDialogEnd = onEnd ?? null;
-    this.dialog.hidden = false;
-    this.hint.classList.remove('show');
-    this.prompt.hidden = true;
-    this.actionBtn.hidden = true;
+    this.openDialog(speaker);
+    this.dialogOptions.replaceChildren();
     this.startLine();
   }
 
-  /** Avança o diálogo: completa a linha atual ou passa para a próxima. */
+  /** Versão com promessa: resolve quando o jogador termina de ler. */
+  tell(lines: readonly string[], speaker?: string): Promise<void> {
+    return new Promise((resolve) => this.say(lines, resolve, speaker));
+  }
+
+  /** Pergunta com botões. Resolve com o índice da opção escolhida (teclas 1-4 também valem). */
+  ask(question: string, options: readonly string[], speaker?: string): Promise<number> {
+    return new Promise((resolve) => {
+      this.lines = [question];
+      this.lineIndex = 0;
+      this.onDialogEnd = null;
+      this.openDialog(speaker);
+      this.startLine();
+      this.dialogOptions.replaceChildren();
+      this.optionButtons = options.map((label, i) => {
+        const b = el('button', 'btn option', this.dialogOptions);
+        b.textContent = this.isTouch ? label : `${i + 1}. ${label}`;
+        b.addEventListener('pointerdown', (e) => e.stopPropagation());
+        b.addEventListener('click', () => this.choose(i));
+        return b;
+      });
+      this.asking = (i) => {
+        this.dialog.hidden = true;
+        this.dialogOptions.replaceChildren();
+        this.optionButtons = [];
+        resolve(i);
+      };
+      this.dialogHint.classList.remove('show');
+    });
+  }
+
+  private choose(i: number) {
+    const fn = this.asking;
+    this.asking = null;
+    fn?.(i);
+  }
+
+  private openDialog(speaker?: string) {
+    this.dialog.hidden = false;
+    this.dialogSpeaker.textContent = speaker ?? '';
+    this.dialogSpeaker.hidden = !speaker;
+    this.hint.classList.remove('show');
+    this.prompt.hidden = true;
+    this.actionBtn.hidden = true;
+    this.hidePopover();
+  }
+
+  /** Avança o que estiver aberto: diálogo (completa a linha ou passa) ou carta. */
   advance() {
-    if (!this.inDialog) return;
+    if (this.letterState) {
+      this.advanceLetter();
+      return;
+    }
+    if (!this.dialog.hidden && !this.asking) this.advanceDialog();
+  }
+
+  private advanceDialog() {
     const line = this.lines[this.lineIndex];
     if (this.typing) {
       this.typed = line.length;
@@ -176,14 +332,213 @@ export class UI {
     this.dialogHint.classList.remove('show');
   }
 
+  // ---------- carta animada ----------
+
+  /** Mostra uma carta com o texto aparecendo aos poucos. Resolve quando ela é guardada. */
+  letter(title: string, paragraphs: readonly string[], closeLabel: string): Promise<void> {
+    return new Promise((resolve) => {
+      this.hidePopover();
+      const overlay = el('div', 'letter-overlay', this.root);
+      const card = el('div', 'letter', overlay);
+      el('h2', 'letter-title', card).textContent = title;
+      const paras = paragraphs.map((_, i) => {
+        const p = el('p', 'letter-p' + (i === paragraphs.length - 1 ? ' sign' : ''), card);
+        p.textContent = '';
+        return p;
+      });
+      const btn = el('button', 'btn primary letter-close', card);
+      btn.textContent = closeLabel;
+      btn.hidden = true;
+      this.letterEl = overlay;
+      const finish = () => {
+        overlay.remove();
+        this.letterEl = null;
+        this.letterState = null;
+        resolve();
+      };
+      btn.addEventListener('click', finish);
+      this.letterState = { paras, texts: [...paragraphs], index: 0, typed: 0, done: false, close: finish };
+      overlay.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        if ((e.target as HTMLElement).closest('button')) return;
+        this.advanceLetter();
+      });
+      this.letterBtn = btn;
+    });
+  }
+  private letterBtn: HTMLButtonElement | null = null;
+
+  private advanceLetter() {
+    const st = this.letterState;
+    if (!st) return;
+    if (!st.done) {
+      // primeiro toque completa o texto todo
+      st.paras.forEach((p, i) => (p.textContent = st.texts[i]));
+      st.done = true;
+      if (this.letterBtn) this.letterBtn.hidden = false;
+    } else {
+      st.close();
+    }
+  }
+
+  // ---------- loja ----------
+
+  openShop(cfg: ShopConfig): Promise<void> {
+    return new Promise((resolve) => {
+      this.hidePopover();
+      const overlay = el('div', 'shop-overlay', this.root);
+      const panel = el('div', 'shop', overlay);
+      const head = el('div', 'shop-head', panel);
+      el('h2', 'shop-title', head).textContent = cfg.title;
+      const coins = el('div', 'coins', head);
+      const list = el('div', 'shop-list', panel);
+      el('p', 'shop-hint', panel).textContent = cfg.hint;
+      const close = el('button', 'btn primary shop-close', panel);
+      close.textContent = content.ui.close;
+
+      const render = () => {
+        coins.textContent = `🪙 ${cfg.coins()}`;
+        list.replaceChildren();
+        for (const e of cfg.entries()) {
+          const row = el('div', 'shop-row', list);
+          el('div', 'shop-icon', row).textContent = e.icon;
+          const info = el('div', 'shop-info', row);
+          el('div', 'shop-name', info).textContent = e.name;
+          el('div', 'shop-desc', info).textContent = e.desc;
+          const buy = el('button', 'btn buy', row);
+          if (e.owned) {
+            buy.textContent = content.ui.owned;
+            buy.disabled = true;
+          } else {
+            const can = cfg.coins() >= e.price;
+            buy.textContent = `🪙 ${e.price}`;
+            buy.classList.toggle('poor', !can);
+            buy.title = can ? content.ui.buy : content.ui.notEnough;
+            buy.addEventListener('click', () => {
+              if (cfg.onBuy(e.id)) render();
+            });
+          }
+        }
+      };
+      render();
+      overlay.addEventListener('pointerdown', (e) => e.stopPropagation());
+      this.shopEl = overlay;
+      const done = () => {
+        overlay.remove();
+        this.shopEl = null;
+        this.shopClose = null;
+        resolve();
+      };
+      this.shopClose = done;
+      close.addEventListener('click', done);
+    });
+  }
+
+  // ---------- cartão final de área ----------
+
+  private endEl: HTMLDivElement | null = null;
+
+  showEndCard(title: string, text: string, buttonLabel: string): Promise<void> {
+    return new Promise((resolve) => {
+      const overlay = el('div', 'end-overlay', this.root);
+      const box = el('div', 'end-card', overlay);
+      el('h2', 'end-title', box).textContent = title;
+      el('p', 'end-text', box).textContent = text;
+      const btn = el('button', 'btn primary', box);
+      btn.textContent = buttonLabel;
+      overlay.addEventListener('pointerdown', (e) => e.stopPropagation());
+      this.endEl = overlay;
+      btn.addEventListener('click', () => {
+        overlay.remove();
+        this.endEl = null;
+        resolve();
+      });
+    });
+  }
+
+  // ---------- objetivo, avisos e inventário ----------
+
+  setObjective(text: string | null) {
+    this.objective.hidden = text === null;
+    if (text !== null && this.objectiveText.textContent !== text) {
+      this.objectiveText.textContent = text;
+      this.objective.classList.remove('flash');
+      void this.objective.offsetWidth;
+      this.objective.classList.add('flash');
+    }
+  }
+
+  /** Aviso curto no alto da tela ("+5 moedas", "Item recebido: ..."). */
+  toast(text: string) {
+    const t = el('div', 'toast', this.toasts);
+    t.textContent = text;
+    while (this.toasts.children.length > 4) this.toasts.firstElementChild?.remove();
+    setTimeout(() => t.classList.add('out'), 2600);
+    setTimeout(() => t.remove(), 3200);
+  }
+
+  setInventory(entries: readonly InventoryEntry[], coins: number) {
+    this.coinsBadge.textContent = `🪙 ${coins}`;
+    this.inventory.querySelectorAll('.slot').forEach((n) => n.remove());
+    for (const e of entries) {
+      const slot = el('button', 'slot', this.inventory);
+      slot.textContent = e.icon;
+      slot.setAttribute('aria-label', e.name);
+      if (e.count > 1) el('span', 'slot-count', slot).textContent = String(e.count);
+      slot.addEventListener('pointerdown', (ev) => ev.stopPropagation());
+      slot.addEventListener('click', () => this.showPopover(e));
+    }
+  }
+
+  private showPopover(e: InventoryEntry) {
+    this.popover.replaceChildren();
+    el('div', 'pop-title', this.popover).textContent = `${e.icon} ${e.name}`;
+    el('div', 'pop-desc', this.popover).textContent = e.desc;
+    el('div', 'pop-used', this.popover).textContent = content.ui.usedIn.replace('{where}', e.usedIn);
+    this.popover.hidden = false;
+    clearTimeout(this.popoverTimer);
+    this.popoverTimer = window.setTimeout(() => this.hidePopover(), 6000);
+  }
+
+  private hidePopover() {
+    this.popover.hidden = true;
+    clearTimeout(this.popoverTimer);
+  }
+
+  // ---------- teclado ----------
+
+  private onKey(e: KeyboardEvent) {
+    if (this.asking && /^Digit[1-4]$/.test(e.code)) {
+      const i = Number(e.code.slice(5)) - 1;
+      if (i < this.optionButtons.length) this.choose(i);
+    } else if (e.code === 'Escape') {
+      if (this.shopClose) this.shopClose();
+      else this.hidePopover();
+    }
+  }
+
   update(dt: number, fps?: number) {
     if (this.typing) {
       const line = this.lines[this.lineIndex];
-      this.typed = Math.min(line.length, this.typed + dt * 38);
+      this.typed = Math.min(line.length, this.typed + dt * TYPE_SPEED);
       this.dialogText.textContent = line.slice(0, Math.floor(this.typed));
       if (this.typed >= line.length) {
         this.typing = false;
-        this.dialogHint.classList.add('show');
+        if (!this.asking) this.dialogHint.classList.add('show');
+      }
+    }
+    const st = this.letterState;
+    if (st && !st.done) {
+      st.typed += dt * (TYPE_SPEED + 10);
+      let left = Math.floor(st.typed);
+      for (let i = 0; i < st.texts.length; i++) {
+        const t = st.texts[i];
+        st.paras[i].textContent = t.slice(0, Math.max(0, Math.min(t.length, left)));
+        left -= t.length + 8; // pequena pausa entre parágrafos
+      }
+      if (left >= 0) {
+        st.done = true;
+        if (this.letterBtn) this.letterBtn.hidden = false;
       }
     }
     if (this.fps && fps !== undefined) this.fps.textContent = `${fps.toFixed(0)} fps`;

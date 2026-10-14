@@ -142,6 +142,23 @@ export class Torch {
   /** Intensidade base da luz (0 apaga, usado no modo de inspeção). */
   baseIntensity = TORCH.intensity;
 
+  private lit = true;
+
+  get isLit() {
+    return this.lit;
+  }
+
+  /**
+   * Acende ou apaga a tocha (de dia ela fica apagada). Apagada, a luz sai da cena, então
+   * ela também deixa de gastar o mapa de sombras de seis faces.
+   */
+  setLit(on: boolean) {
+    this.lit = on;
+    this.light.visible = on;
+    this.flame.mesh.visible = on;
+    this.sparks.points.visible = on;
+  }
+
   update(dt: number) {
     this.t += dt;
     const t = this.t;
@@ -152,6 +169,8 @@ export class Torch {
       parent.getWorldQuaternion(this.parentQ);
       this.object.quaternion.copy(this.parentQ).invert();
     }
+
+    if (!this.lit) return;
 
     // ruído barato: soma de senos com frequências "quebradas"
     const n = Math.sin(t * 9.1) * 0.5 + Math.sin(t * 15.7 + 1.3) * 0.3 + Math.sin(t * 23.3 + 2.1) * 0.2;

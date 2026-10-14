@@ -30,7 +30,7 @@ const PANTS_WIDTH = 1.22;
 const SHOE_WIDTH = 1.12;
 
 export const MATHEUS_BASE = CHARACTER('Mage');
-export const MATHEUS_ASSETS = [MATHEUS_BASE, CHARACTER('knight_head')];
+export const MATHEUS_ASSETS = [MATHEUS_BASE, CHARACTER('knight_head'), CHARACTER('sword_1handed')];
 
 type Recolor = Record<string, number>;
 const L = MATHEUS_LOOK;

@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { Torch } from './torch';
 import { buildMatheus, type MatheusRig } from './matheusModel';
+import { buildBackpack } from './backpack';
+import { CHARACTER, model } from '../core/assets';
 import type { CollisionWorld } from '../core/collision';
 
 /**
@@ -32,6 +34,8 @@ export class Player {
   readonly rig: MatheusRig;
   /** Ponto de encaixe nas costas (espada, mochila) para a evolução visual. */
   readonly backSlot = new THREE.Group();
+  private sword: THREE.Object3D | null = null;
+  private backpack: THREE.Object3D | null = null;
 
   private readonly velocity = new THREE.Vector3();
   private readonly targetVel = new THREE.Vector3();
@@ -64,6 +68,28 @@ export class Player {
 
     this.backSlot.position.set(0, 0, -0.35);
     this.rig.bones.chest.add(this.backSlot);
+  }
+
+  /** Mostra ou esconde a espada e a mochila nas costas (evolução visual do Matheus). */
+  setEquipment(eq: { sword: boolean; backpack: boolean }) {
+    if (eq.backpack && !this.backpack) {
+      this.backpack = buildBackpack();
+      this.backSlot.add(this.backpack);
+    }
+    if (eq.sword && !this.sword) {
+      // espada atravessada nas costas: cabo embaixo à esquerda, ponta sobre o ombro direito
+      const blade = model(CHARACTER('sword_1handed'));
+      blade.traverse((o) => (o.castShadow = true));
+      blade.scale.setScalar(0.5);
+      blade.position.set(0, -0.12, 0);
+      this.sword = new THREE.Group();
+      this.sword.add(blade);
+      this.sword.position.set(0.02, 0.0, -0.1);
+      this.sword.rotation.z = -0.55;
+      this.backSlot.add(this.sword);
+    }
+    if (this.backpack) this.backpack.visible = eq.backpack;
+    if (this.sword) this.sword.visible = eq.sword;
   }
 
   /** Define a pose do braço direito a partir de um instante de qualquer clipe. */

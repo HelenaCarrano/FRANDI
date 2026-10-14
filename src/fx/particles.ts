@@ -148,7 +148,7 @@ export class Dust {
         varying float vAlpha;
         void main() {
           float d = length(gl_PointCoord - 0.5);
-          float a = smoothstep(0.5, 0.1, d) * vAlpha * 0.7;
+          float a = smoothstep(0.5, 0.1, d) * vAlpha * 0.85;
           if (a < 0.01) discard;
           gl_FragColor = vec4(uColor * a, a);
         }
@@ -165,5 +165,113 @@ export class Dust {
   update(time: number, lightPos: THREE.Vector3) {
     this.material.uniforms.uTime.value = time;
     this.material.uniforms.uLightPos.value.copy(lightPos);
+  }
+}
+
+/**
+ * Fumaça de chaminé: bolinhas macias que sobem, crescem e somem. Cada emissor é uma
+ * posição de mundo (boca da chaminé). Fica em espaço de mundo; adicione `points` à cena.
+ */
+export class Smoke {
+  readonly points: THREE.Points;
+  private readonly positions: Float32Array;
+  private readonly velocity: Float32Array;
+  private readonly age: Float32Array;
+  private readonly life: Float32Array;
+  private readonly alpha: Float32Array;
+  private readonly size: Float32Array;
+  private cursor = 0;
+  private acc = 0;
+
+  constructor(
+    private readonly emitters: readonly THREE.Vector3[],
+    private readonly count = 80,
+    private readonly rate = 2.4,
+    color = new THREE.Color(0xfbf6ee),
+  ) {
+    this.positions = new Float32Array(count * 3);
+    this.velocity = new Float32Array(count * 3);
+    this.age = new Float32Array(count);
+    this.life = new Float32Array(count);
+    this.alpha = new Float32Array(count);
+    this.size = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+      this.positions[i * 3 + 1] = -999;
+      this.life[i] = 0;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(this.positions, 3));
+    geo.setAttribute('aAlpha', new THREE.BufferAttribute(this.alpha, 1));
+    geo.setAttribute('aSize', new THREE.BufferAttribute(this.size, 1));
+    const mat = new THREE.ShaderMaterial({
+      uniforms: { uColor: { value: color }, uScale: pointScale },
+      vertexShader: /* glsl */ `
+        attribute float aAlpha;
+        attribute float aSize;
+        varying float vAlpha;
+        uniform float uScale;
+        void main() {
+          vAlpha = aAlpha;
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = aSize * projectionMatrix[1][1] * uScale / -mv.z;
+          gl_Position = projectionMatrix * mv;
+        }
+      `,
+      fragmentShader: /* glsl */ `
+        uniform vec3 uColor;
+        varying float vAlpha;
+        void main() {
+          float d = length(gl_PointCoord - 0.5);
+          float a = smoothstep(0.5, 0.12, d) * vAlpha;
+          if (a < 0.01) discard;
+          gl_FragColor = vec4(uColor, a);
+        }
+      `,
+      transparent: true,
+      depthWrite: false,
+    });
+    this.points = new THREE.Points(geo, mat);
+    this.points.frustumCulled = false;
+    this.points.renderOrder = 5;
+  }
+
+  update(dt: number) {
+    this.acc += dt * this.rate * this.emitters.length;
+    while (this.acc >= 1) {
+      this.acc -= 1;
+      const e = this.emitters[Math.floor(Math.random() * this.emitters.length)];
+      const i = this.cursor;
+      this.cursor = (this.cursor + 1) % this.count;
+      this.positions[i * 3] = e.x + (Math.random() - 0.5) * 0.15;
+      this.positions[i * 3 + 1] = e.y;
+      this.positions[i * 3 + 2] = e.z + (Math.random() - 0.5) * 0.15;
+      this.velocity[i * 3] = 0.25 + Math.random() * 0.15; // vento leve
+      this.velocity[i * 3 + 1] = 0.55 + Math.random() * 0.25;
+      this.velocity[i * 3 + 2] = -0.1 + Math.random() * 0.1;
+      this.age[i] = 0;
+      this.life[i] = 3.2 + Math.random() * 1.4;
+    }
+    for (let i = 0; i < this.count; i++) {
+      if (this.life[i] <= 0) {
+        this.alpha[i] = 0;
+        continue;
+      }
+      this.age[i] += dt;
+      const t = this.age[i] / this.life[i];
+      if (t >= 1) {
+        this.life[i] = 0;
+        this.alpha[i] = 0;
+        continue;
+      }
+      this.positions[i * 3] += this.velocity[i * 3] * dt;
+      this.positions[i * 3 + 1] += this.velocity[i * 3 + 1] * dt;
+      this.positions[i * 3 + 2] += this.velocity[i * 3 + 2] * dt;
+      this.alpha[i] = Math.sin(Math.PI * Math.min(1, t * 1.15)) * 0.7;
+      this.size[i] = 0.5 + t * 1.5;
+    }
+    const geo = this.points.geometry;
+    geo.attributes.position.needsUpdate = true;
+    geo.attributes.aAlpha.needsUpdate = true;
+    geo.attributes.aSize.needsUpdate = true;
   }
 }

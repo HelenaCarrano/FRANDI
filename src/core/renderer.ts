@@ -6,6 +6,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import type { QualitySettings } from './quality';
+import { DARK_ENV, type AreaEnv } from '../scenes/types';
 import { pointScale } from '../fx/particles';
 
 /** Vinheta escura + granulado leve, aplicados depois do tone mapping. */
@@ -58,6 +59,7 @@ export class GameRenderer {
   private readonly aoPass: GTAOPass;
   private readonly bloomPass: UnrealBloomPass;
   private readonly finalPass: ShaderPass;
+  private bloomAllowed = true;
 
   constructor(
     container: HTMLElement,
@@ -103,6 +105,20 @@ export class GameRenderer {
 
     window.addEventListener('resize', () => this.resize());
     this.resize();
+    this.applyEnv(DARK_ENV);
+  }
+
+  /** Aplica o clima gráfico da área (exposição, vinheta, granulado, bloom). */
+  applyEnv(env: AreaEnv) {
+    this.renderer.toneMappingExposure = env.exposure;
+    this.finalPass.uniforms.uVignette.value = env.vignette;
+    this.finalPass.uniforms.uGrain.value = env.grain;
+    if (env.bloom) {
+      this.bloomPass.strength = env.bloom.strength;
+      this.bloomPass.radius = env.bloom.radius;
+      this.bloomPass.threshold = env.bloom.threshold;
+    }
+    this.bloomPass.enabled = !!env.bloom && this.quality.bloom && this.bloomAllowed;
   }
 
   /** Degraus de redução de qualidade usados pelo AdaptiveQuality. */
@@ -114,6 +130,7 @@ export class GameRenderer {
       this.renderer.setPixelRatio(this.quality.pixelRatio);
       this.resize();
     } else if (step === 3) {
+      this.bloomAllowed = false;
       this.bloomPass.enabled = false;
     }
     console.info(`[qualidade] reduzida para o degrau ${step}`);

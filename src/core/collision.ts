@@ -17,24 +17,57 @@ export interface BoxCollider {
   maxZ: number;
 }
 
-export type Collider = CircleCollider | BoxCollider;
+/** Mantém o jogador DENTRO de um círculo (limite do mapa). */
+export interface BoundsCollider {
+  kind: 'bounds';
+  x: number;
+  z: number;
+  r: number;
+}
+
+export type Collider = CircleCollider | BoxCollider | BoundsCollider;
 
 export class CollisionWorld {
   readonly colliders: Collider[] = [];
 
   addCircle(x: number, z: number, r: number) {
-    this.colliders.push({ kind: 'circle', x, z, r });
+    const c: CircleCollider = { kind: 'circle', x, z, r };
+    this.colliders.push(c);
+    return c;
   }
 
   addBox(minX: number, maxX: number, minZ: number, maxZ: number) {
-    this.colliders.push({ kind: 'box', minX, maxX, minZ, maxZ });
+    const c: BoxCollider = { kind: 'box', minX, maxX, minZ, maxZ };
+    this.colliders.push(c);
+    return c;
+  }
+
+  addBounds(x: number, z: number, r: number) {
+    const c: BoundsCollider = { kind: 'bounds', x, z, r };
+    this.colliders.push(c);
+    return c;
+  }
+
+  remove(c: Collider) {
+    const i = this.colliders.indexOf(c);
+    if (i >= 0) this.colliders.splice(i, 1);
   }
 
   /** Empurra a posição para fora de qualquer colisor (corpo do jogador = círculo de raio r). */
   resolve(pos: THREE.Vector3, r: number) {
     for (let pass = 0; pass < 2; pass++) {
       for (const c of this.colliders) {
-        if (c.kind === 'circle') {
+        if (c.kind === 'bounds') {
+          const dx = pos.x - c.x;
+          const dz = pos.z - c.z;
+          const max = c.r - r;
+          const d2 = dx * dx + dz * dz;
+          if (d2 > max * max) {
+            const d = Math.sqrt(d2);
+            pos.x = c.x + (dx / d) * max;
+            pos.z = c.z + (dz / d) * max;
+          }
+        } else if (c.kind === 'circle') {
           const dx = pos.x - c.x;
           const dz = pos.z - c.z;
           const min = c.r + r;
