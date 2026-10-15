@@ -23,7 +23,10 @@ const DEFS: Record<AreaId, AreaDef> = {
     return { assets: m.VILLAGE_ASSETS, create: m.createVillage };
   } },
   map: {}, // o mapa é uma tela de pergaminho (ui/kingdomMap.ts), não uma área 3D
-  forest: {},
+  forest: { load: async () => {
+    const m = await import('./forest');
+    return { assets: m.FOREST_ASSETS, create: m.createForest };
+  } },
   visual: { load: async () => {
     const m = await import('./lookTest');
     return { assets: m.LOOK_TEST_ASSETS, create: m.createLookTest };

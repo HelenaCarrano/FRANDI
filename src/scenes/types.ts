@@ -96,6 +96,8 @@ export interface AreaContext {
   quality: QualitySettings;
   /** A câmera do jogo (o céu e a sombra do sol acompanham). */
   camera: THREE.PerspectiveCamera;
+  /** Luz de preenchimento do Matheus (só vale quando a tocha está acesa). */
+  fillLight: THREE.PointLight;
   goTo: (id: AreaId, entry?: string) => Promise<void>;
   /** Abre o Mapa do Reino; se o jogador escolher outro lugar, viaja para lá. */
   openMap: () => Promise<void>;

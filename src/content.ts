@@ -310,6 +310,54 @@ export const content = {
     },
   },
 
+  // ---------- Floresta dos Sussurros ----------
+  // Textos de exemplo ([EXEMPLO]).
+  forest: {
+    areaName: 'Floresta dos Sussurros',
+    intro: [
+      'A estrada de terra entra na mata. A luz do fim de tarde ainda atravessa as copas.',
+      'Mas a floresta escurece depressa. Dizem que, quando a noite cai, os vagalumes mostram o caminho a quem sabe segui-los.',
+    ],
+    objective: {
+      follow: 'Siga a trilha pela floresta',
+      fireflies: 'Siga os vagalumes',
+      thorns: 'Corte os espinhos com a espada',
+      portal: 'Chegue ao portal de pedra',
+      done: 'Volte ao mapa: novos caminhos se abriram',
+    },
+    back: {
+      prompt: 'Voltar ao mapa',
+    },
+    horseStops: [
+      '{name} para na beira da sombra, bufa e recua dois passos.',
+      'Ele tem medo do escuro. Vai esperar aqui por você, e vai estar aqui na volta.',
+    ],
+    deadEnd: [
+      [
+        'A trilha termina numa clareira vazia, com um tronco caído e cogumelos tímidos.',
+        'Os vagalumes não vieram para cá. Quem sabe eles brilhem em outro caminho.',
+      ],
+      [
+        'Mais uma clareira sem saída. Os vagalumes passaram direto por aqui, sem nem olhar.',
+        'Hora de voltar até a bifurcação e escolher o outro lado.',
+      ],
+    ],
+    thorns: {
+      prompt: 'Cortar os espinhos',
+      noSword: ['Os espinhos são grossos demais para passar. Algo bem afiado resolveria.'],
+      cut: ['Você abre caminho a golpes de espada. Folhas e gravetos voam para todo lado.'],
+    },
+    portal: {
+      prompt: 'Examinar o portal',
+      lines: [
+        'No fim da trilha, um arco de pedra muito antigo brilha com símbolos azuis.',
+        'Os símbolos lembram uma escrita que você já viu... mas ainda não sabe onde.',
+        'Do outro lado do arco, o ar tem cheiro de memória. As Ruínas esperam.',
+      ],
+      done: 'O portal pulsa devagar, como um coração. O caminho para as Ruínas está aberto.',
+    },
+  },
+
   // ---------- Mapa do Reino (pergaminho) ----------
   // Textos de exemplo ([EXEMPLO]): troque pelos nomes e piadas reais.
   kingdomMap: {

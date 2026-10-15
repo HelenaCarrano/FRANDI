@@ -47,7 +47,7 @@ export class SceneManager {
 
   private context(): AreaContext {
     const { ui, game, player, quality } = this.deps;
-    return { ui, game, player, quality, camera: this.deps.follow.camera, goTo: (id, entry) => this.goTo(id, entry), openMap: () => this.openMap() };
+    return { ui, game, player, quality, camera: this.deps.follow.camera, fillLight: this.fillLight, goTo: (id, entry) => this.goTo(id, entry), openMap: () => this.openMap() };
   }
 
   /** Carrega os modelos e cria a área, ainda sem mostrá-la. */

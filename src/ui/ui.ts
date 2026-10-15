@@ -544,7 +544,7 @@ export class UI {
       this.horseBtn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        this.horsePress?.();
+        if (!this.inDialog) this.horsePress?.();
       });
       window.addEventListener('keydown', (e) => {
         if (e.code === 'KeyH' && !e.repeat && !this.inDialog && !this.horseBtn!.hidden) this.horsePress?.();

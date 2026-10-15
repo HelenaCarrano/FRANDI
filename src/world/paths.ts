@@ -55,10 +55,31 @@ export class Path {
     return best - this.widthAt(Math.round(bi)) / 2;
   }
 
-  /** Ponto na fração f (0 a 1) do comprimento. */
+  /** Ponto na fração f (0 a 1) do comprimento (interpolado entre as amostras). */
   at(f: number) {
-    const i = Math.min(this.pts.length - 1, Math.max(0, Math.round(f * (this.pts.length - 1))));
-    return this.pts[i];
+    const x = Math.min(this.pts.length - 1, Math.max(0, f * (this.pts.length - 1)));
+    const i = Math.min(this.pts.length - 2, Math.floor(x));
+    return this.pts[i].clone().lerp(this.pts[i + 1], x - i);
+  }
+
+  /** Fração (0 a 1) do ponto da trilha mais perto de (x, z). */
+  progress(x: number, z: number) {
+    let best = Infinity;
+    let at = 0;
+    for (let i = 0; i < this.pts.length - 1; i++) {
+      const a = this.pts[i];
+      const b = this.pts[i + 1];
+      const dx = b.x - a.x;
+      const dz = b.y - a.y;
+      const len2 = dx * dx + dz * dz;
+      const t = len2 === 0 ? 0 : Math.min(1, Math.max(0, ((x - a.x) * dx + (z - a.y) * dz) / len2));
+      const d = Math.hypot(x - (a.x + dx * t), z - (a.y + dz * t));
+      if (d < best) {
+        best = d;
+        at = i + t;
+      }
+    }
+    return at / (this.pts.length - 1);
   }
 
   /** Direção (unitária) da trilha na fração f. */

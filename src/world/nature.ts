@@ -214,6 +214,37 @@ export function mushroomGeometry(): THREE.BufferGeometry {
   return finish([stem, cap], rng(9), 0.04);
 }
 
+/** Haste do cogumelo (para brilhar só o chapéu, separamos as duas partes). */
+export function mushroomStemGeometry(): THREE.BufferGeometry {
+  return finish([bake(new THREE.CylinderGeometry(0.035, 0.05, 0.2, 5, 1, true).translate(0, 0.1, 0), () => hex(0xe8dcc0))], rng(10), 0.04);
+}
+
+/** Chapéu do cogumelo, em branco: a cor que brilha vem da instância. */
+export function mushroomCapGeometry(): THREE.BufferGeometry {
+  return finish([bake(new THREE.SphereGeometry(0.13, 7, 4, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.75, 1).translate(0, 0.2, 0), () => new THREE.Color(1, 1, 1))], rng(11), 0.0);
+}
+
+/** Moita de espinhos de ~2 m: um emaranhado escuro com dezenas de pontas voltadas para fora. */
+export function thornGeometry(seed: number): THREE.BufferGeometry {
+  const rand = rng(seed);
+  const parts: THREE.BufferGeometry[] = [];
+  const dark = hex(0x2e1d2e);
+  const tip = hex(0x9a3045);
+  parts.push(bake(blob(rand, 0.9, 1, 0.8, 0.3).translate(0, 0.8, 0), () => dark.clone()));
+  for (let i = 0; i < 26; i++) {
+    const len = 0.9 + rand() * 1.2;
+    const cone = new THREE.ConeGeometry(0.1 + rand() * 0.05, len, 4, 1, true).translate(0, len / 2, 0);
+    // aponta para fora a partir do centro, mais para os lados que para cima
+    const az = rand() * Math.PI * 2;
+    const el = 0.2 + rand() * 1.1;
+    cone.rotateZ(Math.PI / 2 - el);
+    cone.rotateY(az);
+    cone.translate(0, 0.7, 0);
+    parts.push(bake(cone, (_x, y) => dark.clone().lerp(tip, THREE.MathUtils.clamp((y - 0.7) / 1.4, 0, 1))));
+  }
+  return finish(parts, rand, 0.1);
+}
+
 // ---------- cerca rústica ----------
 
 export const FENCE_SEGMENT = 2.6;
