@@ -510,6 +510,29 @@ export class UI {
     this.bubbles.clear();
   }
 
+  // ---------- botão do mapa ----------
+
+  private mapBtn: HTMLButtonElement | null = null;
+  private mapPress: (() => void) | null = null;
+
+  /** Botão "Mapa" no canto da tela (depois que o Matheus compra o mapa). Tecla M também vale. */
+  setMapButton(visible: boolean, onPress?: () => void) {
+    if (!this.mapBtn) {
+      this.mapBtn = el('button', 'map-btn', this.root);
+      this.mapBtn.innerHTML = `<span>🗺️</span><span>${escapeHtml(content.kingdomMap.openButton)}${this.isTouch ? '' : ' (M)'}</span>`;
+      this.mapBtn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.mapPress?.();
+      });
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'KeyM' && !e.repeat && !this.inDialog && !this.mapBtn!.hidden) this.mapPress?.();
+      });
+    }
+    if (onPress) this.mapPress = onPress;
+    this.mapBtn.hidden = !visible;
+  }
+
   // ---------- botão do cavalo ----------
 
   private horseBtn: HTMLButtonElement | null = null;

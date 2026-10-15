@@ -619,3 +619,242 @@
     bottom: calc(env(safe-area-inset-bottom, 0px) + 5rem);
   }
 }
+
+/* ---------- Mapa do Reino (pergaminho) ---------- */
+.modal-box.kingdom {
+  width: min(64rem, 100%);
+  max-height: 100%;
+  padding: 0.5rem;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.map-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.4rem;
+}
+.map-title {
+  margin: 0;
+  font-family: var(--title-font);
+  font-size: 1.2rem;
+  color: var(--gold);
+  letter-spacing: 0.08em;
+}
+.map-close {
+  padding: 0.35rem 0.7rem;
+  font-size: 1rem;
+}
+.map-svg {
+  width: 100%;
+  height: auto;
+  max-height: 68vh;
+  filter: drop-shadow(0 10px 28px rgba(0, 0, 0, 0.6));
+}
+.map-svg .frame {
+  stroke: #6b4a22;
+  stroke-width: 4;
+}
+.map-svg .frame.thin {
+  stroke-width: 1.5;
+  opacity: 0.7;
+}
+.map-svg .doodle {
+  fill: none;
+  stroke: #7a5a30;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.75;
+}
+.map-svg .doodle .star {
+  fill: #c9a456;
+}
+.map-svg .compass-n {
+  fill: #5a3d18;
+  stroke: none;
+  font-family: var(--title-font);
+  font-size: 22px;
+}
+.map-svg .road {
+  fill: none;
+  stroke: #5b3d1a;
+  stroke-width: 5.5;
+  stroke-linecap: round;
+  stroke-dasharray: 1 13;
+  opacity: 0;
+  transition: opacity 1.4s ease;
+}
+.map-svg .road.open {
+  opacity: 0.9;
+}
+.map-svg .trail {
+  fill: none;
+  stroke: #b3361f;
+  stroke-width: 5;
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+.map-svg .hub {
+  fill: #5b3d1a;
+}
+.map-svg .place {
+  cursor: pointer;
+}
+.map-svg .place .icon {
+  fill: #f0e1b5;
+  stroke: #4a3118;
+  stroke-width: 3.2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  transition: opacity 1s ease;
+  transform-box: fill-box;
+  transform-origin: center bottom;
+}
+.map-svg .place .icon .door,
+.map-svg .place .icon .trunk,
+.map-svg .place .icon .ground,
+.map-svg .place .icon .flag {
+  fill: none;
+}
+.map-svg .place .icon .flag {
+  fill: #b3361f;
+}
+.map-svg .place:not(.open) .icon {
+  opacity: 0.25;
+}
+.map-svg .place .place-name {
+  font-family: var(--title-font);
+  font-size: 23px;
+  fill: #3a2410;
+  stroke: #f0e1b5;
+  stroke-width: 5;
+  paint-order: stroke;
+  transition: opacity 1s ease;
+}
+.map-svg .place:not(.open) .place-name {
+  opacity: 0;
+}
+.map-svg .place .cloud {
+  opacity: 1;
+  transition: opacity 1.6s ease;
+  pointer-events: none;
+}
+.map-svg .place.open .cloud {
+  opacity: 0;
+}
+.map-svg .cloud .cloud-shape {
+  fill: #fbfaf6;
+  stroke: #b8ab8c;
+  stroke-width: 2.4;
+  animation: cloud-drift 7s ease-in-out infinite alternate;
+}
+.map-svg .cloud.dark .cloud-shape {
+  fill: #7d7a86;
+  stroke: #4a4752;
+}
+@keyframes cloud-drift {
+  from { transform: translateX(-7px); }
+  to { transform: translateX(7px); }
+}
+.map-svg .place.revealing .icon {
+  animation: ink-in 1.4s ease both;
+}
+@keyframes ink-in {
+  0% { opacity: 0; transform: scale(0.6); filter: blur(4px); }
+  100% { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+.map-svg .place .done-mark {
+  display: none;
+}
+.map-svg .place.done .done-mark {
+  display: block;
+}
+.map-svg .done-mark circle {
+  fill: #5f9a3a;
+  stroke: #2f5a22;
+  stroke-width: 2.5;
+}
+.map-svg .done-mark path {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.map-svg .place.selected .icon {
+  filter: drop-shadow(0 0 6px rgba(179, 54, 31, 0.9));
+}
+.map-svg .pin circle {
+  fill: #fff6dd;
+  stroke: #b3361f;
+  stroke-width: 3.4;
+}
+.map-svg .pin text {
+  font-size: 26px;
+}
+.map-svg .pin {
+  animation: pin-bob 1.6s ease-in-out infinite;
+}
+@keyframes pin-bob {
+  50% { translate: 0 -5px; }
+}
+.map-card {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-height: 3.3rem;
+  padding: 0.55rem 0.9rem;
+  border: var(--panel-border);
+  border-radius: 12px;
+  background: var(--parchment);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.map-card.show {
+  opacity: 1;
+  transform: none;
+}
+.map-card-name {
+  font-family: var(--title-font);
+  color: var(--gold);
+  font-size: 1.05rem;
+}
+.map-card-text {
+  flex: 1;
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+.map-go {
+  white-space: nowrap;
+}
+.map-btn {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 0.7rem);
+  right: calc(env(safe-area-inset-right, 0px) + 0.8rem);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.7rem;
+  border: var(--panel-border);
+  border-radius: 10px;
+  background: var(--parchment);
+  color: var(--gold-soft);
+  font-family: var(--title-font);
+  font-size: 0.8rem;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+@media (max-width: 520px) {
+  .map-card {
+    flex-wrap: wrap;
+  }
+  .map-go {
+    width: 100%;
+  }
+}

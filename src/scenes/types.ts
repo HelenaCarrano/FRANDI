@@ -97,6 +97,8 @@ export interface AreaContext {
   /** A câmera do jogo (o céu e a sombra do sol acompanham). */
   camera: THREE.PerspectiveCamera;
   goTo: (id: AreaId, entry?: string) => Promise<void>;
+  /** Abre o Mapa do Reino; se o jogador escolher outro lugar, viaja para lá. */
+  openMap: () => Promise<void>;
 }
 
 /** Contrato de uma área do jogo. Cada área é uma cena 3D pequena. */

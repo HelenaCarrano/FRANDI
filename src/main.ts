@@ -37,14 +37,18 @@ const ui = new UI(quality.isTouch, () => input.pressAction());
 const game = new GameState();
 const hasSave = !useTestScene && GameState.hasSave();
 
-/** ?area=mapa (ou map) abre direto numa área; sem isso vale a do save, e sem save a vila. */
-const AREA_ALIASES: Record<string, AreaId> = { mapa: 'map', vila: 'village' };
+/** ?area=vila (ou floresta...) abre direto numa área; sem isso vale a do save, e sem save a vila. */
+const AREA_ALIASES: Record<string, AreaId> = { vila: 'village', floresta: 'forest', visual: 'visual' };
 function startTarget(): { id: AreaId; entry?: string } {
   const asked = urlParams.get('area');
   const wanted = asked && (AREA_ALIASES[asked] ?? asked);
   if (wanted && isBuilt(wanted)) return { id: wanted, entry: urlParams.get('entry') ?? undefined };
-  return isBuilt(game.area) ? { id: game.area, entry: game.entry } : { id: 'village' };
+  if (isBuilt(game.area)) return { id: game.area, entry: game.entry };
+  // save da época do mapa-maquete: volta para o portão norte da vila
+  return game.area === 'map' ? { id: 'village', entry: 'gate' } : { id: 'village' };
 }
+/** ?mapa abre o pergaminho logo no começo (depuração). */
+const openMapAtStart = urlParams.has('mapa');
 
 const loading = (async () => {
   const assets = new Set<string>([...MATHEUS_ASSETS, TORCH_MODEL]);
@@ -147,8 +151,17 @@ async function run(startClicked: Promise<void>) {
     started = true;
     ui.showAreaTitle(area.name);
     if (characterViewer) return;
-    setTimeout(() => area.onEnter?.(), 1800);
+    setTimeout(() => {
+      area.onEnter?.();
+      if (openMapAtStart) void manager.openMap();
+    }, 1800);
   });
+
+  // botão e tecla do mapa: aparecem depois que o Matheus compra o mapa
+  const syncMapButton = () => ui.setMapButton(!useTestScene && game.has('mapa') && !manager.busy);
+  ui.setMapButton(false, () => void manager.openMap());
+  syncMapButton();
+  game.onChange(syncMapButton);
 
   const timer = new THREE.Timer();
   const moveDir = new THREE.Vector3();

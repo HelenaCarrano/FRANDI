@@ -28,7 +28,7 @@ const HEN_COLORS = [0xf4efe6, 0x9a5a2c, 0x3a3430, 0xe0c890, 0xb4472a];
 type QuestId = keyof typeof T.quests;
 
 export function createVillage(ctx: AreaContext): Area {
-  const { ui, game, player, quality, camera, goTo } = ctx;
+  const { ui, game, player, quality, camera, openMap } = ctx;
   const scene = new THREE.Scene();
   const world = new CollisionWorld();
   const interactables: Interactable[] = [];
@@ -418,7 +418,7 @@ export function createVillage(ctx: AreaContext): Area {
   async function useGate() {
     const g = T.gate;
     if (game.flag('villageDone')) {
-      await goTo('map', 'village');
+      await openMap();
       return;
     }
     if (!game.has('chave_trigo')) await ui.tell(g.noKey);
@@ -426,7 +426,7 @@ export function createVillage(ctx: AreaContext): Area {
     else {
       await ui.tell(g.open);
       game.setFlag('villageDone');
-      await goTo('map', 'village');
+      await openMap();
     }
   }
 

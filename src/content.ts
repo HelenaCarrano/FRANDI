@@ -310,37 +310,30 @@ export const content = {
     },
   },
 
-  // ---------- Mapa do Reino ----------
+  // ---------- Mapa do Reino (pergaminho) ----------
   // Textos de exemplo ([EXEMPLO]): troque pelos nomes e piadas reais.
-  worldMap: {
-    areaName: 'Mapa do Reino',
-    intro: [
-      'Do outro lado do portão, o reino inteiro se abre diante de você, pequeno como uma maquete.',
-      'Uma estrada de terra segue até a floresta. Todo o resto está coberto por uma névoa espessa.',
-    ],
-    enter: 'Entrar: {name}',
-    examine: 'Examinar o caminho',
-    toVillage: 'Voltar para a vila',
-    /** Quando uma área nova abre, as nuvens somem e aparece este aviso. */
+  kingdomMap: {
+    title: 'Mapa do Reino',
+    openButton: 'Mapa',
+    close: 'Fechar o mapa',
+    here: 'Você está aqui',
+    travel: 'Viajar para {name}',
+    preparing: 'Este caminho ainda está sendo preparado',
+    done: 'Concluído',
+    /** Aviso quando uma área nova se revela no pergaminho. */
     newPath: 'Novo caminho: {name}',
-    preparing: [
-      'Este caminho ainda está sendo preparado...',
-      'Volte em breve: o resto da aventura está chegando.',
+    firstOpen: [
+      'Você desdobra o mapa. É um pergaminho velho, riscado a tinta, com uma estrada de terra saindo da vila.',
+      'A maior parte do reino está coberta de nuvens pintadas. Elas vão sumindo conforme você avança.',
     ],
     locked: {
-      middle: [
-        'Uma névoa espessa cobre este lugar. Não dá nem para ver o caminho.',
-        'Talvez a floresta guarde uma pista de como dissipá-la.',
-      ],
-      castle: [
-        'Nuvens escuras envolvem o castelo. As portas não vão se mostrar a qualquer um.',
-        'Só quem passar por todos os lugares do reino chegará até aqui.',
-      ],
-      ending: ['Ainda não é hora de abrir este lugar.'],
-      forest: ['O portão da vila ainda não se abriu para este caminho.'],
+      forest: 'O portão da vila ainda não se abriu para este caminho.',
+      middle: 'Uma nuvem espessa cobre este lugar. Talvez a floresta guarde uma pista de como dissipá-la.',
+      castle: 'Nuvens escuras envolvem o castelo. Só quem passar por todos os lugares do reino chegará até aqui.',
+      ending: 'Ainda não é hora de abrir este lugar.',
     },
     objective: {
-      forest: 'Siga a estrada até a Floresta',
+      forest: 'Abra o mapa e siga a estrada até a Floresta',
       explore: 'Explore o reino: {n} de 4 lugares concluídos',
       castle: 'O Castelo espera por você',
       ending: 'Entre na Sala do Tesouro',

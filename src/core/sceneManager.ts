@@ -2,7 +2,9 @@ import * as THREE from 'three';
 import { isSharedResource, preload } from './assets';
 import { OcclusionFader } from './occlusion';
 import { DARK_ENV, THIRD_PERSON, type Area, type AreaContext, type AreaId, type CameraStyle } from '../scenes/types';
-import { loadArea } from '../scenes/registry';
+import { isBuilt, isUnlocked, loadArea } from '../scenes/registry';
+import { openKingdomMap } from '../ui/kingdomMap';
+import { content } from '../content';
 import type { GameRenderer } from './renderer';
 import type { FollowCamera } from './followCamera';
 import type { GameState } from './gameState';
@@ -45,7 +47,7 @@ export class SceneManager {
 
   private context(): AreaContext {
     const { ui, game, player, quality } = this.deps;
-    return { ui, game, player, quality, camera: this.deps.follow.camera, goTo: (id, entry) => this.goTo(id, entry) };
+    return { ui, game, player, quality, camera: this.deps.follow.camera, goTo: (id, entry) => this.goTo(id, entry), openMap: () => this.openMap() };
   }
 
   /** Carrega os modelos e cria a área, ainda sem mostrá-la. */
@@ -69,6 +71,30 @@ export class SceneManager {
     this.activate(area, 'village', undefined, false);
     return area;
   }
+
+  /** Abre o pergaminho; se o jogador escolher outro lugar, viaja para lá. */
+  async openMap() {
+    const { ui, game } = this.deps;
+    if (this.busy || this.mapOpen || ui.inDialog) return;
+    this.mapOpen = true;
+    try {
+      if (!game.flag('mapSeen')) {
+        game.setFlag('mapSeen');
+        await ui.tell(content.kingdomMap.firstOpen);
+      }
+      const dest = await openKingdomMap(ui, {
+        game,
+        current: this.id,
+        isUnlocked: (id) => isUnlocked(id, game),
+        isBuilt,
+        names: content.areas,
+      });
+      if (dest && dest !== this.id) await this.goTo(dest, dest === 'village' ? 'gate' : 'start');
+    } finally {
+      this.mapOpen = false;
+    }
+  }
+  private mapOpen = false;
 
   /** Viaja para outra área: escurece, troca, clareia. */
   async goTo(id: AreaId, entry?: string) {
