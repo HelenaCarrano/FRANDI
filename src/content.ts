@@ -318,6 +318,7 @@ export const content = {
     vineyard: 'Vinhedo Dourado',
     castle: 'Castelo',
     ending: 'Sala do Tesouro',
+    visual: 'Teste visual',
   },
 } as const;
 

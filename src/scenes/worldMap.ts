@@ -6,7 +6,7 @@ import { sparkleMarker, type Marker } from '../fx/markers';
 import { content, fmt } from '../content';
 import { DAY_ENV, S, hexPos, skyTexture } from './hexKit';
 import { doneFlag, isBuilt, isUnlocked, MIDDLE_AREAS, unlockAll } from './registry';
-import type { Area, AreaContext, AreaId, Interactable, SpawnPoint } from './types';
+import { ISOMETRIC, type Area, type AreaContext, type AreaId, type Interactable, type SpawnPoint } from './types';
 
 /**
  * Mapa do Reino: o hub entre as áreas. Uma maquete em hexágonos do KayKit Medieval Hexagon Pack
@@ -36,7 +36,7 @@ const world = (u: number, v: number) => new THREE.Vector3(A * (u - v), 0, A * (-
 /** Direção do chão para a câmera. */
 const TO_CAMERA = new THREE.Vector3(A, 0, A);
 
-type PlaceId = Exclude<AreaId, 'map' | 'ending'>;
+type PlaceId = Exclude<AreaId, 'map' | 'ending' | 'visual'>;
 
 interface Place {
   u: number;
@@ -689,7 +689,7 @@ export function createWorldMap(ctx: AreaContext): Area {
     world: collision,
     spawn: new THREE.Vector3(entry.x, 0, entry.z),
     entries,
-    cameraDistance: 25,
+    camera: { ...ISOMETRIC, distance: 25 },
     interactables,
     occluders,
     env: DAY_ENV,

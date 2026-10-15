@@ -25,6 +25,11 @@ export class Input {
   private zoomListeners: ((factor: number) => void)[] = [];
   private pinchDist = 0;
 
+  // giro da câmera (arrastar)
+  private lookPointer: number | null = null;
+  private lookLast = { x: 0, y: 0 };
+  private lookAcc = { x: 0, y: 0 };
+
   // joystick
   private joyPointer: number | null = null;
   private joyOrigin = { x: 0, y: 0 };
@@ -70,14 +75,17 @@ export class Input {
       },
       { passive: false },
     );
+    // dois dedos juntos = pinça (zoom); um em cada lado da tela = andar com um e girar com o outro
+    const isPinch = (t: TouchList) => t.length === 2 && Math.abs(t[0].clientX - t[1].clientX) < window.innerWidth * 0.4;
     surface.addEventListener('touchstart', (e) => {
-      if (e.touches.length === 2) {
+      if (isPinch(e.touches)) {
         this.pinchDist = touchDistance(e.touches);
-        this.releaseJoystick(); // dois dedos = zoom, não andar
+        this.releaseJoystick();
+        this.releaseLook();
       }
     });
     surface.addEventListener('touchmove', (e) => {
-      if (e.touches.length !== 2 || this.pinchDist === 0) return;
+      if (!isPinch(e.touches) || this.pinchDist === 0) return;
       const d = touchDistance(e.touches);
       if (d > 0) this.emitZoom(this.pinchDist / d);
       this.pinchDist = d;
@@ -95,6 +103,13 @@ export class Input {
   /** Chamado pelo botão de ação da interface. */
   pressAction() {
     this.actionQueued = true;
+  }
+
+  /** Quanto o jogador arrastou para girar a câmera desde a última chamada (pixels). */
+  consumeLook() {
+    const l = { x: this.lookAcc.x, y: this.lookAcc.y };
+    this.lookAcc.x = this.lookAcc.y = 0;
+    return l;
   }
 
   /** Retorna true uma única vez por toque/tecla de ação. */
@@ -137,7 +152,16 @@ export class Input {
   }
 
   private onPointerDown = (e: PointerEvent) => {
-    if (this.joyPointer !== null || this.pinchDist > 0) return;
+    if (this.pinchDist > 0) return;
+    // mouse: arrastar gira a câmera (andar é pelo teclado). Toque: lado esquerdo anda, lado direito gira.
+    const look = e.pointerType === 'mouse' ? true : e.clientX > window.innerWidth * 0.5;
+    if (look) {
+      if (this.lookPointer !== null) return;
+      this.lookPointer = e.pointerId;
+      this.lookLast = { x: e.clientX, y: e.clientY };
+      return;
+    }
+    if (this.joyPointer !== null) return;
     this.joyPointer = e.pointerId;
     this.joyOrigin = { x: e.clientX, y: e.clientY };
     this.joyVec = { x: 0, y: 0 };
@@ -148,6 +172,12 @@ export class Input {
   };
 
   private onPointerMove = (e: PointerEvent) => {
+    if (e.pointerId === this.lookPointer) {
+      this.lookAcc.x += e.clientX - this.lookLast.x;
+      this.lookAcc.y += e.clientY - this.lookLast.y;
+      this.lookLast = { x: e.clientX, y: e.clientY };
+      return;
+    }
     if (e.pointerId !== this.joyPointer) return;
     let dx = e.clientX - this.joyOrigin.x;
     let dy = e.clientY - this.joyOrigin.y;
@@ -167,9 +197,13 @@ export class Input {
   };
 
   private onPointerUp = (e: PointerEvent) => {
-    if (e.pointerId !== this.joyPointer) return;
-    this.releaseJoystick();
+    if (e.pointerId === this.lookPointer) this.releaseLook();
+    if (e.pointerId === this.joyPointer) this.releaseJoystick();
   };
+
+  private releaseLook() {
+    this.lookPointer = null;
+  }
 
   private releaseJoystick() {
     this.joyPointer = null;

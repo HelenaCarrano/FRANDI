@@ -27,6 +27,10 @@ const DEFS: Record<AreaId, AreaDef> = {
     return { assets: m.MAP_ASSETS, create: m.createWorldMap };
   } },
   forest: {},
+  visual: { load: async () => {
+    const m = await import('./lookTest');
+    return { assets: m.LOOK_TEST_ASSETS, create: m.createLookTest };
+  } },
   ruins: {},
   tower: {},
   tavern: {},
@@ -69,6 +73,7 @@ export function isUnlocked(id: AreaId, game: GameState): boolean {
   switch (id) {
     case 'village':
     case 'map':
+    case 'visual':
       return true;
     case 'forest':
       return game.flag('villageDone');

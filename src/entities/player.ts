@@ -46,6 +46,8 @@ export class Player {
   private armPose: THREE.AnimationAction | null = null;
   /** Quando true, o personagem não é controlado (cutscenes, visualizador). */
   frozen = false;
+  /** Altura do terreno (a área atual informa); o Matheus acompanha o relevo. */
+  ground: (x: number, z: number) => number = () => 0;
 
   constructor(shadowMapSize: number) {
     this.rig = buildMatheus();
@@ -128,6 +130,16 @@ export class Player {
     return RADIUS;
   }
 
+  /** Rotação em Y do rosto (mesma convenção de `Object3D.rotation.y`). */
+  get facing() {
+    return this.heading;
+  }
+
+  /** Velocidade atual no chão (m/s). */
+  get speed() {
+    return this.velocity.length();
+  }
+
   /** `moveDir`: direção desejada no chão (XZ), comprimento 0..1. */
   update(dt: number, moveDir: THREE.Vector3, world: CollisionWorld) {
     if (!this.frozen) {
@@ -139,6 +151,8 @@ export class Player {
 
       this.object.position.addScaledVector(this.velocity, dt);
       world.resolve(this.object.position, RADIUS);
+      const gy = this.ground(this.object.position.x, this.object.position.z);
+      this.object.position.y += (gy - this.object.position.y) * (1 - Math.exp(-20 * dt));
 
       if (moveDir.lengthSq() > 0.01) {
         const target = Math.atan2(moveDir.x, moveDir.z);

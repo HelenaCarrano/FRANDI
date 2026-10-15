@@ -25,8 +25,7 @@ const useTestScene = characterViewer || urlParams.get('area') === 'teste';
 
 // ?cam=distancia,elevacao  (depuração: ex. ?cam=40,75 para ver a vila de cima)
 const camParams = urlParams.get('cam')?.split(',').map(Number);
-const cameraDistance = camParams?.[0] ?? 17;
-const follow = new FollowCamera(cameraDistance, 45, camParams?.[1] ?? 48);
+const follow = new FollowCamera();
 const input = new Input(container);
 input.onZoom((f) => follow.zoomBy(f));
 // visualizador: começa aproximado (?perto = rosto)
@@ -89,8 +88,7 @@ async function run(startClicked: Promise<void>) {
     player,
     follow,
     quality,
-    cameraDistance,
-    lockCamera: camParams?.[0] !== undefined,
+    cameraOverride: camParams?.[0] !== undefined ? { distance: camParams[0], pitch: camParams[1] } : undefined,
     areaLabel: (id) => content.areas[id],
   });
 
@@ -107,7 +105,7 @@ async function run(startClicked: Promise<void>) {
   // ?tp=x,z (depuração): começa em outro ponto do mapa
   const tp = urlParams.get('tp')?.split(',').map(Number);
   if (tp && tp.length === 2) player.position.set(tp[0], 0, tp[1]);
-  follow.snapTo(player.position);
+  follow.snapTo(player.position, player.facing);
   // ?debug expõe o jogo no console (window.__dev) para testes e capturas automáticas
   if (debug) {
     const dev = { player, game, ui, manager, follow, goTo: (id: AreaId, entry?: string) => manager.goTo(id, entry) };
@@ -139,7 +137,7 @@ async function run(startClicked: Promise<void>) {
   gfx.applyEnv(area.env ?? DARK_ENV);
   manager.attach(gfx);
   if (debug) Object.assign((window as unknown as { __dev: object }).__dev, { gfx });
-  const adaptive = new AdaptiveQuality(3, (step) => gfx.downgrade(step));
+  const adaptive = new AdaptiveQuality(4, (step) => gfx.downgrade(step));
 
   let started = false;
   startClicked.then(() => {
@@ -169,7 +167,7 @@ async function run(startClicked: Promise<void>) {
 
   function frame(timestamp: number) {
     timer.update(timestamp);
-    const dt = Math.min(timer.getDelta(), 1 / 20); // evita saltos ao trocar de aba
+    const dt = Math.max(0, Math.min(timer.getDelta(), 1 / 20)); // evita saltos ao trocar de aba
     const time = timer.getElapsed();
     const current = manager.area;
 
@@ -190,8 +188,13 @@ async function run(startClicked: Promise<void>) {
       else if (near) near.onInteract();
     }
 
-    camTarget.set(player.position.x, 1.0, player.position.z);
-    follow.update(camTarget, dt);
+    if (started && !ui.inDialog && !manager.busy) {
+      const look = input.consumeLook();
+      if (look.x || look.y) follow.lookBy(look.x, look.y);
+    } else input.consumeLook();
+    camTarget.set(player.position.x, player.position.y + 1.0, player.position.z);
+    follow.update(camTarget, dt, { heading: player.facing, speed: player.speed });
+    gfx.applyEnv(current.env ?? DARK_ENV);
     manager.fillLight.position.copy(player.position).addScaledVector(follow.offsetDir, 1.8);
     manager.fillLight.position.y += 1.8;
     manager.occlusion.update(dt, follow.camera, player.position);
