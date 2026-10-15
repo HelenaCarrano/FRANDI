@@ -188,6 +188,8 @@ export class Smoke {
     private readonly count = 80,
     private readonly rate = 2.4,
     color = new THREE.Color(0xfbf6ee),
+    /** Multiplica o tamanho das bolinhas e a subida (cenário em escala maior). */
+    private readonly sizeScale = 1,
   ) {
     this.positions = new Float32Array(count * 3);
     this.velocity = new Float32Array(count * 3);
@@ -245,9 +247,9 @@ export class Smoke {
       this.positions[i * 3] = e.x + (Math.random() - 0.5) * 0.15;
       this.positions[i * 3 + 1] = e.y;
       this.positions[i * 3 + 2] = e.z + (Math.random() - 0.5) * 0.15;
-      this.velocity[i * 3] = 0.25 + Math.random() * 0.15; // vento leve
-      this.velocity[i * 3 + 1] = 0.55 + Math.random() * 0.25;
-      this.velocity[i * 3 + 2] = -0.1 + Math.random() * 0.1;
+      this.velocity[i * 3] = (0.25 + Math.random() * 0.15) * this.sizeScale; // vento leve
+      this.velocity[i * 3 + 1] = (0.55 + Math.random() * 0.25) * this.sizeScale;
+      this.velocity[i * 3 + 2] = (-0.1 + Math.random() * 0.1) * this.sizeScale;
       this.age[i] = 0;
       this.life[i] = 3.2 + Math.random() * 1.4;
     }
@@ -267,7 +269,7 @@ export class Smoke {
       this.positions[i * 3 + 1] += this.velocity[i * 3 + 1] * dt;
       this.positions[i * 3 + 2] += this.velocity[i * 3 + 2] * dt;
       this.alpha[i] = Math.sin(Math.PI * Math.min(1, t * 1.15)) * 0.7;
-      this.size[i] = 0.5 + t * 1.5;
+      this.size[i] = (0.5 + t * 1.5) * this.sizeScale;
     }
     const geo = this.points.geometry;
     geo.attributes.position.needsUpdate = true;

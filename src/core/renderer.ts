@@ -8,6 +8,7 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import type { QualitySettings } from './quality';
 import { DARK_ENV, type AreaEnv } from '../scenes/types';
 import { pointScale } from '../fx/particles';
+import { GodRaysPass } from '../fx/godRays';
 
 /** Vinheta escura + granulado leve, aplicados depois do tone mapping. */
 const VignetteGrainShader = {
@@ -17,6 +18,10 @@ const VignetteGrainShader = {
     uVignette: { value: 1.15 },
     uGrain: { value: 0.045 },
     uAspect: { value: 1 },
+    uShadow: { value: new THREE.Color(1, 1, 1) },
+    uHighlight: { value: new THREE.Color(1, 1, 1) },
+    uSaturation: { value: 1 },
+    uContrast: { value: 1 },
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -31,6 +36,10 @@ const VignetteGrainShader = {
     uniform float uVignette;
     uniform float uGrain;
     uniform float uAspect;
+    uniform vec3 uShadow;
+    uniform vec3 uHighlight;
+    uniform float uSaturation;
+    uniform float uContrast;
     varying vec2 vUv;
 
     float hash(vec2 p) {
@@ -41,6 +50,11 @@ const VignetteGrainShader = {
 
     void main() {
       vec4 color = texture2D(tDiffuse, vUv);
+      // gradação de cor: saturação, contraste e tom frio nas sombras / quente nas luzes
+      float luma = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+      color.rgb = mix(vec3(luma), color.rgb, uSaturation);
+      color.rgb = (color.rgb - 0.5) * uContrast + 0.5;
+      color.rgb *= mix(uShadow, uHighlight, smoothstep(0.08, 0.75, luma));
       vec2 c = vUv - 0.5;
       c.x *= mix(1.0, uAspect, 0.5);
       float v = smoothstep(0.85, 0.2, length(c) * uVignette);
@@ -59,7 +73,10 @@ export class GameRenderer {
   private readonly aoPass: GTAOPass;
   private readonly bloomPass: UnrealBloomPass;
   private readonly finalPass: ShaderPass;
+  readonly godRays: GodRaysPass;
   private bloomAllowed = true;
+  private readonly sunColor = new THREE.Color();
+  private readonly sunDir = new THREE.Vector3();
 
   constructor(
     container: HTMLElement,
@@ -98,6 +115,9 @@ export class GameRenderer {
     this.bloomPass.enabled = quality.bloom;
     composer.addPass(this.bloomPass);
 
+    this.godRays = new GodRaysPass(quality.godRaySamples);
+    composer.addPass(this.godRays);
+
     composer.addPass(new OutputPass()); // tone mapping ACES + sRGB
 
     this.finalPass = new ShaderPass(VignetteGrainShader);
@@ -119,6 +139,22 @@ export class GameRenderer {
       this.bloomPass.threshold = env.bloom.threshold;
     }
     this.bloomPass.enabled = !!env.bloom && this.quality.bloom && this.bloomAllowed;
+
+    const u = this.finalPass.uniforms;
+    const g = env.grade;
+    u.uShadow.value.setHex(g?.shadow ?? 0xffffff);
+    u.uHighlight.value.setHex(g?.highlight ?? 0xffffff);
+    u.uSaturation.value = g?.saturation ?? 1;
+    u.uContrast.value = g?.contrast ?? 1;
+
+    const o = env.outdoor;
+    if (o && env.godRays) {
+      this.sunDir.set(...o.sunDir).normalize();
+      this.sunColor.setHex(o.sunColor);
+      this.godRays.setSun(this.camera, this.sunDir, this.sunColor, env.godRays);
+    } else {
+      this.godRays.enabled = false;
+    }
   }
 
   /** Troca a cena desenhada (troca de área). */
@@ -130,12 +166,19 @@ export class GameRenderer {
   /** Degraus de redução de qualidade usados pelo AdaptiveQuality. */
   downgrade(step: number) {
     if (step === 1) {
-      this.aoPass.enabled = false;
+      // grama mais curta e raios de sol mais baratos
+      this.quality.grassRange *= 0.65;
+      this.quality.godRaySamples = Math.min(this.quality.godRaySamples, 10);
+      this.godRays.setSamples(this.quality.godRaySamples);
     } else if (step === 2) {
+      this.godRays.setSamples(0);
+      this.quality.godRaySamples = 0;
+      this.aoPass.enabled = false;
+    } else if (step === 3) {
       this.quality.pixelRatio = Math.max(1, this.quality.pixelRatio * 0.75);
       this.renderer.setPixelRatio(this.quality.pixelRatio);
       this.resize();
-    } else if (step === 3) {
+    } else if (step === 4) {
       this.bloomAllowed = false;
       this.bloomPass.enabled = false;
     }

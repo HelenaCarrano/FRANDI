@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import { isSharedResource, preload } from './assets';
 import { OcclusionFader } from './occlusion';
-import { DARK_ENV, type Area, type AreaContext, type AreaId } from '../scenes/types';
-import { loadArea } from '../scenes/registry';
+import { DARK_ENV, THIRD_PERSON, type Area, type AreaContext, type AreaId, type CameraStyle } from '../scenes/types';
+import { isBuilt, isUnlocked, loadArea } from '../scenes/registry';
+import { openKingdomMap } from '../ui/kingdomMap';
+import { content } from '../content';
 import type { GameRenderer } from './renderer';
 import type { FollowCamera } from './followCamera';
 import type { GameState } from './gameState';
@@ -21,10 +23,8 @@ export interface SceneManagerDeps {
   player: Player;
   follow: FollowCamera;
   quality: QualitySettings;
-  /** Distância normal da câmera, restaurada nas áreas que não pedem outra. */
-  cameraDistance: number;
-  /** Depuração (`?cam=`): mantém a distância pedida em vez da que a área prefere. */
-  lockCamera?: boolean;
+  /** Depuração (`?cam=distância,elevação`): mantém esses valores em vez dos que a área prefere. */
+  cameraOverride?: { distance: number; pitch?: number };
   /** Nome mostrado no escuro durante a viagem. */
   areaLabel: (id: AreaId) => string;
 }
@@ -47,7 +47,7 @@ export class SceneManager {
 
   private context(): AreaContext {
     const { ui, game, player, quality } = this.deps;
-    return { ui, game, player, quality, goTo: (id, entry) => this.goTo(id, entry) };
+    return { ui, game, player, quality, camera: this.deps.follow.camera, fillLight: this.fillLight, goTo: (id, entry) => this.goTo(id, entry), openMap: () => this.openMap() };
   }
 
   /** Carrega os modelos e cria a área, ainda sem mostrá-la. */
@@ -71,6 +71,30 @@ export class SceneManager {
     this.activate(area, 'village', undefined, false);
     return area;
   }
+
+  /** Abre o pergaminho; se o jogador escolher outro lugar, viaja para lá. */
+  async openMap() {
+    const { ui, game } = this.deps;
+    if (this.busy || this.mapOpen || ui.inDialog) return;
+    this.mapOpen = true;
+    try {
+      if (!game.flag('mapSeen')) {
+        game.setFlag('mapSeen');
+        await ui.tell(content.kingdomMap.firstOpen);
+      }
+      const dest = await openKingdomMap(ui, {
+        game,
+        current: this.id,
+        isUnlocked: (id) => isUnlocked(id, game),
+        isBuilt,
+        names: content.areas,
+      });
+      if (dest && dest !== this.id) await this.goTo(dest, dest === 'village' ? 'gate' : 'start');
+    } finally {
+      this.mapOpen = false;
+    }
+  }
+  private mapOpen = false;
 
   /** Viaja para outra área: escurece, troca, clareia. */
   async goTo(id: AreaId, entry?: string) {
@@ -101,7 +125,7 @@ export class SceneManager {
     this.area = area;
     this.id = id;
 
-    const spawn = (entry && area.entries?.[entry]) || { x: area.spawn.x, z: area.spawn.z, rot: 0 };
+    const spawn = (entry && area.entries?.[entry]) || { x: area.spawn.x, z: area.spawn.z, rot: area.spawnRot ?? 0 };
     player.position.set(spawn.x, 0, spawn.z);
     player.face(spawn.rot);
     player.torch.setLit(area.torchLit ?? true);
@@ -114,8 +138,18 @@ export class SceneManager {
     this.occlusion = new OcclusionFader();
     area.occluders.forEach((o) => this.occlusion.add(o));
 
-    follow.setBaseDistance(this.deps.lockCamera ? this.deps.cameraDistance : (area.cameraDistance ?? this.deps.cameraDistance));
-    follow.snapTo(player.position);
+    const style: CameraStyle = { ...(area.camera ?? THIRD_PERSON) };
+    const o = this.deps.cameraOverride;
+    if (o) {
+      style.distance = o.distance;
+      if (o.pitch !== undefined) style.pitch = o.pitch;
+    }
+    follow.setStyle(style);
+    follow.world = area.world;
+    follow.ground = area.ground ?? (() => 0);
+    player.ground = follow.ground;
+    player.position.y = follow.ground(player.position.x, player.position.z);
+    follow.snapTo(player.position, player.facing);
 
     if (this.gfx) {
       this.gfx.setScene(area.scene);

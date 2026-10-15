@@ -22,11 +22,15 @@ const DEFS: Record<AreaId, AreaDef> = {
     const m = await import('./village');
     return { assets: m.VILLAGE_ASSETS, create: m.createVillage };
   } },
-  map: { load: async () => {
-    const m = await import('./worldMap');
-    return { assets: m.MAP_ASSETS, create: m.createWorldMap };
+  map: {}, // o mapa é uma tela de pergaminho (ui/kingdomMap.ts), não uma área 3D
+  forest: { load: async () => {
+    const m = await import('./forest');
+    return { assets: m.FOREST_ASSETS, create: m.createForest };
   } },
-  forest: {},
+  visual: { load: async () => {
+    const m = await import('./lookTest');
+    return { assets: m.LOOK_TEST_ASSETS, create: m.createLookTest };
+  } },
   ruins: {},
   tower: {},
   tavern: {},
@@ -69,6 +73,7 @@ export function isUnlocked(id: AreaId, game: GameState): boolean {
   switch (id) {
     case 'village':
     case 'map':
+    case 'visual':
       return true;
     case 'forest':
       return game.flag('villageDone');

@@ -14,6 +14,14 @@ export interface QualitySettings {
   ambientOcclusion: boolean;
   bloom: boolean;
   dustCount: number;
+  /** Tufos de grama por metro quadrado. */
+  grassDensity: number;
+  /** Até que distância (m) a grama aparece; a redução automática encurta. */
+  grassRange: number;
+  /** Amostras do raio de sol (0 desliga). */
+  godRaySamples: number;
+  /** Metade do lado da caixa de sombra do sol, em metros. */
+  shadowSpan: number;
 }
 
 const params = new URLSearchParams(location.search);
@@ -39,6 +47,10 @@ export function detectQuality(): QualitySettings {
       ambientOcclusion: true,
       bloom: true,
       dustCount: 260,
+      grassDensity: 1.1,
+      grassRange: 55,
+      godRaySamples: 26,
+      shadowSpan: 34,
     };
   }
   return {
@@ -47,9 +59,13 @@ export function detectQuality(): QualitySettings {
     pixelRatio: Math.min(dpr, 1.5),
     shadowMapSize: 1024,
     msaaSamples: 0,
-    ambientOcclusion: true, // pode ser desligado pelo ajuste automático de FPS
+    ambientOcclusion: false, // o celular começa sem AO (é o passe mais caro com cenário grande)
     bloom: true,
     dustCount: 120,
+    grassDensity: 0.45,
+    grassRange: 38,
+    godRaySamples: 14,
+    shadowSpan: 26,
   };
 }
 

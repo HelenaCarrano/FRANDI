@@ -4,7 +4,7 @@ import { DUNGEON, model } from '../core/assets';
 import { Dust } from '../fx/particles';
 import { createFlame } from '../entities/torch';
 import { content } from '../content';
-import type { Area, Interactable } from './types';
+import { ISOMETRIC, type Area, type Interactable } from './types';
 
 /**
  * Cena de teste: salão de pedra montado com o KayKit Dungeon Remastered (CC0),
@@ -238,6 +238,7 @@ export function createTestScene(opts: Options): Area {
     scene,
     world,
     spawn: new THREE.Vector3(0, 0, 8),
+    camera: ISOMETRIC,
     interactables,
     occluders,
     onEnter: () => opts.say(content.testScene.intro),
