@@ -66,14 +66,13 @@ export const content = {
   // ---------- itens ----------
   // Cada item tem uso real mais adiante (usedIn). [EXEMPLO] nas piadas internas.
   items: {
-    ferro: { name: 'Barra de ferro', icon: '🔩', desc: 'Ferro bruto, ainda frio. O Ferreiro precisa dele para forjar a espada.', usedIn: 'Ferraria' },
-    carvao: { name: 'Carvão', icon: '⚫', desc: 'Pedras negras que mantêm a forja acesa por horas.', usedIn: 'Ferraria' },
-    couro: { name: 'Pedaço de couro', icon: '🟤', desc: 'Couro curtido. Vai virar a alça da mochila.', usedIn: 'Ferraria' },
+    maca: { name: 'Maçã do Tito', icon: '🍎', desc: 'Vermelha e brilhante. Cavalos desconfiados costumam mudar de ideia por uma maçã.', usedIn: 'Estábulo' },
+    ferradura: { name: 'Ferraduras novas', icon: '🧲', desc: 'Quatro ferraduras forjadas pelo Brutus, ainda mornas. Cada uma tem um "M" riscado.', usedIn: 'Estábulo' },
     espada: { name: 'Espada do Ferreiro', icon: '🗡️', desc: 'Forjada para você. Corta arbustos, teias e, quem sabe, pão.', usedIn: 'Floresta e Castelo' },
     mochila: { name: 'Mochila', icon: '🎒', desc: 'Leva tudo o que você coletar pelo caminho.', usedIn: 'Toda a aventura' },
     chave_trigo: { name: 'Chave de trigo', icon: '🌾', desc: 'Uma chave em forma de espiga de trigo. A primeira das três chaves do castelo.', usedIn: 'Portão do Castelo' },
     mapa: { name: 'Mapa do Reino', icon: '🗺️', desc: 'Mostra o caminho para além da vila.', usedIn: 'Portão da vila e mapa central' },
-    carta: { name: 'Carta do Mensageiro', icon: '✉️', desc: 'Uma carta lacrada para entregar a um morador.', usedIn: 'Casas da vila' },
+    ovos: { name: 'Ovos da Clotilde', icon: '🥚', desc: 'Meia dúzia de ovos caipiras, ainda quentinhos. "Os melhores do vale", segundo ela.', usedIn: 'Taverna' },
     pocao: { name: 'Poção de Coragem', icon: '🧪', desc: 'Tem gosto de morango. Dizem que cura o medo do escuro.', usedIn: 'Castelo' },
     pao: { name: 'Pão quentinho', icon: '🍞', desc: 'Saído do forno agora há pouco. Ainda solta vapor.', usedIn: 'Taverna' },
     farinha: { name: 'Pacote de farinha misterioso', icon: '🌫️', desc: 'A Dona Pimenta jura que "vai ser importante mais tarde". Não faz sentido nenhum... por enquanto.', usedIn: 'Taverna' },
@@ -81,13 +80,13 @@ export const content = {
   },
 
   // ---------- Vila ----------
-  // Tudo aqui é texto de exemplo ([EXEMPLO]): troque pelas piadas e nomes reais.
+  // Tudo aqui é texto de exemplo ([EXEMPLO]): troque pelos nomes, bichos e piadas reais.
   village: {
     areaName: 'Vila do Amanhecer',
     intro: [
       'Uma mensagem misteriosa ecoa pelo vale...',
       '"Seu presente foi escondido. Atravesse este mundo para encontrá-lo."',
-      'Na praça, um mensageiro acena como quem corre atrás de você há dias.',
+      'Ao amanhecer, um cavalo chegou sozinho à vila. Na sela, uma bolsa com o seu nome.',
     ],
 
     letter: {
@@ -96,115 +95,167 @@ export const content = {
         'Matheus,',
         'Seu presente foi escondido em algum lugar deste mundo.',
         'Para encontrá-lo, você vai atravessar florestas, ruínas, torres e castelos.',
-        'Comece pela vila. Alguém aí sabe por onde.',
+        'Este cavalo veio buscar você. Cuide bem dele: ele sabe o caminho.',
         '— H.',
       ],
       close: 'Guardar a carta',
     },
 
     quests: {
-      smith: { title: 'Três materiais', coins: 12 },
-      mail: { title: 'Cartas da vila', coins: 15 },
-      pet: { title: 'O fugitivo Fubá', coins: 10 },
+      horse: { title: 'O cavalo desconfiado', coins: 6 },
+      shoes: { title: 'Ferraduras novas', coins: 12 },
+      mill: { title: 'O moinho parado', coins: 10 },
+      hens: { title: 'Fuga das galinhas', coins: 15 },
     },
 
+    /** Nome do cavalo. [EXEMPLO] */
+    horseName: 'Trovão',
+
     npcs: {
-      messenger: { name: 'Tico, o Mensageiro', prompt: 'Falar com o Mensageiro' },
+      stable: { name: 'Tito, o Cavalariço', prompt: 'Falar com o Tito' },
       smith: { name: 'Brutus, o Ferreiro', prompt: 'Falar com o Ferreiro' },
+      miller: { name: 'Seu Alvim, o Moleiro', prompt: 'Falar com o Moleiro' },
+      hens: { name: 'Dona Clotilde', prompt: 'Falar com a Dona Clotilde' },
       merchant: { name: 'Dona Pimenta', prompt: 'Falar com a Comerciante' },
     },
 
-    messenger: {
+    // ----- Tito e o cavalo -----
+    stable: {
       first: [
-        'Ei, ei, ei! Você é o Matheus? Graças aos céus!',
-        'Corri a noite inteira atravessando o vale para te achar.',
-        'Entregaram isto na minha porta. Dizia: "só para o Matheus".',
+        'Ah, graças a Deus, alguém! O senhor é o Matheus? Aquele da bolsa?',
+        'Esse cavalo chegou sozinho ao amanhecer, trotando pela estrada como quem tem hora marcada.',
+        'Na sela, uma bolsa com seu nome. Só que ele morde quem chega perto. Perdi um chapéu e metade da paciência.',
+        'Mas ele me parece um cavalo que quer ser ganho, não pego. Leve esta maçã e vá DEVAGAR. Cavalo sente pressa de longe.',
       ],
-      afterLetter: [
-        'Não sei o que significa, mas o Ferreiro pareceu saber de algo.',
-        'Vá falar com ele, na ferraria, a que solta fumaça.',
+      offer: 'Ele só vai deixar chegar quem se aproxima com calma, segurando a maçã.',
+      yes: 'Deixa comigo',
+      no: 'Preciso de um minuto',
+      decline: ['Sem pressa. Ele também não tem.'],
+      accepted: ['Isso! Passo de caracol, voz baixa e a maçã à mostra. Ele vai decidir.'],
+      waiting: ['Chegue perto bem devagar. Se ele sair galopando, é porque você veio com pressa. Respira e tenta de novo.'],
+      afterTrust: [
+        'Eu NUNCA vi ele deixar alguém encostar. Você tem jeito, hein.',
+        'Só tem um detalhe: ele veio de longe e está sem ferraduras. Assim ele não vai muito além da cerca.',
+        'Fale com o Brutus, o ferreiro. Se ele estiver de bom humor, faz um jogo novo.',
       ],
-      mailOffer: [
-        'Já que você está aqui... tenho três cartas para entregar e minhas pernas pedem folga.',
-        'Entrega para mim? Eu pago com moedas!',
+      idleBeforeShoes: ['O Brutus fica na ferraria, perto da praça. A que solta fumaça e barulho.'],
+      shoeFit: [
+        'Ferraduras forjadas pelo Brutus! Deixa eu ver...',
+        '*tuc* *tuc* *tuc*',
+        'Pronto. Olha só como ele pisa firme. Agora ele é seu, Matheus.',
+        'Chegue perto dele e use o botão do cavalo para montar. Segure firme: ele é mais rápido do que parece.',
       ],
-      mailYes: 'Claro, deixa comigo!',
-      mailNo: 'Agora não',
-      mailDecline: ['Sem problema. Se mudar de ideia, minhas pernas e eu estaremos aqui.'],
-      mailAccepted: [
-        'Maravilha! Uma é para a Dona Rosa, outra para o Seu Antônio e a última para o Zé, da taverna.',
-        'E não leia. (Ninguém nunca lê. Mentira, todo mundo lê.)',
-      ],
-      mailProgress: 'Ainda faltam {n} cartas: Dona Rosa, Seu Antônio e o Zé da taverna.',
-      mailDone: [
-        'Todas entregues? Você é rápido!',
-        'Aqui estão suas moedas. Gaste bem... ou com farinha.',
-      ],
-      idle: ['Se precisar de mim, estarei aqui. Descansando. Muito.'],
+      done: ['Se for ao galope, cuidado com as galinhas da Clotilde. Elas não perdoam.'],
     },
 
-    houses: {
-      allDelivered: 'Todas entregues! Volte ao Mensageiro.',
-      rosa: {
-        prompt: 'Entregar a carta',
-        lines: ['Dona Rosa: "Uma carta? Faz anos que ninguém me escreve! Obrigada, querido."'],
-      },
-      antonio: {
-        prompt: 'Entregar a carta',
-        lines: ['Seu Antônio: "Finalmente! Já achava que tinham esquecido de mim. Boa sorte aí na sua aventura!"'],
-      },
-      ze: {
-        prompt: 'Entregar a carta',
-        lines: ['Zé da taverna: "Carta pra mim? Deve ser a conta do fornecedor de vinho. Abre você."', '(sussurrando) "...Brincadeira. Obrigado!"'],
-      },
+    horse: {
+      approachHint: 'Aproxime-se devagar, com a maçã',
+      tooFast: 'Ele se assustou: vá mais devagar',
+      trustLabel: 'Confiança de {name}',
+      trusted: [
+        '{name} abaixa a cabeça e cheira a maçã. Depois cheira você. Respira fundo.',
+        'A bolsa da sela se solta com um clique. Dentro, um envelope com a letra de alguém que você conhece bem.',
+      ],
+      mount: 'Montar em {name}',
+      dismount: 'Desmontar',
     },
 
+    // ----- Brutus e a forja -----
     smith: {
       noLetter: [
         'Hmpf. Você parece ter pressa de aventura.',
-        'Mas o Mensageiro estava te procurando. Fale com ele primeiro.',
+        'Mas antes resolva a bolsa do cavalo, aquele lá do estábulo.',
       ],
+      notYet: ['Ainda não tenho o que fazer por você. Resolva o negócio do cavalo primeiro.'],
       offer: [
-        'Então você é o Matheus. Li a carta por cima do ombro do Tico. Perdão.',
-        'Seu presente está longe e o caminho é perigoso. Não vai sair daqui desarmado.',
-        'Eu forjo uma espada para você, mas preciso de três coisas escondidas pela vila: ferro, carvão e couro.',
-        'Procure em barris, caixas e cantos esquecidos. O brilho dourado denuncia.',
+        'Então é você que o Tito não para de falar. Dizem que o cavalo deixou você chegar perto.',
+        'Cavalo sem ferradura é pé sem sapato. Eu faço quatro novas, mas a forja precisa de braço.',
+        'Você bate o ferro quando o brilho passar pela faixa verde. Três marteladas boas e a ferradura nasce. Topa?',
       ],
-      yes: 'Pode deixar!',
-      no: 'Preciso pensar',
-      decline: ['Sem pressa. Só lembre que o fogo da forja não espera ninguém.'],
-      accepted: ['Boa! Ferro, carvão e couro. Volte quando tiver os três.'],
-      progress: 'Você já tem {n} de 3 materiais.',
-      ready: [
-        'Isso! É exatamente o que eu precisava.',
-        '*clang* *clang* *clang*',
-        'Pronto! Uma espada de verdade e uma mochila de couro para carregar suas coisas.',
-        'E esta chave em forma de espiga de trigo. O portão da vila só abre com ela.',
-        'Ah, e para passar pelo portão você também vai precisar de um mapa. A Dona Pimenta vende.',
+      yes: 'Bora forjar',
+      no: 'Daqui a pouco',
+      decline: ['Sem pressa. O ferro esfria, mas eu esquento de novo.'],
+      forgeTitle: 'Forja do Brutus',
+      forgeHint: 'Toque quando o brilho passar pela faixa verde.',
+      forgeButton: 'Martelar!',
+      forgeMiss: [
+        'Foi no ar. O ferro nem sentiu.',
+        'Essa passou longe. Respira e tenta de novo.',
+        'Quase! Quase só vale em ferradura de cavalo muito pequeno.',
+        'O martelo ficou com vergonha. Outra vez!',
       ],
+      forgeHit: ['CLANG! Primeira, e já saiu faísca.', 'CLANG! Isso aí, agora o ferro entendeu.', 'CLANG! A forja sorriu.'],
+      forged: [
+        'Pronto! Quatro ferraduras novas, e uma delas ficou até bonita.',
+        'E para a estrada vai precisar de algo mais que cenoura: esta espada. Forjei hoje cedo sem saber para quem. Agora sei.',
+        'Leve as ferraduras ao Tito. Ele sabe colocar.',
+      ],
+      progress: ['As ferraduras já estão com você. Leve ao Tito, no estábulo.'],
       done: ['Cuide bem dessa espada. Ela já cortou muita coisa... principalmente pão.'],
     },
 
+    // ----- Seu Alvim e o moinho -----
+    miller: {
+      noLetter: ['Hm? Visita? Estou ocupado olhando para o moinho. Ele me ignora, eu ignoro ele.'],
+      offer: [
+        'Você é o do cavalo? Ótimo, notícia corre mais que o vento por aqui, e o vento anda parado.',
+        'O moinho emperrou na semana passada. As engrenagens da casa de máquinas saíram do encaixe: três rodas, e cada uma que eu mexo arrasta a vizinha.',
+        'Se conseguir alinhar as marcas todas para cima, eu devolvo o favor com a chave da despensa de trigo.',
+      ],
+      yes: 'Eu dou uma olhada',
+      no: 'Agora não',
+      decline: ['Tudo bem. O moinho não vai a lugar nenhum. É esse o problema.'],
+      accepted: ['A casa de máquinas fica aos pés do moinho. É só chegar e mexer nas rodas. Elas giram quando você toca.'],
+      progress: ['As engrenagens ficam na casa de máquinas, aos pés do moinho. Toque nelas até as marcas ficarem para cima.'],
+      ready: [
+        'ELE VOLTOU A GIRAR! Escute só esse rangido bom.',
+        'Prometi uma chave, e aqui está: a chave em forma de espiga, a primeira das três do castelo.',
+        'E aceite esta mochila de couro. Foi do meu avô e carregou mais farinha que histórias.',
+      ],
+      done: ['O moinho agora gira tão bem que a farinha chega sozinha. Meus braços estão agradecendo.'],
+      gearsTitle: 'Engrenagens do moinho',
+      gearsHint: 'Tocar numa roda gira ela e a vizinha ao contrário.',
+      gearsGoal: 'Objetivo: todas as marcas amarelas apontando para cima.',
+      gearsSolved: 'Clic! As rodas se encaixam e o moinho estremece.',
+    },
+
+    gears: { prompt: 'Mexer nas engrenagens', fixed: ['O moinho gira devagar, rangendo satisfeito. Volte ao Seu Alvim.'] },
+
+    // ----- Dona Clotilde e as galinhas -----
+    hens: {
+      first: [
+        'MEU DEUS, UM VISITANTE! Rápido, rápido, por favor, uma emergência!',
+        'As minhas meninas fugiram! O portão ficou aberto por três segundos, TRÊS, e quando eu vi só restava a Beyoncé.',
+        'Há seis delas soltas pela vila: a Nuggets, a Bela Adormecida, a Dona Frango, a Frida, a Maria Fofoca e o Bartolomeu (é menina, não pergunte).',
+        'Elas fogem de quem corre atrás, mas voltam para casa se você chegar de mansinho. Tente conduzir elas para o cercado, ali ao lado.',
+      ],
+      offer: 'Me ajuda a levar as minhas meninas de volta para o cercado?',
+      yes: 'Claro, vamos lá',
+      no: 'Agora não',
+      decline: ['Eu entendo. Mas, por favor, se vir alguma, diga que a mamãe não está brava.'],
+      accepted: ['Gratidão eterna! O cercado é este aqui do lado, com a entrada aberta. Elas fogem de você, então use isso a seu favor.'],
+      progress: 'Ainda faltam {n} galinhas soltas. Cuidado para não correr atrás delas: elas correm mais!',
+      ready: [
+        'TODAS AQUI! Nuggets, Bela Adormecida, Dona Frango, Frida, Maria Fofoca e... Bartolomeu, vem cá, meu bem.',
+        'Você salvou a minha manhã. Tome as moedas e estes ovos: os melhores do vale, rigorosamente.',
+        'E uma dica de ouro: quem leva ovos à taverna ganha o respeito do cozinheiro.',
+      ],
+      done: ['A Beyoncé conta pra todo mundo da fuga. Ela é dramática como a dona.'],
+      penToast: 'Galinha no cercado: {n} de {total}',
+    },
+
+    // ----- Dona Pimenta e a loja -----
     merchant: {
       greet: ['Bem-vindo, bem-vindo! Tenho de tudo um pouco. E um pouco de tudo também.'],
       menuShop: 'Ver a loja',
       menuChat: 'Conversar',
       menuBye: 'Até logo',
       bye: ['Volte sempre! Ou nunca mais, mas deixando uma gorjeta.'],
-      petOffer: [
-        'Ando preocupada. Meu gatinho, o Fubá, fugiu hoje cedo.',
-        'Se achar ele, eu pago com moedas. Ele é laranja, gordinho e finge que não me conhece.',
+      chat: [
+        'Aquele cavalo preto? Passou aqui antes de o sol nascer, parou na frente da minha barraca e ficou me olhando.',
+        'Cavalo que sabe o que quer é raro. Cavalo que sabe o que você quer... é de outro mundo.',
       ],
-      petYes: 'Eu procuro!',
-      petNo: 'Agora não',
-      petDecline: ['Tudo bem. Se o vir por aí, grite "Fubá!". Ele não vem, mas faz bem.'],
-      petAccepted: ['Obrigada! Ele gosta de se esconder longe do barulho, onde ninguém procura.'],
-      petWaiting: ['Nada do Fubá ainda? Ele deve estar dormindo em algum canto sossegado da vila.'],
-      petReturned: [
-        'Fubá! Meu pãozinho! Onde você estava?',
-        'Tome as moedas, você mereceu. E uma dica de ouro: guarde algumas para o mapa.',
-      ],
-      chatIdle: ['O Fubá agora só quer saber de dormir. Eu também.'],
+      chatDone: ['Agora a vila toda fala de você e do {name}. Você é o novo assunto preferido. Parabéns?'],
       shopTitle: 'Loja da Dona Pimenta',
       shopHint: 'Dica: o mapa é obrigatório para passar pelo portão da vila.',
     },
@@ -218,36 +269,13 @@ export const content = {
       { id: 'biscoito', price: 7 },
     ],
 
-    /** Materiais escondidos e o gatinho. A posição de cada um fica em scenes/village.ts. */
-    finds: {
-      ferro: {
-        prompt: 'Vasculhar as tralhas',
-        lines: ['Entre as tralhas, algo brilha: uma barra de ferro!'],
-        hint: 'O ferro deve estar entre as tralhas guardadas perto da ferraria.',
-      },
-      carvao: {
-        prompt: 'Olhar dentro do barril',
-        lines: ['Dentro do barril, pedras negras e quentinhas: carvão!'],
-        hint: 'Carvão... tente os barris perto do poço.',
-      },
-      couro: {
-        prompt: 'Vasculhar os sacos',
-        lines: ['Debaixo dos sacos, um pedaço de couro bem curtido.'],
-        hint: 'Couro? Procure perto da barraca da Dona Pimenta.',
-      },
-      gato: {
-        prompt: 'Pegar o gatinho',
-        lines: ['Miau! Lá está o Fubá, enrolado e fingindo que não é com ele.', 'Você o pega no colo. Hora de levá-lo para casa.'],
-      },
-    },
-
     gate: {
       prompt: 'Examinar o portão',
       /** Texto do botão quando o portão já está aberto. */
       promptOpen: 'Seguir para o mapa',
       noKey: [
         'O portão está trancado. A fechadura tem formato de espiga de trigo.',
-        'Quem sabe o Ferreiro tenha uma chave assim?',
+        'Quem sabe o dono do moinho tenha uma chave assim?',
       ],
       noMap: [
         'A chave de trigo gira na fechadura, mas você hesita.',
@@ -259,15 +287,26 @@ export const content = {
       ],
     },
 
+    mutters: {
+      villagerA: ['Bom dia! O cavalo preto é seu?', 'Que manhã bonita para procurar presente.'],
+      villagerB: ['Dizem que o Brutus chora quando termina uma ferradura.', 'Eu não falei nada...'],
+      kid: ['Posso fazer carinho no cavalo?', 'A Beyoncé é a galinha mais fofoqueira da vila!'],
+    },
+
     objective: {
-      talkMessenger: 'Fale com o Mensageiro',
-      talkSmith: 'Fale com o Ferreiro',
-      findMaterials: 'Encontre ferro, carvão e couro ({n}/3)',
-      bringMaterials: 'Leve os materiais ao Ferreiro',
+      talkStable: 'Fale com o Tito, perto do cercado do cavalo',
+      approachHorse: 'Aproxime-se do cavalo devagar, com a maçã',
+      talkSmith: 'Fale com o Ferreiro, na ferraria',
+      forgeShoes: 'Forje as ferraduras com o Brutus',
+      bringShoes: 'Leve as ferraduras ao Tito',
+      talkMiller: 'Fale com o Moleiro, no moinho',
+      fixMill: 'Conserte as engrenagens do moinho',
+      returnMiller: 'Volte ao Seu Alvim',
       needMap: 'Compre um mapa com a Dona Pimenta',
-      needCoins: 'Ganhe moedas ajudando os moradores (cartas, o gatinho Fubá)',
-      gate: 'Atravesse o portão da vila',
+      needCoins: 'Ganhe moedas ajudando os moradores',
+      gate: 'Atravesse o portão norte da vila',
       done: 'Siga pelo portão até o mapa do reino',
+      hens: 'Leve as galinhas ao cercado ({n}/6)',
     },
   },
 

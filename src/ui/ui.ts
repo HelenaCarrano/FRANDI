@@ -232,7 +232,7 @@ export class UI {
 
   /** Verdadeiro enquanto qualquer janela (diálogo, escolha, carta, loja) estiver aberta. */
   get inDialog() {
-    return !this.dialog.hidden || this.letterEl !== null || this.shopEl !== null || this.endEl !== null;
+    return !this.dialog.hidden || this.letterEl !== null || this.shopEl !== null || this.endEl !== null || this.modalEl !== null;
   }
 
   // ---------- diálogo ----------
@@ -434,6 +434,104 @@ export class UI {
       close.addEventListener('click', done);
     });
   }
+
+  // ---------- janelas de minijogo ----------
+
+  private modalEl: HTMLDivElement | null = null;
+
+  /**
+   * Abre uma janela sobre o jogo (forja, engrenagens...). `build` monta o conteúdo e recebe `close`
+   * para encerrar; a promessa resolve com o valor passado a `close`. Enquanto aberta, o jogo para.
+   */
+  modal<T = void>(className: string, build: (box: HTMLElement, close: (value: T) => void) => void): Promise<T> {
+    return new Promise((resolve) => {
+      const overlay = el('div', 'modal-overlay', this.root);
+      const box = el('div', `modal-box ${className}`, overlay);
+      overlay.addEventListener('pointerdown', (e) => e.stopPropagation());
+      this.modalEl = overlay;
+      this.prompt.hidden = true;
+      this.actionBtn.hidden = true;
+      build(box, (value) => {
+        overlay.remove();
+        this.modalEl = null;
+        resolve(value);
+      });
+    });
+  }
+
+  // ---------- barra de progresso (ex.: confiança do cavalo) ----------
+
+  private progressEl: HTMLDivElement | null = null;
+  private progressFill: HTMLDivElement | null = null;
+  private progressLabel: HTMLDivElement | null = null;
+
+  /** Mostra uma barra com texto no meio da tela; `value` de 0 a 1, ou `null` para esconder. */
+  setProgress(label: string | null, value = 0) {
+    if (label === null) {
+      if (this.progressEl) this.progressEl.hidden = true;
+      return;
+    }
+    if (!this.progressEl) {
+      this.progressEl = el('div', 'progress-card', this.root);
+      this.progressLabel = el('div', 'progress-label', this.progressEl);
+      const track = el('div', 'progress-track', this.progressEl);
+      this.progressFill = el('div', 'progress-fill', track);
+    }
+    this.progressEl.hidden = false;
+    if (this.progressLabel!.textContent !== label) this.progressLabel!.textContent = label;
+    this.progressFill!.style.transform = `scaleX(${Math.min(1, Math.max(0, value))})`;
+  }
+
+  // ---------- balões de fala sobre as pessoas ----------
+
+  private bubbleLayer: HTMLDivElement | null = null;
+  private bubbles = new Map<string, HTMLDivElement>();
+
+  /** Balão de fala preso a um ponto da tela (x, y em pixels); `text` null apaga. */
+  bubble(key: string, text: string | null, x = 0, y = 0) {
+    this.bubbleLayer ??= el('div', 'bubbles', this.root);
+    let b = this.bubbles.get(key);
+    if (text === null) {
+      if (b) b.classList.remove('show');
+      return;
+    }
+    if (!b) {
+      b = el('div', 'bubble', this.bubbleLayer);
+      this.bubbles.set(key, b);
+    }
+    if (b.textContent !== text) b.textContent = text;
+    b.classList.add('show');
+    b.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
+  }
+
+  /** Apaga todos os balões (troca de área). */
+  clearBubbles() {
+    this.bubbles.forEach((b) => b.remove());
+    this.bubbles.clear();
+  }
+
+  // ---------- botão do cavalo ----------
+
+  private horseBtn: HTMLButtonElement | null = null;
+
+  /** Botão redondo do cavalo (chamar / montar / desmontar). `null` esconde. Tecla H também vale. */
+  setHorseButton(label: string | null, onPress?: () => void) {
+    if (!this.horseBtn) {
+      this.horseBtn = el('button', 'horse-btn', this.root);
+      this.horseBtn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.horsePress?.();
+      });
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'KeyH' && !e.repeat && !this.inDialog && !this.horseBtn!.hidden) this.horsePress?.();
+      });
+    }
+    this.horsePress = onPress ?? null;
+    this.horseBtn.hidden = label === null || this.inDialog;
+    if (label !== null) this.horseBtn.innerHTML = `<span class="horse-ico">🐴</span><span class="horse-txt">${escapeHtml(label)}${this.isTouch ? '' : ' (H)'}</span>`;
+  }
+  private horsePress: (() => void) | null = null;
 
   // ---------- cartão final de área ----------
 

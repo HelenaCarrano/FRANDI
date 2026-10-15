@@ -14,6 +14,10 @@ import type { CollisionWorld } from '../core/collision';
 const WALK_SPEED = 2.2;
 const RUN_SPEED = 4.4;
 const RADIUS = 0.4;
+const RIDING_RADIUS = 1.0;
+/** Montado: velocidades de passo e galope (m/s). */
+const RIDE_WALK = 4;
+const RIDE_RUN = 9;
 
 /** Ossos do braço direito: ficam fora da locomoção e seguem a pose de "segurar tocha". */
 // (o GLTFLoader remove os pontos dos nomes: "upperarm.r" vira "upperarmr")
@@ -46,6 +50,8 @@ export class Player {
   private armPose: THREE.AnimationAction | null = null;
   /** Quando true, o personagem não é controlado (cutscenes, visualizador). */
   frozen = false;
+  /** Montado no cavalo: anda e corre mais rápido, de corpo parado e raio maior. */
+  riding = false;
   /** Altura do terreno (a área atual informa); o Matheus acompanha o relevo. */
   ground: (x: number, z: number) => number = () => 0;
 
@@ -127,8 +133,15 @@ export class Player {
   }
 
   get radius() {
-    return RADIUS;
+    return this.riding ? RIDING_RADIUS : RADIUS;
   }
+
+  /** Sobe no cavalo (`saddleY`: altura da sela) ou desce (`null`). */
+  setRiding(saddleY: number | null) {
+    this.riding = saddleY !== null;
+    this.rideY = saddleY === null ? 0 : saddleY - 0.62;
+  }
+  private rideY = 0;
 
   /** Rotação em Y do rosto (mesma convenção de `Object3D.rotation.y`). */
   get facing() {
@@ -145,12 +158,14 @@ export class Player {
     if (!this.frozen) {
       // Joystick parcial = andar; empurrado até o fim = correr.
       const input = Math.min(1, moveDir.length());
-      const speed = input < 0.75 ? input * (WALK_SPEED / 0.75) : THREE.MathUtils.lerp(WALK_SPEED, RUN_SPEED, (input - 0.75) / 0.25);
+      const walk = this.riding ? RIDE_WALK : WALK_SPEED;
+      const run = this.riding ? RIDE_RUN : RUN_SPEED;
+      const speed = input < 0.75 ? input * (walk / 0.75) : THREE.MathUtils.lerp(walk, run, (input - 0.75) / 0.25);
       this.targetVel.copy(moveDir).setLength(input > 0.01 ? speed : 0);
       this.velocity.lerp(this.targetVel, 1 - Math.exp(-12 * dt));
 
       this.object.position.addScaledVector(this.velocity, dt);
-      world.resolve(this.object.position, RADIUS);
+      world.resolve(this.object.position, this.radius);
       const gy = this.ground(this.object.position.x, this.object.position.z);
       this.object.position.y += (gy - this.object.position.y) * (1 - Math.exp(-20 * dt));
 
@@ -162,7 +177,7 @@ export class Player {
       }
 
       // mistura das animações pela velocidade real
-      const v = this.velocity.length();
+      const v = this.riding ? 0 : this.velocity.length();
       const wWalk = THREE.MathUtils.clamp(v / WALK_SPEED, 0, 1) * (1 - THREE.MathUtils.clamp((v - WALK_SPEED) / (RUN_SPEED - WALK_SPEED), 0, 1));
       const wRun = THREE.MathUtils.clamp((v - WALK_SPEED) / (RUN_SPEED - WALK_SPEED), 0, 1);
       const wIdle = 1 - Math.min(1, wWalk + wRun);
@@ -174,6 +189,8 @@ export class Player {
       this.run.timeScale = THREE.MathUtils.clamp(v / RUN_SPEED, 0.8, 1.2);
     }
 
+    // montado: o corpo sobe até a sela (as pernas somem dentro do cavalo)
+    this.rig.root.position.y = this.rideY;
     this.rig.mixer.update(dt);
     this.torch.update(dt);
   }

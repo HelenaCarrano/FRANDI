@@ -43,7 +43,7 @@ const shader = {
         uv -= delta;
         vec3 s = texture2D(tDiffuse, uv).rgb;
         float l = dot(s, vec3(0.3, 0.6, 0.1));
-        acc += s * smoothstep(1.0, 2.6, l) * decay;
+        acc += s * smoothstep(1.15, 2.8, l) * decay;
         decay *= 0.955;
       }
       acc /= float(RAY_SAMPLES) * 0.9;

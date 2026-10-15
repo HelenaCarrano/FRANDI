@@ -415,3 +415,207 @@
   color: var(--gold-soft);
   text-shadow: 0 0 18px rgba(232, 160, 60, 0.45);
 }
+
+/* ---------- janelas de minijogo ---------- */
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(8, 5, 2, 0.66);
+  pointer-events: auto;
+  animation: fade-in 0.3s ease;
+}
+.modal-box {
+  width: min(26rem, 100%);
+  padding: 1.4rem 1.3rem 1.5rem;
+  border: var(--panel-border);
+  border-radius: 14px;
+  background: linear-gradient(#2a1c0e, #1a110a);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  text-align: center;
+}
+.mg-title {
+  margin: 0 0 0.3rem;
+  font-family: var(--title-font);
+  font-size: 1.25rem;
+  color: var(--gold);
+}
+.mg-hint {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  font-style: italic;
+  opacity: 0.85;
+  min-height: 2.4em;
+}
+.mg-status {
+  min-height: 2.6em;
+  margin: 0.9rem 0 0.2rem;
+  font-size: 0.9rem;
+}
+
+/* forja: uma barra com a faixa certa e um brilho que vai e volta */
+.forge-bar {
+  position: relative;
+  height: 2.6rem;
+  border: 2px solid #5b3c18;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #3a1d0c, #7a3512 45%, #c4551a 70%, #3a1d0c);
+  overflow: hidden;
+}
+.forge-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(130, 255, 150, 0.35);
+  border-left: 2px solid #9dffae;
+  border-right: 2px solid #9dffae;
+}
+.forge-spark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0.45rem;
+  margin-left: -0.22rem;
+  background: #fff3c4;
+  box-shadow: 0 0 14px 5px rgba(255, 220, 120, 0.9);
+}
+.forge-hits {
+  margin: 0.9rem 0 0.4rem;
+  font-size: 1.6rem;
+  letter-spacing: 0.4rem;
+}
+.forge-btn {
+  min-width: 11rem;
+  min-height: 3.2rem;
+  font-size: 1.05rem;
+}
+
+/* engrenagens: três rodas; tocar numa gira ela (e a vizinha, ao contrário) */
+.gears {
+  display: flex;
+  justify-content: center;
+  gap: 0.6rem;
+  margin: 0.4rem 0 0.6rem;
+}
+.gear {
+  position: relative;
+  width: 6.2rem;
+  height: 6.2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.28s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+.gear svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.6));
+}
+.gear.ok svg .body {
+  fill: #b98a3c;
+}
+.gears-goal {
+  margin: 0 0 0.3rem;
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+
+/* barra de progresso (confiança do cavalo) */
+.progress-card {
+  position: absolute;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 7.5rem);
+  transform: translateX(-50%);
+  width: min(18rem, 80vw);
+  padding: 0.55rem 0.8rem 0.65rem;
+  border: var(--panel-border);
+  border-radius: 10px;
+  background: var(--parchment);
+  text-align: center;
+  pointer-events: none;
+}
+.progress-label {
+  margin-bottom: 0.4rem;
+  font-size: 0.82rem;
+}
+.progress-track {
+  height: 0.5rem;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #d6a243, #ffe08a);
+  transform-origin: left;
+  transition: transform 0.15s linear;
+}
+
+/* balões de fala sobre as pessoas */
+.bubbles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.bubble {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: 14rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 12px;
+  background: rgba(255, 248, 232, 0.94);
+  color: #3a2410;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  text-align: center;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  will-change: transform;
+}
+.bubble.show {
+  opacity: 1;
+}
+
+/* botão do cavalo: chamar, montar, desmontar */
+.horse-btn {
+  position: absolute;
+  right: calc(env(safe-area-inset-right, 0px) + 1.4rem);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 9rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  min-width: 4.4rem;
+  padding: 0.45rem 0.6rem;
+  border: 2px solid var(--gold);
+  border-radius: 16px;
+  background: radial-gradient(circle, rgba(70, 40, 12, 0.92), rgba(20, 12, 6, 0.92));
+  color: var(--gold-soft);
+  font-family: var(--title-font);
+  font-size: 0.7rem;
+  pointer-events: auto;
+  touch-action: none;
+  box-shadow: 0 0 14px rgba(232, 160, 60, 0.35);
+}
+.horse-btn:active {
+  transform: scale(0.94);
+}
+.horse-ico {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+@media (pointer: fine) {
+  .horse-btn {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 5rem);
+  }
+}

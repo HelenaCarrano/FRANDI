@@ -59,7 +59,7 @@ export function detectQuality(): QualitySettings {
     pixelRatio: Math.min(dpr, 1.5),
     shadowMapSize: 1024,
     msaaSamples: 0,
-    ambientOcclusion: true, // pode ser desligado pelo ajuste automático de FPS
+    ambientOcclusion: false, // o celular começa sem AO (é o passe mais caro com cenário grande)
     bloom: true,
     dustCount: 120,
     grassDensity: 0.45,

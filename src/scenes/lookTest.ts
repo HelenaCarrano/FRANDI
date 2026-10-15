@@ -8,7 +8,7 @@ import { updateWind } from '../world/wind';
 import { rng, smoothstep } from '../world/noise';
 import { scatter } from '../world/scatter';
 import {
-  PINE_STYLES, bushGeometry, daisyGeometry, fenceLine, instanced, logGeometry, lupineGeometry, natureMaterial,
+  PINE_STYLES, bushGeometry, daisyGeometry, fenceLine, instancedChunked as instanced, logGeometry, lupineGeometry, natureMaterial,
   pebbleGeometry, pineGeometry, rockGeometry, roundTreeGeometry, tint, type Inst,
 } from '../world/nature';
 import type { Area, AreaContext } from './types';

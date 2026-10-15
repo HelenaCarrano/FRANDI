@@ -126,5 +126,7 @@ export interface Area {
   env?: AreaEnv;
   /** A tocha do jogador começa acesa? Padrão: sim. */
   torchLit?: boolean;
+  /** Só para depuração (`?debug`): objetos da área expostos em `__dev.area.debug`. */
+  debug?: Record<string, unknown>;
   update(dt: number, time: number, playerPos: THREE.Vector3): void;
 }

@@ -73,10 +73,13 @@ loading
 
 /** Mantém a barra de inventário e as moedas iguais ao estado salvo. */
 function syncInventory() {
-  const entries = Object.entries(game.data.items).map(([id, count]) => {
-    const it = content.items[id as ItemId];
-    return { id, icon: it.icon, name: it.name, desc: it.desc, usedIn: it.usedIn, count };
-  });
+  // itens de versões antigas do jogo (que não existem mais) ficam de fora
+  const entries = Object.entries(game.data.items)
+    .filter(([id]) => id in content.items)
+    .map(([id, count]) => {
+      const it = content.items[id as ItemId];
+      return { id, icon: it.icon, name: it.name, desc: it.desc, usedIn: it.usedIn, count };
+    });
   ui.setInventory(entries, game.coins);
 }
 

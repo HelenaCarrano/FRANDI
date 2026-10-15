@@ -69,7 +69,7 @@ export const PINE_STYLES: Record<'sunny' | 'green' | 'deep', PineStyle> = {
 };
 
 /** Pinheiro de 10 m de altura: tronco + camadas de cones serrilhados que diminuem para o topo. */
-export function pineGeometry(seed: number, style: PineStyle, tiers = 5): THREE.BufferGeometry {
+export function pineGeometry(seed: number, style: PineStyle, tiers = 5, radial = 9): THREE.BufferGeometry {
   const rand = rng(seed);
   const H = 10;
   const R = 2.9;
@@ -86,13 +86,13 @@ export function pineGeometry(seed: number, style: PineStyle, tiers = 5): THREE.B
     const th = H * (0.31 - 0.03 * t);
     const yb = H * 0.15 + t * H * 0.55;
     const r = R * (1 - 0.8 * t) * (0.94 + rand() * 0.12) + 0.15;
-    const cone = new THREE.ConeGeometry(r, th, 9, 1, false);
+    const cone = new THREE.ConeGeometry(r, th, radial, 1, false);
     cone.rotateY(rand() * Math.PI);
     const pos = cone.getAttribute('position');
     for (let v = 0; v < pos.count; v++) {
       if (pos.getY(v) > -th / 2 + 1e-4) continue; // só o anel da base
       const a = Math.atan2(pos.getZ(v), pos.getX(v));
-      const flap = Math.round(a / ((Math.PI * 2) / 9)) % 2 === 0;
+      const flap = Math.round(a / ((Math.PI * 2) / radial)) % 2 === 0;
       const k = flap ? 1 : 0.74;
       pos.setX(v, pos.getX(v) * k * (0.93 + rand() * 0.14));
       pos.setZ(v, pos.getZ(v) * k * (0.93 + rand() * 0.14));
@@ -281,6 +281,24 @@ export function instanced(geo: THREE.BufferGeometry, mat: THREE.Material, list: 
   mesh.receiveShadow = opts.receive ?? true;
   mesh.computeBoundingSphere();
   return mesh;
+}
+
+/**
+ * Como `instanced`, mas separa as instâncias em blocos de `size` metros: cada bloco é um InstancedMesh com
+ * a própria esfera de visibilidade, então o que está fora da tela (ou fora da caixa de sombra do sol) não é desenhado.
+ */
+export function instancedChunked(geo: THREE.BufferGeometry, mat: THREE.Material, list: readonly Inst[], opts: { cast?: boolean; receive?: boolean; size?: number } = {}) {
+  const size = opts.size ?? 44;
+  const cells = new Map<string, Inst[]>();
+  for (const it of list) {
+    const k = `${Math.floor(it.x / size)}:${Math.floor(it.z / size)}`;
+    const a = cells.get(k);
+    if (a) a.push(it);
+    else cells.set(k, [it]);
+  }
+  const group = new THREE.Group();
+  for (const part of cells.values()) group.add(instanced(geo, mat, part, opts));
+  return group;
 }
 
 /** Variação de tom por instância (perto de branco: multiplica a cor da geometria). */
