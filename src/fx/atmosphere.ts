@@ -83,6 +83,30 @@ export const NIGHT_FOREST: AreaEnv = {
   },
 };
 
+/** Noite das Ruínas: luar azul-violeta, névoa baixa e clara, estrelas. */
+export const NIGHT_RUINS: AreaEnv = {
+  exposure: 1.2,
+  vignette: 1.1,
+  grain: 0.045,
+  bloom: { strength: 0.8, radius: 0.55, threshold: 0.8 },
+  godRays: 0.0,
+  grade: { shadow: 0xb4c4f0, highlight: 0xffe8d0, saturation: 1.1, contrast: 1.08 },
+  outdoor: {
+    skyTop: 0x080c2c,
+    skyHorizon: 0x2c3a78,
+    skyGround: 0x0a0e22,
+    sunDir: [-0.35, 0.6, 0.45],
+    sunColor: 0xaab8ff,
+    sunIntensity: 1.1,
+    hemiSky: 0x6a7fc4,
+    hemiGround: 0x232a48,
+    hemiIntensity: 1.2,
+    fogColor: 0x1c2650,
+    fogDensity: 0.016,
+    stars: 1,
+  },
+};
+
 const NEUTRAL_GRADE: Grade = { shadow: 0xffffff, highlight: 0xffffff, saturation: 1, contrast: 1 };
 export const neutralGrade = () => ({ ...NEUTRAL_GRADE });
 

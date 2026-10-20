@@ -4,6 +4,7 @@ import type { UI } from './ui';
  * Minijogos em janelas HTML sobre o jogo. Nenhum trava o progresso: errar só gera uma fala e outra tentativa.
  *  - Forja: um brilho vai e volta numa barra; toque no momento em que ele passa pela faixa verde (3 acertos).
  *  - Engrenagens: três rodas; tocar numa gira ela e a vizinha ao contrário, até todas as marcas apontarem para cima.
+ *  - Anéis de símbolos: três discos de pedra com seis símbolos; tocar num gira ele e o vizinho ao contrário, até o ✦ ficar no alto de todos.
  */
 
 const ACTION_KEYS = new Set(['KeyE', 'Space', 'Enter']);
@@ -159,6 +160,72 @@ export function playGears(ui: UI, text: GearsText): Promise<void> {
         draw();
         const ok = state.every((v) => v === 0);
         gears.forEach((el) => el.classList.toggle('ok', ok));
+        if (ok) {
+          done = true;
+          status.textContent = text.solved;
+          setTimeout(() => close(), 1400);
+        }
+      });
+    });
+  });
+}
+
+export interface RunesText {
+  title: string;
+  hint: string;
+  goal: string;
+  solved: string;
+}
+
+const RUNE_GLYPHS = ['✦', '☾', '☀', '❖', '✿', '⚔'];
+
+/** Anéis do altar: resolve quando o primeiro símbolo (✦) fica no alto dos três discos. */
+export function playRunes(ui: UI, text: RunesText): Promise<void> {
+  return ui.modal<void>('runes-box', (box, close) => {
+    h('h3', 'mg-title', box, text.title);
+    h('p', 'mg-hint', box, text.hint);
+    const row = h('div', 'runes', box);
+    h('p', 'gears-goal', box, text.goal);
+    const status = h('p', 'mg-status', box);
+
+    const N = 3;
+    const STEPS = RUNE_GLYPHS.length;
+    const state = [0, 0, 0];
+    const tap = (k: number) => {
+      state[k] = (state[k] + 1) % STEPS;
+      const n = (k + 1) % N;
+      state[n] = (state[n] + STEPS - 1) % STEPS;
+    };
+    // embaralha a partir do estado resolvido: sempre tem solução
+    do {
+      for (let i = 0; i < 7 + Math.floor(Math.random() * 5); i++) tap(Math.floor(Math.random() * N));
+    } while (state.every((v) => v === 0));
+
+    const turns = [...state]; // giros acumulados (para a animação nunca voltar para trás)
+    const dials = state.map(() => {
+      const d = h('button', 'rune-dial', row);
+      h('span', 'rune-notch', d, '▼');
+      const disc = h('div', 'rune-disc', d);
+      RUNE_GLYPHS.forEach((g, i) => {
+        const s = h('span', 'rune-glyph', disc, g);
+        s.style.transform = `rotate(${i * (360 / STEPS)}deg) translateY(-2.05rem)`;
+      });
+      return { d, disc };
+    });
+    const draw = () => dials.forEach(({ disc }, i) => (disc.style.transform = `rotate(${turns[i] * (360 / STEPS)}deg)`));
+    draw();
+
+    let done = false;
+    dials.forEach(({ d }, i) => {
+      d.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (done) return;
+        tap(i);
+        turns[i] += 1;
+        turns[(i + 1) % N] -= 1;
+        draw();
+        const ok = state.every((v) => v === 0);
+        dials.forEach(({ d: el }) => el.classList.toggle('ok', ok));
         if (ok) {
           done = true;
           status.textContent = text.solved;

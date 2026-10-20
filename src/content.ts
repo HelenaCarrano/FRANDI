@@ -51,6 +51,8 @@ export const content = {
     yes: 'Sim, recomeçar',
     no: 'Voltar',
     close: 'Fechar',
+    memoryKeep: 'Guardar memória',
+    memoryNoPhoto: 'foto em breve',
     buy: 'Comprar',
     owned: 'Comprado',
     notEnough: 'Faltam moedas',
@@ -77,6 +79,7 @@ export const content = {
     pao: { name: 'Pão quentinho', icon: '🍞', desc: 'Saído do forno agora há pouco. Ainda solta vapor.', usedIn: 'Taverna' },
     farinha: { name: 'Pacote de farinha misterioso', icon: '🌫️', desc: 'A Dona Pimenta jura que "vai ser importante mais tarde". Não faz sentido nenhum... por enquanto.', usedIn: 'Taverna' },
     biscoito: { name: 'Biscoito da sorte', icon: '🥠', desc: 'O papelzinho dentro diz: "Você vai comer este biscoito." Acertou.', usedIn: 'Torre' },
+    cristal: { name: 'Cristal das Ruínas', icon: '💎', desc: 'Pulsa devagar, como se lembrasse de tudo o que viu. Os três altares das Ruínas deixaram uma luz dentro dele.', usedIn: 'Castelo' },
   },
 
   // ---------- Vila ----------
@@ -355,6 +358,89 @@ export const content = {
         'Do outro lado do arco, o ar tem cheiro de memória. As Ruínas esperam.',
       ],
       done: 'O portal pulsa devagar, como um coração. O caminho para as Ruínas está aberto.',
+    },
+  },
+
+  // ---------- Ruínas Esquecidas ----------
+  // Textos de exemplo ([EXEMPLO]): troque pelas perguntas e memórias reais.
+  ruins: {
+    areaName: 'Ruínas Esquecidas',
+    intro: [
+      'Do outro lado do arco, a noite é clara e fria. Colunas quebradas cercam um pátio de pedra muito antigo.',
+      'Três altares esperam ao fundo, cada um com um cristal apagado. Dizem que eles guardam o que o reino não quer esquecer.',
+    ],
+    back: { prompt: 'Voltar ao mapa' },
+    objective: {
+      explore: 'Explore o pátio das ruínas',
+      altars: 'Acenda os altares ({n}/3)',
+      crystal: 'Pegue o cristal no centro do pátio',
+      done: 'Volte ao mapa: novos caminhos se abriram',
+    },
+    altarLit: 'O cristal acende. Uma lembrança vem à tona...',
+    altarDone: 'O cristal deste altar já está aceso.',
+    flames: {
+      name: 'Altar das Chamas',
+      prompt: 'Examinar o altar',
+      brazier: 'Acender o braseiro',
+      intro: [
+        'Quatro braseiros apagados cercam o altar. Na parede, quatro símbolos pintados em azul brilham numa ordem.',
+        'Acenda os braseiros na mesma ordem dos símbolos, lendo a parede da esquerda para a direita.',
+      ],
+      wrong: [
+        'As chamas tremem e se apagam de uma vez. A ordem não era essa.',
+        'Olhe de novo os símbolos da parede: cada braseiro tem o seu, no poste ao lado.',
+      ],
+      step: 'Uma chama acende. Faltam {n}.',
+    },
+    runes: {
+      name: 'Altar dos Símbolos',
+      prompt: 'Examinar o altar',
+      intro: ['Três anéis de pedra giram em volta do cristal. Cada um traz os mesmos seis símbolos.'],
+      title: 'Os três anéis',
+      hint: 'Toque num anel para girá-lo. Alinhe o mesmo símbolo no alto dos três.',
+      goal: 'Símbolo do alto: ✦',
+      solved: 'Os anéis se encaixam com um estalo grave. A luz sobe.',
+    },
+    echo: {
+      name: 'Altar do Eco',
+      prompt: 'Examinar o altar',
+      intro: ['Uma voz muito baixa vem do cristal, como um eco da sua própria cabeça. Ela faz uma pergunta.'],
+      question: 'Qual é a primeira coisa que o Matheus faz de manhã, antes de qualquer outra? [EXEMPLO]',
+      options: ['Toma um café bem forte', 'Procura o celular', 'Abraça o travesseiro mais um pouquinho'],
+      answer: 0,
+      wrong: ['O eco ri baixinho. "Quase. Pense na manhã mais comum de todas e tente outra vez."'],
+    },
+    crystal: {
+      prompt: 'Pegar o cristal',
+      lines: [
+        'Os três altares acesos soltam uma coluna de luz no centro do pátio. No alto dela, um cristal do tamanho de um punho flutua devagar.',
+        'Ele pesa quase nada e esquenta na mão. Dentro dele, as três memórias giram como pequenas estrelas.',
+        'Algo no castelo vai querer saber disso.',
+      ],
+    },
+    done: 'O pedestal está vazio, mas o pátio ainda guarda um brilho azul. O caminho de volta está livre.',
+  },
+
+  // ---------- Memórias (aparecem quando um altar acende) ----------
+  // Textos de exemplo ([EXEMPLO]). `photo` é o nome do arquivo em public/photos/ (sem foto, mostra a moldura vazia).
+  memories: {
+    ruinas_chamas: {
+      title: 'A primeira vez',
+      text: ['[EXEMPLO] Lembra do dia em que tudo começou? A gente nem imaginava onde isso ia dar.', 'Foi aí que a luz acendeu pela primeira vez.'],
+      caption: '[EXEMPLO] Onde tudo começou',
+      photo: 'ruinas_chamas.jpg',
+    },
+    ruinas_simbolos: {
+      title: 'Um dia qualquer',
+      text: ['[EXEMPLO] Nem foi um dia especial. Foi só um dia bom, desses que a gente guarda sem perceber.'],
+      caption: '[EXEMPLO] Um dia bom',
+      photo: 'ruinas_simbolos.jpg',
+    },
+    ruinas_eco: {
+      title: 'A risada',
+      text: ['[EXEMPLO] Aquela risada que ninguém consegue explicar, mas todo mundo lembra.'],
+      caption: '[EXEMPLO] A risada',
+      photo: 'ruinas_eco.jpg',
     },
   },
 

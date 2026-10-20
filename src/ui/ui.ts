@@ -459,6 +459,31 @@ export class UI {
     });
   }
 
+  /** Janela de memória: foto (ou moldura vazia), título e texto. Resolve quando o jogador a guarda. */
+  showMemory(mem: { title: string; text: readonly string[]; caption?: string; photo?: string }): Promise<void> {
+    return this.modal<void>('memory-box', (box, close) => {
+      const frame = el('div', 'memory-frame', box);
+      const empty = el('div', 'memory-empty', frame);
+      empty.textContent = content.ui.memoryNoPhoto;
+      if (mem.photo) {
+        const img = el('img', 'memory-photo', frame);
+        img.alt = mem.caption ?? mem.title;
+        img.hidden = true;
+        img.addEventListener('load', () => {
+          img.hidden = false;
+          empty.hidden = true;
+        });
+        img.src = `${import.meta.env.BASE_URL}photos/${mem.photo}`;
+      }
+      if (mem.caption) el('div', 'memory-caption', box).textContent = mem.caption;
+      el('h3', 'mg-title', box).textContent = mem.title;
+      for (const line of mem.text) el('p', 'memory-text', box).textContent = line;
+      const btn = el('button', 'btn primary', box);
+      btn.textContent = content.ui.memoryKeep;
+      btn.addEventListener('click', () => close());
+    });
+  }
+
   // ---------- barra de progresso (ex.: confiança do cavalo) ----------
 
   private progressEl: HTMLDivElement | null = null;

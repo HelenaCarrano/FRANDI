@@ -49,7 +49,7 @@ Cada área do jogo implementa `Area` (scenes/types.ts) e é carregada sob demand
 | 3 | Vila | Abertura com mensagem misteriosa, 3 NPCs, sistema de diálogos, miniquest do Ferreiro (3 materiais), inventário (barra), lojinha do Comerciante, `SaveSystem` em localStorage + "recomeçar" | **feito** (textos `[EXEMPLO]`) |
 | 4 | Final | Sala do Tesouro, sequência do baú (tentativa → "companhia" → entrada dela com tocha → abertura), carta animada, voucher salvável, encerramento lado a lado | |
 | 5 | Mapa central | Hub com áreas bloqueadas/desbloqueadas, `SceneManager`, transições com fade | **feito** (as áreas do meio ainda dizem "em preparação") |
-| 6 | Áreas do meio | Floresta → Ruínas (3 altares) → Torre (quiz 5 andares) → Taverna (montar prato por arrasto) → Vinhedo (combinar uvas) | |
+| 6 | Áreas do meio | Floresta → Ruínas (3 altares) → Torre (quiz 5 andares) → Taverna (montar prato por arrasto) → Vinhedo (combinar uvas) | Floresta e Ruínas **feitas**; faltam Torre, Taverna e Vinhedo |
 | 7 | Castelo | Portão com 3 chaves, labirinto escuro, usos de espada/cristal/garrafa/memórias | |
 | 8 | Polimento | Áudio (desbloqueado no 1º toque), efeitos, desempenho, conteúdo real | |
 | 9 | Teste completo | Jogar do início ao fim no celular | |
@@ -110,3 +110,17 @@ textos de exemplo marcados com `[EXEMPLO]`.
   `?cam=72,72` fixa a câmera longe para ver o mapa inteiro de cima.
 - **Peso:** o mapa tem cerca de 300 meshes (~145 mil triângulos), contra ~190 (~85 mil) da vila. Se o celular sofrer,
   reduza os bosques de dentro da ilha em worldMap.ts.
+
+## Etapa 6 — Ruínas Esquecidas (`scenes/ruins.ts`)
+
+- **Cenário:** pátio de templo ao ar livre, à noite (`NIGHT_RUINS` em fx/atmosphere.ts), cercado por uma muralha de peças KayKit
+  quebradas, aberta ao sul. A chegada é um arco de pedra (`entry: start`) com "Voltar ao mapa".
+- **Três altares**, cada um com um cristal que acende devagar e abre uma **memória** (`ui.showMemory`):
+  - *Chamas:* quatro braseiros; a ordem certa está pintada em símbolos na parede (`SEQUENCE`). Errar apaga tudo e dá a dica.
+  - *Símbolos:* minijogo `playRunes` (ui/minigames.ts), três discos que giram o vizinho ao contrário, sempre com solução.
+  - *Eco:* pergunta com `ui.ask`; errar dá a dica e repete.
+- **Conclusão:** com os três acesos, um cristal flutua no centro do pátio. Pegá-lo dá o item `cristal` e grava `done_ruins`.
+- **Save:** só flags (`ruins_altar_flames|runes|echo`, `mem_<id>`, `ruins_seen`); o formato do save não mudou.
+- **Memórias:** `content.memories` (textos `[EXEMPLO]`) e fotos em `public/photos/<arquivo>` (ver LEIA-ME.txt lá). Sem a foto aparece uma moldura vazia.
+- **Depuração:** `?area=ruinas` (ou `?area=ruins`); com `?debug`, `__dev.area.debug.solveAll()` marca os três altares.
+- **Atenção:** o mapa-maquete (`worldMap.ts`) citado na arquitetura acima foi substituído pelo pergaminho `ui/kingdomMap.ts`.
