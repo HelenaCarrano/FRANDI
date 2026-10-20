@@ -45,23 +45,39 @@ export class SceneManager {
     this.gfx = gfx;
   }
 
-  private context(): AreaContext {
-    const { ui, game, player, quality } = this.deps;
-    return { ui, game, player, quality, camera: this.deps.follow.camera, fillLight: this.fillLight, goTo: (id, entry) => this.goTo(id, entry), openMap: () => this.openMap() };
+  private context(entry?: string): AreaContext {
+    const { ui, game, player, quality, follow } = this.deps;
+    return {
+      ui,
+      game,
+      player,
+      quality,
+      camera: follow.camera,
+      fillLight: this.fillLight,
+      goTo: (id, to) => this.goTo(id, to),
+      openMap: () => this.openMap(),
+      entry,
+      teleport: (x, z, rot) => {
+        player.position.set(x, 0, z);
+        if (rot !== undefined) player.face(rot);
+        player.position.y = follow.ground(x, z);
+        follow.snapTo(player.position, player.facing);
+      },
+    };
   }
 
   /** Carrega os modelos e cria a área, ainda sem mostrá-la. */
-  private async build(id: AreaId, onProgress?: (done: number, total: number) => void): Promise<Area> {
+  private async build(id: AreaId, entry?: string, onProgress?: (done: number, total: number) => void): Promise<Area> {
     const mod = await loadArea(id);
     await preload(mod.assets, onProgress);
-    const area = mod.create(this.context());
+    const area = mod.create(this.context(entry));
     area.id = id;
     return area;
   }
 
   /** Primeira área do jogo (a abertura já cobre a tela, então não há fade). */
   async start(id: AreaId, entry?: string, onProgress?: (done: number, total: number) => void) {
-    const area = await this.build(id, onProgress);
+    const area = await this.build(id, entry, onProgress);
     this.activate(area, id, entry);
     return area;
   }
@@ -105,7 +121,7 @@ export class SceneManager {
       await ui.fade(true, this.deps.areaLabel(id));
       const old = this.area;
       const oldOcclusion = this.occlusion;
-      const next = await this.build(id);
+      const next = await this.build(id, entry);
       this.activate(next, id, entry);
       this.discard(old, oldOcclusion);
       ui.showAreaTitle(next.name);

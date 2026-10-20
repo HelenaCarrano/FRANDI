@@ -99,6 +99,10 @@ export interface AreaContext {
   /** Luz de preenchimento do Matheus (só vale quando a tocha está acesa). */
   fillLight: THREE.PointLight;
   goTo: (id: AreaId, entry?: string) => Promise<void>;
+  /** Ponto de chegada pedido a esta área (ex.: `f3`), para quem precisa montar a cena já no lugar certo. */
+  entry?: string;
+  /** Move o jogador dentro da área (ex.: entre andares da Torre) e encaixa a câmera. A tela deve estar escura. */
+  teleport: (x: number, z: number, rot?: number) => void;
   /** Abre o Mapa do Reino; se o jogador escolher outro lugar, viaja para lá. */
   openMap: () => Promise<void>;
 }

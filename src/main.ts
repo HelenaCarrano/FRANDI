@@ -38,7 +38,7 @@ const game = new GameState();
 const hasSave = !useTestScene && GameState.hasSave();
 
 /** ?area=vila (ou floresta...) abre direto numa área; sem isso vale a do save, e sem save a vila. */
-const AREA_ALIASES: Record<string, AreaId> = { vila: 'village', floresta: 'forest', ruinas: 'ruins', visual: 'visual' };
+const AREA_ALIASES: Record<string, AreaId> = { vila: 'village', floresta: 'forest', ruinas: 'ruins', torre: 'tower', visual: 'visual' };
 function startTarget(): { id: AreaId; entry?: string } {
   const asked = urlParams.get('area');
   const wanted = asked && (AREA_ALIASES[asked] ?? asked);

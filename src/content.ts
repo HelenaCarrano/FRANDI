@@ -52,6 +52,8 @@ export const content = {
     no: 'Voltar',
     close: 'Fechar',
     memoryKeep: 'Guardar memória',
+    cookieOption: '🥠 Quebrar o biscoito da sorte',
+    cookieUsed: 'O biscoito se parte: uma resposta errada some.',
     memoryNoPhoto: 'foto em breve',
     buy: 'Comprar',
     owned: 'Comprado',
@@ -80,6 +82,7 @@ export const content = {
     farinha: { name: 'Pacote de farinha misterioso', icon: '🌫️', desc: 'A Dona Pimenta jura que "vai ser importante mais tarde". Não faz sentido nenhum... por enquanto.', usedIn: 'Taverna' },
     biscoito: { name: 'Biscoito da sorte', icon: '🥠', desc: 'O papelzinho dentro diz: "Você vai comer este biscoito." Acertou.', usedIn: 'Torre' },
     cristal: { name: 'Cristal das Ruínas', icon: '💎', desc: 'Pulsa devagar, como se lembrasse de tudo o que viu. Os três altares das Ruínas deixaram uma luz dentro dele.', usedIn: 'Castelo' },
+    chave_estrela: { name: 'Chave de estrela', icon: '⭐', desc: 'Uma chave com a ponta em forma de estrela, ainda fria do alto da torre. A segunda das três chaves do castelo.', usedIn: 'Portão do Castelo' },
   },
 
   // ---------- Vila ----------
@@ -421,6 +424,108 @@ export const content = {
     done: 'O pedestal está vazio, mas o pátio ainda guarda um brilho azul. O caminho de volta está livre.',
   },
 
+  // ---------- Torre do Saber ----------
+  // Textos de exemplo ([EXEMPLO]): troque pelas perguntas e pelas memórias reais.
+  tower: {
+    areaName: 'Torre do Saber',
+    intro: [
+      'A porta da torre range sozinha. Lá dentro, uma escada de pedra sobe de sala em sala.',
+      'Cada andar tem um guardião, e cada guardião faz uma pergunta. Quem acerta ganha a escada. Quem erra ganha uma dica.',
+    ],
+    floorNames: ['Biblioteca', 'Sala dos Relógios', 'Laboratório', 'Salão dos Espelhos', 'Observatório'],
+    floorLabel: '{n}º andar · {name}',
+    door: {
+      up: 'Subir para o {n}º andar',
+      down: 'Descer para o {n}º andar',
+      exit: 'Voltar ao mapa',
+      sealedPrompt: 'Examinar o selo',
+      sealed: ['A passagem está selada por uma luz vermelha. O guardião deste andar sabe como abri-la.'],
+      opened: 'O selo se desfaz. A escada está livre.',
+    },
+    guardians: [
+      {
+        name: 'Madame Lívia, a Bibliotecária',
+        prompt: 'Falar com a Bibliotecária',
+        greet: ['Shhh! Aqui se lê em silêncio, mas se responde em voz alta. [EXEMPLO]', 'Uma pergunta fácil para aquecer, e a escada é sua.'],
+        after: ['Pode subir, querido. E leve um livro, se quiser.'],
+        quiz: {
+          question: 'Qual é a cor favorita do Matheus? [EXEMPLO]',
+          options: ['Azul', 'Verde', 'Vermelho'],
+          answer: 0,
+          hint: ['Tente pensar na cor do céu numa tarde sem nuvens.'],
+          right: ['Isso! Está tudo escrito nos livros. Pode subir.'],
+        },
+      },
+      {
+        name: 'Relojoeiro Ambrósio',
+        prompt: 'Falar com o Relojoeiro',
+        greet: ['Tique, taque. Tudo aqui tem hora, menos a minha paciência. [EXEMPLO]'],
+        after: ['O tempo passa, mas você já passou. Suba.'],
+        quiz: {
+          question: 'Em que mês o Matheus faz aniversário? [EXEMPLO]',
+          options: ['Março', 'Julho', 'Outubro'],
+          answer: 1,
+          hint: ['Pense nas férias de inverno.'],
+          right: ['Pontual como um relógio suíço!'],
+        },
+      },
+      {
+        name: 'Alquimista Bruma',
+        prompt: 'Falar com a Alquimista',
+        greet: ['Cuidado com o caldeirão! Ele borbulha quando mente. [EXEMPLO]'],
+        after: ['A poção aprovou você. Siga em frente.'],
+        quiz: {
+          question: 'Qual é a comida preferida do Matheus? [EXEMPLO]',
+          options: ['Pizza', 'Churrasco', 'Lasanha'],
+          answer: 1,
+          hint: ['O cheiro da brasa já diz tudo.'],
+          right: ['O caldeirão borbulhou de alegria. Acertou!'],
+        },
+      },
+      {
+        name: 'O Espelho Falante',
+        prompt: 'Falar com o Espelho',
+        greet: ['Eu só mostro o que você já sabe. Vamos ver se sabe mesmo. [EXEMPLO]'],
+        after: ['Seu reflexo sorri. Pode seguir.'],
+        quiz: {
+          question: 'Qual é o bicho de estimação do Matheus? [EXEMPLO]',
+          options: ['Um gato', 'Um cachorro', 'Um papagaio'],
+          answer: 0,
+          hint: ['Ele ronrona e dorme em cima do teclado.'],
+          right: ['O reflexo concorda. A escada se abre.'],
+        },
+      },
+      {
+        name: 'Astrônomo Orion',
+        prompt: 'Falar com o Astrônomo',
+        greet: ['Cheguei até aqui contando estrelas. Última pergunta, e o baú é seu. [EXEMPLO]'],
+        after: ['As estrelas estão a seu favor. O baú espera.'],
+        quiz: {
+          question: 'Onde foi a primeira viagem do Matheus e da H.? [EXEMPLO]',
+          options: ['Na praia', 'Na serra', 'Numa cidade grande'],
+          answer: 1,
+          hint: ['Fazia frio e tinha lareira.'],
+          right: ['Ah, essa constelação eu conheço! Pode abrir o baú.'],
+        },
+      },
+    ],
+    chest: {
+      prompt: 'Abrir o baú',
+      locked: ['O baú está trancado por um feitiço. O Astrônomo sabe a palavra.'],
+      lines: [
+        'O baú abre devagar. Dentro, sobre um tecido azul, há uma chave com a ponta em forma de estrela.',
+        'Ela brilha como se tivesse guardado uma lembrança.',
+      ],
+    },
+    objective: {
+      talk: 'Fale com o guardião do {n}º andar',
+      climb: 'Suba para o {n}º andar',
+      chest: 'Abra o baú no observatório',
+      done: 'Volte ao mapa: a segunda chave está com você',
+    },
+    done: 'O baú está vazio, mas a torre ainda cintila. A chave de estrela já está com você.',
+  },
+
   // ---------- Memórias (aparecem quando um altar acende) ----------
   // Textos de exemplo ([EXEMPLO]). `photo` é o nome do arquivo em public/photos/ (sem foto, mostra a moldura vazia).
   memories: {
@@ -441,6 +546,12 @@ export const content = {
       text: ['[EXEMPLO] Aquela risada que ninguém consegue explicar, mas todo mundo lembra.'],
       caption: '[EXEMPLO] A risada',
       photo: 'ruinas_eco.jpg',
+    },
+    torre_topo: {
+      title: 'Lá do alto',
+      text: ['[EXEMPLO] De cima a gente enxerga longe. Foi num lugar alto assim que a gente teve a certeza.'],
+      caption: '[EXEMPLO] Lá do alto',
+      photo: 'torre_topo.jpg',
     },
   },
 

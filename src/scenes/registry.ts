@@ -35,7 +35,10 @@ const DEFS: Record<AreaId, AreaDef> = {
     const m = await import('./ruins');
     return { assets: m.RUINS_ASSETS, create: m.createRuins };
   } },
-  tower: {},
+  tower: { load: async () => {
+    const m = await import('./tower');
+    return { assets: m.TOWER_ASSETS, create: m.createTower };
+  } },
   tavern: {},
   vineyard: {},
   castle: {},
