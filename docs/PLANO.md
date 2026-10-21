@@ -49,7 +49,7 @@ Cada área do jogo implementa `Area` (scenes/types.ts) e é carregada sob demand
 | 3 | Vila | Abertura com mensagem misteriosa, 3 NPCs, sistema de diálogos, miniquest do Ferreiro (3 materiais), inventário (barra), lojinha do Comerciante, `SaveSystem` em localStorage + "recomeçar" | **feito** (textos `[EXEMPLO]`) |
 | 4 | Final | Sala do Tesouro, sequência do baú (tentativa → "companhia" → entrada dela com tocha → abertura), carta animada, voucher salvável, encerramento lado a lado | |
 | 5 | Mapa central | Hub com áreas bloqueadas/desbloqueadas, `SceneManager`, transições com fade | **feito** (as áreas do meio ainda dizem "em preparação") |
-| 6 | Áreas do meio | Floresta → Ruínas (3 altares) → Torre (quiz 5 andares) → Taverna (montar prato por arrasto) → Vinhedo (combinar uvas) | Floresta, Ruínas, Torre e Taverna **feitas**; falta o Vinhedo |
+| 6 | Áreas do meio | Floresta → Ruínas (3 altares) → Torre (quiz 5 andares) → Taverna (montar prato por arrasto) → Vinhedo (combinar uvas) | **feita** (Floresta, Ruínas, Torre, Taverna e Vinhedo) |
 | 7 | Castelo | Portão com 3 chaves, labirinto escuro, usos de espada/cristal/garrafa/memórias | |
 | 8 | Polimento | Áudio (desbloqueado no 1º toque), efeitos, desempenho, conteúdo real | |
 | 9 | Teste completo | Jogar do início ao fim no celular | |
@@ -154,3 +154,17 @@ textos de exemplo marcados com `[EXEMPLO]`.
   não é salvo: ao voltar, o jogador conversa de novo com o cliente.
 - **Textos:** `content.tavern` (pedidos, ingredientes, falas), todos `[EXEMPLO]`. Foto da memória: `public/photos/taverna_jantar.jpg`.
 - **Depuração:** `?area=taverna`; com `?debug`, `__dev.area.debug.solveAll()` serve os três pedidos.
+
+## Etapa 6 — Vinhedo Dourado (`scenes/vineyard.ts`)
+
+- **Cenário:** vinhedo ao pôr do sol (`SUNSET`), 8 fileiras de videira (postes, arame, folhas e cachos instanciados, colisão por fileira) e um galpão de pedra
+  com o lagar, barris e a vinicultora. Chegada por um portão de pedra com "Voltar ao mapa". Tocha apagada, câmera de 3ª pessoa.
+- **Fluxo:** Dona Vitória (grava `vineyard_started`) → colher 4 cachos especiais em cestas nos corredores entre as fileiras (`vineyard_grape_<id>`, com brilho) →
+  usar o lagar (`playBlend`, em ui/minigames.ts) → mistura certa grava `vineyard_blended`, ela entrega a `garrafa` (usada no Castelo), a memória
+  `vinhedo_brinde` e grava `done_vineyard`. Com as quatro áreas do meio concluídas, o Castelo destrava.
+- **Mistura:** cada uva tem doçura, acidez e corpo (0 a 3, em `content.vineyard.grapes`). O barril aceita até 6 cachos e as barras mostram a média; a faixa de
+  cada barra é a média da receita de referência (`blend.solution`) ± `blend.tolerance`, então sempre há solução (e combinações parecidas também valem).
+  Errar só mostra qual barra passou ou faltou.
+- **Save:** só flags (`vineyard_seen|started|grape_<id>|blended`, `mem_vinhedo_brinde`, `done_vineyard`) e o item. Se o jogador sair depois de misturar, ao voltar basta falar com ela.
+- **Textos:** `content.vineyard`, todos `[EXEMPLO]`. Foto da memória: `public/photos/vinhedo_brinde.jpg`.
+- **Depuração:** `?area=vinhedo`; com `?debug`, `__dev.area.debug.harvestAll()` colhe os cachos e `solveAll()` também deixa a mistura feita.

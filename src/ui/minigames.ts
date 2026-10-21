@@ -356,3 +356,131 @@ export function playRunes(ui: UI, text: RunesText): Promise<void> {
     });
   });
 }
+
+export type BlendAxis = 'doce' | 'acido' | 'corpo';
+const BLEND_AXES: readonly BlendAxis[] = ['doce', 'acido', 'corpo'];
+const BLEND_SCALE = 3;
+
+export interface BlendGrape extends Record<BlendAxis, number> {
+  id: string;
+  icon: string;
+  name: string;
+}
+
+export interface BlendText {
+  title: string;
+  hint: string;
+  empty: string;
+  taste: string;
+  clear: string;
+  emptyBarrel: string;
+  labels: Record<BlendAxis, string>;
+  high: Record<BlendAxis, string>;
+  low: Record<BlendAxis, string>;
+  ok: string;
+}
+
+/**
+ * Lagar: toque nas uvas para pôr cachos no barril (até `max`). As três barras mostram a média de doçura, acidez e corpo;
+ * "Provar" só aceita quando as três estão dentro da faixa de `targets`. Errar mostra qual barra passou ou faltou.
+ */
+export function playBlend(
+  ui: UI,
+  text: BlendText,
+  grapes: readonly BlendGrape[],
+  targets: Record<BlendAxis, readonly [number, number]>,
+  max = 6,
+): Promise<void> {
+  return ui.modal<void>('blend-box', (box, close) => {
+    h('h3', 'mg-title', box, text.title);
+    h('p', 'mg-hint', box, text.hint);
+    const shelfEl = h('div', 'plate-shelf', box);
+    const barrelEl = h('div', 'plate blend-barrel', box);
+    const bars = h('div', 'blend-bars', box);
+    const status = h('p', 'mg-status', box);
+    const actions = h('div', 'plate-actions', box);
+    const clearBtn = h('button', 'btn', actions, text.clear);
+    const tasteBtn = h('button', 'btn primary', actions, text.taste);
+
+    const byId = new Map(grapes.map((g) => [g.id, g]));
+    const barrel: string[] = [];
+    let done = false;
+
+    const fills = {} as Record<BlendAxis, HTMLElement>;
+    for (const axis of BLEND_AXES) {
+      const row = h('div', 'blend-row', bars);
+      h('span', 'blend-label', row, text.labels[axis]);
+      const track = h('div', 'blend-track', row);
+      const [lo, hi] = targets[axis];
+      const zone = h('div', 'blend-target', track);
+      zone.style.left = `${(lo / BLEND_SCALE) * 100}%`;
+      zone.style.width = `${((hi - lo) / BLEND_SCALE) * 100}%`;
+      fills[axis] = h('div', 'blend-fill', track);
+    }
+
+    const average = (axis: BlendAxis) => (barrel.length ? barrel.reduce((sum, id) => sum + byId.get(id)![axis], 0) / barrel.length : 0);
+    const inRange = (axis: BlendAxis) => {
+      const v = average(axis);
+      return v >= targets[axis][0] && v <= targets[axis][1];
+    };
+
+    const draw = () => {
+      barrelEl.replaceChildren();
+      if (!barrel.length) h('span', 'plate-empty', barrelEl, text.empty);
+      barrel.forEach((id, i) => {
+        const g = byId.get(id)!;
+        const chip = h('button', 'ingredient on-plate', barrelEl);
+        chip.innerHTML = `<span class="ing-icon">${g.icon}</span><span class="ing-name">${g.name}</span>`;
+        chip.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          if (done) return;
+          barrel.splice(i, 1);
+          status.textContent = '';
+          draw();
+        });
+      });
+      for (const axis of BLEND_AXES) {
+        fills[axis].style.width = `${(average(axis) / BLEND_SCALE) * 100}%`;
+        fills[axis].classList.toggle('good', barrel.length > 0 && inRange(axis));
+      }
+    };
+    draw();
+
+    grapes.forEach((g) => {
+      const chip = h('button', 'ingredient', shelfEl);
+      chip.innerHTML = `<span class="ing-icon">${g.icon}</span><span class="ing-name">${g.name}</span>`;
+      chip.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (done || barrel.length >= max) return;
+        barrel.push(g.id);
+        status.textContent = '';
+        draw();
+      });
+    });
+
+    clearBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (done) return;
+      barrel.length = 0;
+      status.textContent = '';
+      draw();
+    });
+    tasteBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (done) return;
+      if (!barrel.length) {
+        status.textContent = text.emptyBarrel;
+        return;
+      }
+      const off = BLEND_AXES.find((axis) => !inRange(axis));
+      if (off) {
+        status.textContent = average(off) > targets[off][1] ? text.high[off] : text.low[off];
+        return;
+      }
+      done = true;
+      barrelEl.classList.add('ok');
+      status.textContent = text.ok;
+      setTimeout(() => close(), 1200);
+    });
+  });
+}

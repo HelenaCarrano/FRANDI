@@ -84,6 +84,7 @@ export const content = {
     cristal: { name: 'Cristal das Ruínas', icon: '💎', desc: 'Pulsa devagar, como se lembrasse de tudo o que viu. Os três altares das Ruínas deixaram uma luz dentro dele.', usedIn: 'Castelo' },
     chave_estrela: { name: 'Chave de estrela', icon: '⭐', desc: 'Uma chave com a ponta em forma de estrela, ainda fria do alto da torre. A segunda das três chaves do castelo.', usedIn: 'Portão do Castelo' },
     chave_cobre: { name: 'Chave de cobre', icon: '🗝️', desc: 'Uma chave de cobre com cheiro de pão e de lenha. A terceira das três chaves do castelo.', usedIn: 'Portão do Castelo' },
+    garrafa: { name: 'Garrafa do Vinhedo', icon: '🍷', desc: 'A última garrafa da safra, com a rolha ainda úmida de cera. Guardada para um brinde importante.', usedIn: 'Castelo' },
   },
 
   // ---------- Vila ----------
@@ -641,6 +642,78 @@ export const content = {
     done: 'O balcão está limpo e o cheiro de comida boa ainda enche a casa. A chave de cobre já está com você.',
   },
 
+  // ---------- Vinhedo Dourado ----------
+  // Textos de exemplo ([EXEMPLO]): troque pelos nomes, pelas uvas e pelas piadas reais.
+  // Cada uva tem doçura, acidez e corpo (0 a 3). A mistura certa deixa a média de cada um dentro da faixa de `blend.solution`.
+  vineyard: {
+    areaName: 'Vinhedo Dourado',
+    intro: [
+      'O sol baixo pinta as fileiras de videira de dourado. O cheiro de uva madura vem junto com o vento.',
+      'Lá no fundo, debaixo de um galpão de pedra, uma mulher de lenço na cabeça pisa em alguma coisa e canta sozinha.',
+    ],
+    back: { prompt: 'Voltar ao mapa' },
+    keeper: {
+      name: 'Dona Vitória, a Vinicultora',
+      prompt: 'Falar com a Dona Vitória',
+      greet: [
+        'Que bom que alguém apareceu! A colheita está madura e eu estou sozinha. [EXEMPLO]',
+        'Preciso de quatro cachos especiais, um de cada tipo: roxa, verde, rosada e dourada. Cada um está escondido entre as fileiras e brilha quando você chega perto.',
+        'Com eles, a gente faz a mistura no lagar. Se der certo, a última garrafa da safra é sua. Ela abre uma porta do castelo.',
+      ],
+      waiting: ['Os cachos brilham entre as fileiras. Procure nos corredores de videira, um de cada tipo.'],
+      ready: ['Os quatro! Agora é com o lagar: misture os cachos até o sabor ficar redondo. Prove quantas vezes quiser.'],
+      reward: [
+        'Isso! Doce na medida, ácido na medida, corpo de sobra. É assim que se faz um vinho de gente grande.',
+        'Prometi e cumpro. Esta é a última garrafa da safra. Guarde para um brinde importante.',
+      ],
+      done: ['A safra foi boa, a vinha está feliz e eu também. Faça um bom brinde com aquela garrafa.'],
+    },
+    press: {
+      prompt: 'Usar o lagar',
+      notReady: ['O lagar está parado. Falta colher os quatro cachos especiais nas fileiras.'],
+      notStarted: ['Um lagar de madeira, manchado de roxo. Melhor falar com a dona do vinhedo antes de mexer em alguma coisa.'],
+      done: ['O lagar está limpo e o cheiro de uva ainda paira no ar.'],
+    },
+    grapes: {
+      roxa: { icon: '🍇', name: 'Uva roxa', prompt: 'Colher o cacho roxo', picked: 'Um cacho roxo, pesado e escuro. Encorpado.', doce: 2, acido: 1, corpo: 3 },
+      verde: { icon: '🍏', name: 'Uva verde', prompt: 'Colher o cacho verde', picked: 'Um cacho verde e firme. Ácido de fazer careta.', doce: 1, acido: 3, corpo: 1 },
+      rosada: { icon: '🌸', name: 'Uva rosada', prompt: 'Colher o cacho rosado', picked: 'Um cacho rosado, quase um doce de tão macio.', doce: 3, acido: 1, corpo: 1 },
+      dourada: { icon: '✨', name: 'Uva dourada', prompt: 'Colher o cacho dourado', picked: 'Um cacho dourado que brilha sozinho. Doce, sem um pingo de acidez.', doce: 3, acido: 0, corpo: 2 },
+    },
+    blend: {
+      title: 'Lagar da Dona Vitória',
+      hint: 'Toque nas uvas para pôr cachos no barril (até 6). Toque num cacho do barril para tirá-lo. Deixe as três barras dentro da faixa marcada.',
+      empty: 'O barril está vazio',
+      taste: 'Provar',
+      clear: 'Esvaziar',
+      emptyBarrel: 'O barril está vazio. Toque nas uvas para pôr cachos nele.',
+      labels: { doce: 'Doçura', acido: 'Acidez', corpo: 'Corpo' },
+      high: {
+        doce: 'Doce demais, enjoa. Ponha menos uva doce.',
+        acido: 'Ácido demais, até a língua franze. Tire um pouco da verde.',
+        corpo: 'Pesado demais, parece sopa. Tire um pouco da roxa.',
+      },
+      low: {
+        doce: 'Faltou doçura, está seco como poeira.',
+        acido: 'Faltou acidez, está sem graça e sem vida.',
+        corpo: 'Faltou corpo, está aguado. Falta alguma coisa encorpada.',
+      },
+      /** Receita de referência (roxa + verde + dourada). A faixa de cada barra é a média dela ± `tolerance`. */
+      solution: ['roxa', 'verde', 'dourada'],
+      tolerance: 0.4,
+      max: 6,
+      ok: 'Perfeito! O barril brilha dourado.',
+    },
+    objective: {
+      talk: 'Fale com a Dona Vitória, no lagar',
+      harvest: 'Colha os cachos especiais entre as fileiras ({n}/4)',
+      press: 'Leve os cachos ao lagar e faça a mistura',
+      reward: 'Volte à Dona Vitória para pegar a garrafa',
+      done: 'Volte ao mapa: a garrafa está com você',
+    },
+    done: 'A safra está guardada e a última garrafa já está com você.',
+  },
+
   // ---------- Memórias (aparecem quando um altar acende) ----------
   // Textos de exemplo ([EXEMPLO]). `photo` é o nome do arquivo em public/photos/ (sem foto, mostra a moldura vazia).
   memories: {
@@ -673,6 +746,12 @@ export const content = {
       text: ['[EXEMPLO] Nada de especial: uma mesa, comida boa e conversa até esfriar o prato. Foi tudo.'],
       caption: '[EXEMPLO] O jantar',
       photo: 'taverna_jantar.jpg',
+    },
+    vinhedo_brinde: {
+      title: 'O brinde',
+      text: ['[EXEMPLO] A gente brindou com qualquer coisa e achou que era o melhor vinho do mundo. Era só a companhia.'],
+      caption: '[EXEMPLO] O brinde',
+      photo: 'vinhedo_brinde.jpg',
     },
   },
 
