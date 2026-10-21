@@ -170,6 +170,127 @@ export function playGears(ui: UI, text: GearsText): Promise<void> {
   });
 }
 
+export interface PlatingIngredient {
+  id: string;
+  icon: string;
+  name: string;
+}
+
+export interface PlatingText {
+  title: string;
+  hint: string;
+  empty: string;
+  serve: string;
+  clear: string;
+  missing: string;
+  extra: string;
+  emptyPlate: string;
+}
+
+/**
+ * Montar o prato: arraste fichas da prateleira para o prato (mouse ou dedo); tocar numa ficha do prato a tira.
+ * `check` diz se o prato servido está certo; errar só mostra a dica e deixa o jogador corrigir.
+ * Resolve com os ids do prato certo.
+ */
+export function playPlating(
+  ui: UI,
+  text: PlatingText,
+  shelf: readonly PlatingIngredient[],
+  check: (plate: readonly string[]) => 'ok' | 'missing' | 'extra',
+): Promise<string[]> {
+  return ui.modal<string[]>('plating-box', (box, close) => {
+    h('h3', 'mg-title', box, text.title);
+    h('p', 'mg-hint', box, text.hint);
+    const shelfEl = h('div', 'plate-shelf', box);
+    const plateEl = h('div', 'plate', box);
+    const status = h('p', 'mg-status', box);
+    const actions = h('div', 'plate-actions', box);
+    const clearBtn = h('button', 'btn', actions, text.clear);
+    const serveBtn = h('button', 'btn primary', actions, text.serve);
+
+    const byId = new Map(shelf.map((s) => [s.id, s]));
+    const plate: string[] = [];
+    let done = false;
+
+    const drawPlate = () => {
+      plateEl.replaceChildren();
+      if (!plate.length) {
+        h('span', 'plate-empty', plateEl, text.empty);
+        return;
+      }
+      plate.forEach((id, i) => {
+        const chip = h('button', 'ingredient on-plate', plateEl);
+        chip.innerHTML = `<span class="ing-icon">${byId.get(id)!.icon}</span><span class="ing-name">${byId.get(id)!.name}</span>`;
+        chip.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          if (done) return;
+          plate.splice(i, 1);
+          status.textContent = '';
+          drawPlate();
+        });
+      });
+    };
+    drawPlate();
+
+    shelf.forEach((ing) => {
+      const chip = h('button', 'ingredient', shelfEl);
+      chip.innerHTML = `<span class="ing-icon">${ing.icon}</span><span class="ing-name">${ing.name}</span>`;
+      chip.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (done) return;
+        const ghost = h('div', 'ingredient dragging', document.body);
+        ghost.innerHTML = chip.innerHTML;
+        const move = (x: number, y: number) => {
+          ghost.style.left = `${x}px`;
+          ghost.style.top = `${y}px`;
+        };
+        move(e.clientX, e.clientY);
+        const onMove = (ev: PointerEvent) => move(ev.clientX, ev.clientY);
+        const end = (ev: PointerEvent) => {
+          window.removeEventListener('pointermove', onMove);
+          window.removeEventListener('pointerup', end);
+          window.removeEventListener('pointercancel', end);
+          ghost.remove();
+          const r = plateEl.getBoundingClientRect();
+          const over = ev.type === 'pointerup' && ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
+          if (over && !plate.includes(ing.id)) {
+            plate.push(ing.id);
+            status.textContent = '';
+            drawPlate();
+          }
+        };
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', end);
+        window.addEventListener('pointercancel', end);
+      });
+    });
+
+    clearBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (done) return;
+      plate.length = 0;
+      status.textContent = '';
+      drawPlate();
+    });
+    serveBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (done) return;
+      if (!plate.length) {
+        status.textContent = text.emptyPlate;
+        return;
+      }
+      const result = check(plate);
+      if (result === 'ok') {
+        done = true;
+        plateEl.classList.add('ok');
+        setTimeout(() => close([...plate]), 900);
+      } else {
+        status.textContent = result === 'missing' ? text.missing : text.extra;
+      }
+    });
+  });
+}
+
 export interface RunesText {
   title: string;
   hint: string;

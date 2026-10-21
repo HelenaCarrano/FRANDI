@@ -49,7 +49,7 @@ Cada área do jogo implementa `Area` (scenes/types.ts) e é carregada sob demand
 | 3 | Vila | Abertura com mensagem misteriosa, 3 NPCs, sistema de diálogos, miniquest do Ferreiro (3 materiais), inventário (barra), lojinha do Comerciante, `SaveSystem` em localStorage + "recomeçar" | **feito** (textos `[EXEMPLO]`) |
 | 4 | Final | Sala do Tesouro, sequência do baú (tentativa → "companhia" → entrada dela com tocha → abertura), carta animada, voucher salvável, encerramento lado a lado | |
 | 5 | Mapa central | Hub com áreas bloqueadas/desbloqueadas, `SceneManager`, transições com fade | **feito** (as áreas do meio ainda dizem "em preparação") |
-| 6 | Áreas do meio | Floresta → Ruínas (3 altares) → Torre (quiz 5 andares) → Taverna (montar prato por arrasto) → Vinhedo (combinar uvas) | Floresta, Ruínas e Torre **feitas**; faltam Taverna e Vinhedo |
+| 6 | Áreas do meio | Floresta → Ruínas (3 altares) → Torre (quiz 5 andares) → Taverna (montar prato por arrasto) → Vinhedo (combinar uvas) | Floresta, Ruínas, Torre e Taverna **feitas**; falta o Vinhedo |
 | 7 | Castelo | Portão com 3 chaves, labirinto escuro, usos de espada/cristal/garrafa/memórias | |
 | 8 | Polimento | Áudio (desbloqueado no 1º toque), efeitos, desempenho, conteúdo real | |
 | 9 | Teste completo | Jogar do início ao fim no celular | |
@@ -139,3 +139,18 @@ textos de exemplo marcados com `[EXEMPLO]`.
 - **Save/continuar:** a cada troca de andar `game.setArea('tower', 'f<n>')`; `AreaContext.entry` informa o andar à `createTower`,
   então "Continuar" volta à sala certa. Vindo do mapa (`start`) começa no 1º andar.
 - **Depuração:** `?area=torre` (e `&entry=f3` para um andar); com `?debug`, `__dev.area.debug.goFloor(n)` e `solveAll()`.
+
+## Etapa 6 — Taverna do Zé (`scenes/tavern.ts`)
+
+- **Cenário:** salão fechado (20 × 16 m) com lareira, balcão, prateleira de ingredientes, três mesas e três clientes. Câmera isométrica,
+  tocha apagada (a luz vem da lareira e das tochas de parede). Porta ao sul = "Voltar ao mapa".
+- **Fluxo:** Zé (grava `tavern_started`) → conversar com um cliente (pedido ativo) → "Montar o prato" no balcão (`playPlating`, em
+  ui/minigames.ts: arrastar fichas para o prato, tocar numa ficha do prato a tira) → servir. Prato errado só dá dica (faltou/sobrou) e
+  deixa corrigir. Pedidos servidos gravam `tavern_order_<n>` e pagam moedas. Com os 3, o Zé dá a `chave_cobre` (3ª chave do Castelo),
+  a memória `taverna_jantar` e grava `done_tavern`.
+- **Bônus opcionais:** ovos, pão e farinha da Vila aparecem como fichas extras na prateleira (`BONUS_ITEM`). Cada cliente "adora" um
+  deles: usá-lo no prato dele gasta o item e paga moedas extras; usar o de outro cliente conta como "sobrou algo". Nada exige os itens.
+- **Save:** só flags (`tavern_seen`, `tavern_started`, `tavern_order_<n>`, `mem_taverna_jantar`, `done_tavern`) e o item. O pedido ativo
+  não é salvo: ao voltar, o jogador conversa de novo com o cliente.
+- **Textos:** `content.tavern` (pedidos, ingredientes, falas), todos `[EXEMPLO]`. Foto da memória: `public/photos/taverna_jantar.jpg`.
+- **Depuração:** `?area=taverna`; com `?debug`, `__dev.area.debug.solveAll()` serve os três pedidos.

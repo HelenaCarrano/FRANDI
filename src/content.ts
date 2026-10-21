@@ -83,6 +83,7 @@ export const content = {
     biscoito: { name: 'Biscoito da sorte', icon: '🥠', desc: 'O papelzinho dentro diz: "Você vai comer este biscoito." Acertou.', usedIn: 'Torre' },
     cristal: { name: 'Cristal das Ruínas', icon: '💎', desc: 'Pulsa devagar, como se lembrasse de tudo o que viu. Os três altares das Ruínas deixaram uma luz dentro dele.', usedIn: 'Castelo' },
     chave_estrela: { name: 'Chave de estrela', icon: '⭐', desc: 'Uma chave com a ponta em forma de estrela, ainda fria do alto da torre. A segunda das três chaves do castelo.', usedIn: 'Portão do Castelo' },
+    chave_cobre: { name: 'Chave de cobre', icon: '🗝️', desc: 'Uma chave de cobre com cheiro de pão e de lenha. A terceira das três chaves do castelo.', usedIn: 'Portão do Castelo' },
   },
 
   // ---------- Vila ----------
@@ -526,6 +527,120 @@ export const content = {
     done: 'O baú está vazio, mas a torre ainda cintila. A chave de estrela já está com você.',
   },
 
+  // ---------- Taverna do Zé ----------
+  // Textos de exemplo ([EXEMPLO]): troque pelos pedidos e pelas piadas reais.
+  tavern: {
+    areaName: 'Taverna do Zé',
+    intro: [
+      'A porta da taverna cheira a lenha, pão e alguma coisa queimada. Lá dentro, três clientes esperam de cara fechada.',
+      'Atrás do balcão, um cozinheiro enorme enxuga as mãos no avental e olha para você como quem vê um ajudante chegar.',
+    ],
+    back: { prompt: 'Voltar ao mapa' },
+    cook: {
+      name: 'Zé, o Cozinheiro',
+      prompt: 'Falar com o Zé',
+      greet: [
+        'Ah, finalmente! Meu ajudante sumiu e a casa está cheia de gente com fome. [EXEMPLO]',
+        'São três clientes, três pedidos. Converse com cada um, escute com atenção e monte o prato no balcão.',
+        'Acertou os três, e eu te dou uma coisa que está guardada aqui há anos: a chave de cobre.',
+      ],
+      waiting: ['Fale com os clientes, escute o pedido e monte o prato no balcão. Nada de pressa. Quer dizer, um pouco de pressa.'],
+      reward: [
+        'Os três pratos voltaram limpos. Limpíssimos! Nunca vi tanto sorriso junto nesta casa.',
+        'Prometi e cumpro. Esta chave de cobre abre uma das três fechaduras do portão do castelo.',
+      ],
+      done: ['A casa está sempre aberta para você. Mas, por favor, avise antes de trazer fome.'],
+    },
+    counter: {
+      prompt: 'Montar o prato',
+      noOrder: ['O balcão está vazio. Antes de cozinhar, descubra o que cada cliente quer: converse com eles.'],
+      allServed: ['Todos já foram servidos. Falta só falar com o Zé.'],
+    },
+    ingredients: {
+      pao: { icon: '🍞', name: 'Pão' },
+      queijo: { icon: '🧀', name: 'Queijo' },
+      carne: { icon: '🥩', name: 'Carne' },
+      alface: { icon: '🥬', name: 'Alface' },
+      tomate: { icon: '🍅', name: 'Tomate' },
+      cebola: { icon: '🧅', name: 'Cebola' },
+      peixe: { icon: '🐟', name: 'Peixe' },
+      batata: { icon: '🥔', name: 'Batata' },
+      cogumelo: { icon: '🍄', name: 'Cogumelo' },
+      cenoura: { icon: '🥕', name: 'Cenoura' },
+      ovo: { icon: '🥚', name: 'Ovo caipira' },
+      pao_quente: { icon: '🥖', name: 'Pão quentinho' },
+      farinha: { icon: '🌫️', name: 'Farinha misteriosa' },
+    },
+    plating: {
+      title: 'Balcão do Zé',
+      hint: 'Arraste os ingredientes para o prato. Toque num ingrediente do prato para tirá-lo.',
+      empty: 'Arraste aqui',
+      serve: 'Servir',
+      clear: 'Limpar',
+      missing: 'Hmm, ainda falta alguma coisa no prato. Lembre do que o cliente disse.',
+      extra: 'Tem coisa demais no prato. Releia o pedido: nem tudo que é bom combina.',
+      empty_plate: 'O prato está vazio. Arraste alguma coisa para ele.',
+    },
+    orders: [
+      {
+        name: 'Dona Berenice, a Viajante',
+        prompt: 'Falar com a Viajante',
+        request: [
+          'Boa noite. Estou de passagem e com pressa, mas com fome ainda maior. [EXEMPLO]',
+          'Quero algo simples: um pão com queijo e tomate. Nada de carne, eu juro que não aguento.',
+        ],
+        waiting: ['O prato ainda não chegou? Pão, queijo e tomate. Nada de carne!'],
+        recipe: ['pao', 'queijo', 'tomate'],
+        loves: 'ovo',
+        thanks: ['Perfeito! Simples e quentinho. Pode me chamar de cliente fiel.'],
+        bonusThanks: ['E esse ovo por cima? Quase chorei. Tome uma gorjeta, é o mínimo.'],
+        done: ['Já vou. Mas volto, viu?'],
+        coins: 8,
+        bonusCoins: 6,
+      },
+      {
+        name: 'Seu Teodoro, o Pescador',
+        prompt: 'Falar com o Pescador',
+        request: [
+          'Passei o dia no rio e voltei com um peixe e com um apetite. [EXEMPLO]',
+          'Quero o peixe com batata e cebola. E nada de queijo, que queijo com peixe é crime.',
+        ],
+        waiting: ['Peixe, batata e cebola. Queijo, jamais.'],
+        recipe: ['peixe', 'batata', 'cebola'],
+        loves: 'pao_quente',
+        thanks: ['Isso sim é prato de pescador! O rio agradece.'],
+        bonusThanks: ['Com pão quentinho para molhar? O senhor é um gênio. Tome aqui.'],
+        done: ['Quem come peixe com batata nunca desiste do rio.'],
+        coins: 8,
+        bonusCoins: 6,
+      },
+      {
+        name: 'Madame Cogumela, a Colecionadora',
+        prompt: 'Falar com a Colecionadora',
+        request: [
+          'Colecionei receitas por todo o reino e hoje quero a minha preferida. [EXEMPLO]',
+          'Carne com cogumelo, cenoura e cebola. O segredo é a cenoura, não esqueça.',
+        ],
+        waiting: ['Carne, cogumelo, cenoura e cebola. A cenoura é o segredo!'],
+        recipe: ['carne', 'cogumelo', 'cenoura', 'cebola'],
+        loves: 'farinha',
+        thanks: ['Maravilhoso! Esta receita vai direto para o meu caderno.'],
+        bonusThanks: ['Uma pitada de farinha misteriosa... Entendi tudo. Agora faz sentido. Tome algo pela ousadia.'],
+        done: ['Cada prato conta uma história. Este contou a sua.'],
+        coins: 10,
+        bonusCoins: 8,
+      },
+    ],
+    objective: {
+      talkCook: 'Fale com o Zé, atrás do balcão',
+      takeOrder: 'Converse com os clientes e descubra os pedidos ({n}/3)',
+      plate: 'Monte o prato de {name} no balcão',
+      reward: 'Volte ao Zé para pegar a chave de cobre',
+      done: 'Volte ao mapa: a terceira chave está com você',
+    },
+    done: 'O balcão está limpo e o cheiro de comida boa ainda enche a casa. A chave de cobre já está com você.',
+  },
+
   // ---------- Memórias (aparecem quando um altar acende) ----------
   // Textos de exemplo ([EXEMPLO]). `photo` é o nome do arquivo em public/photos/ (sem foto, mostra a moldura vazia).
   memories: {
@@ -552,6 +667,12 @@ export const content = {
       text: ['[EXEMPLO] De cima a gente enxerga longe. Foi num lugar alto assim que a gente teve a certeza.'],
       caption: '[EXEMPLO] Lá do alto',
       photo: 'torre_topo.jpg',
+    },
+    taverna_jantar: {
+      title: 'O jantar',
+      text: ['[EXEMPLO] Nada de especial: uma mesa, comida boa e conversa até esfriar o prato. Foi tudo.'],
+      caption: '[EXEMPLO] O jantar',
+      photo: 'taverna_jantar.jpg',
     },
   },
 
