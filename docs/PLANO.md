@@ -50,7 +50,7 @@ Cada área do jogo implementa `Area` (scenes/types.ts) e é carregada sob demand
 | 4 | Final | Sala do Tesouro, sequência do baú (tentativa → "companhia" → entrada dela com tocha → abertura), carta animada, voucher salvável, encerramento lado a lado | |
 | 5 | Mapa central | Hub com áreas bloqueadas/desbloqueadas, `SceneManager`, transições com fade | **feito** (as áreas do meio ainda dizem "em preparação") |
 | 6 | Áreas do meio | Floresta → Ruínas (3 altares) → Torre (quiz 5 andares) → Taverna (montar prato por arrasto) → Vinhedo (combinar uvas) | **feita** (Floresta, Ruínas, Torre, Taverna e Vinhedo) |
-| 7 | Castelo | Portão com 3 chaves, labirinto escuro, usos de espada/cristal/garrafa/memórias | |
+| 7 | Castelo | Portão com 3 chaves, labirinto escuro, usos de espada/cristal/garrafa/memórias | **feito** (a Sala do Tesouro, etapa 4, ainda não existe: o fim do Castelo mostra um cartão e volta ao mapa) |
 | 8 | Polimento | Áudio (desbloqueado no 1º toque), efeitos, desempenho, conteúdo real | |
 | 9 | Teste completo | Jogar do início ao fim no celular | |
 
@@ -168,3 +168,26 @@ textos de exemplo marcados com `[EXEMPLO]`.
 - **Save:** só flags (`vineyard_seen|started|grape_<id>|blended`, `mem_vinhedo_brinde`, `done_vineyard`) e o item. Se o jogador sair depois de misturar, ao voltar basta falar com ela.
 - **Textos:** `content.vineyard`, todos `[EXEMPLO]`. Foto da memória: `public/photos/vinhedo_brinde.jpg`.
 - **Depuração:** `?area=vinhedo`; com `?debug`, `__dev.area.debug.harvestAll()` colhe os cachos e `solveAll()` também deixa a mistura feita.
+
+## Etapa 7 — Castelo (`scenes/castle.ts`)
+
+- **Zonas:** três áreas lado a lado (60 m entre os centros), só a atual fica visível. Trocar de zona escurece a tela (`ui.fade`) e move o jogador com
+  `AreaContext.teleport`, como nos andares da Torre. Câmera isométrica nas três. Entradas: `start` (pátio), `maze`, `hall`; o save grava a zona
+  com `game.setArea('castle', ...)`, então "Continuar" volta ao lugar certo.
+- **1. Pátio do Portão:** três pedestais, um por chave. Usar a chave (trigo, estrela, cobre) **gasta** o item e grava `castle_lock_<id>`. Com as três,
+  as folhas do portão deslizam, o colisor some e aparece "Entrar no castelo".
+- **2. Labirinto Escuro:** grade 15 × 15 (peças de 2,5 m) gerada por busca em profundidade com semente fixa, então é sempre o mesmo e tem um único
+  caminho (achado por BFS). A tocha alcança menos aqui (`Torch.setReach`, 0,65; a `sceneManager.activate` devolve 1 ao sair).
+  - *Cristal:* no pedestal da entrada (gasto, grava `castle_crystal`) acende setas de luz nas bifurcações do caminho certo.
+  - *Poção de Coragem:* opcional, gasta, grava `castle_potion` e leva o alcance a 1. Só aparece depois do cristal (ou sem cristal na mochila).
+  - *Espada:* corta duas teias no caminho certo (`castle_web_<n>`); sem espada, só dica. A espada não é gasta.
+- **3. Salão das Memórias:** a Guardiã dá uma pista por memória reunida e abre `playMemoryOrder` (ui/minigames.ts): tocar nas cartas na ordem em que
+  aconteceram; errar diz quantas estão no lugar certo. Acertar grava `castle_memories` e acende as seis molduras (que passam a reabrir a memória).
+  A mesa do brinde **gasta** a garrafa, mostra a memória `castelo_brinde` e grava `castle_toast`, o que dissolve o selo da porta do trono.
+  Abrir a porta grava `done_castle`, mostra o cartão final e abre o mapa. A ordem certa está em `content.castle.hall.order`.
+- **Sem travar:** só entram na ordenação as memórias que o jogador tem (mínimo 2); como as quatro áreas do meio precisam estar concluídas,
+  na prática são as seis.
+- **Save:** só flags (`castle_seen|maze_seen|hall_seen`, `castle_lock_*`, `castle_crystal`, `castle_potion`, `castle_web_*`, `castle_memories`,
+  `castle_toast`, `mem_castelo_brinde`, `done_castle`) e os itens. O formato do save não mudou.
+- **Textos:** `content.castle` (todos `[EXEMPLO]`). Foto da memória final: `public/photos/castelo_brinde.jpg`.
+- **Depuração:** `?area=castelo` (`&entry=maze|hall`); com `?debug`, `__dev.area.debug.giveAll()` (itens e memórias), `goZone(n)` e `solveAll()`.

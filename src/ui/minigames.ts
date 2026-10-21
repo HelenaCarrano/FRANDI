@@ -4,6 +4,7 @@ import type { UI } from './ui';
  * Minijogos em janelas HTML sobre o jogo. Nenhum trava o progresso: errar só gera uma fala e outra tentativa.
  *  - Forja: um brilho vai e volta numa barra; toque no momento em que ele passa pela faixa verde (3 acertos).
  *  - Engrenagens: três rodas; tocar numa gira ela e a vizinha ao contrário, até todas as marcas apontarem para cima.
+ *  - Ordem das lembranças: toque nas cartas na ordem em que aconteceram (Castelo).
  *  - Anéis de símbolos: três discos de pedra com seis símbolos; tocar num gira ele e o vizinho ao contrário, até o ✦ ficar no alto de todos.
  */
 
@@ -481,6 +482,99 @@ export function playBlend(
       barrelEl.classList.add('ok');
       status.textContent = text.ok;
       setTimeout(() => close(), 1200);
+    });
+  });
+}
+
+export interface OrderCard {
+  id: string;
+  icon: string;
+  name: string;
+}
+
+export interface OrderText {
+  title: string;
+  hint: string;
+  empty: string;
+  confirm: string;
+  clear: string;
+  incomplete: string;
+  /** Usa {n} para quantas estão no lugar certo. */
+  wrong: string;
+}
+
+/**
+ * Ordenar lembranças (Castelo): toque nas cartas na ordem certa; tocar numa carta já escolhida a tira.
+ * Errar só diz quantas estão no lugar certo e deixa tentar de novo. Resolve quando a ordem bate com `correct`.
+ */
+export function playMemoryOrder(ui: UI, text: OrderText, cards: readonly OrderCard[], correct: readonly string[]): Promise<void> {
+  return ui.modal<void>('plating-box order-box', (box, close) => {
+    h('h3', 'mg-title', box, text.title);
+    h('p', 'mg-hint', box, text.hint);
+    const shelfEl = h('div', 'plate-shelf', box);
+    const plateEl = h('div', 'plate', box);
+    const status = h('p', 'mg-status', box);
+    const actions = h('div', 'plate-actions', box);
+    const clearBtn = h('button', 'btn', actions, text.clear);
+    const confirmBtn = h('button', 'btn primary', actions, text.confirm);
+
+    const byId = new Map(cards.map((c) => [c.id, c]));
+    const picked: string[] = [];
+    let done = false;
+
+    const draw = () => {
+      shelfEl.replaceChildren();
+      for (const card of cards) {
+        if (picked.includes(card.id)) continue;
+        const chip = h('button', 'ingredient', shelfEl);
+        chip.innerHTML = `<span class="ing-icon">${card.icon}</span><span class="ing-name">${card.name}</span>`;
+        chip.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          if (done) return;
+          picked.push(card.id);
+          status.textContent = '';
+          draw();
+        });
+      }
+      plateEl.replaceChildren();
+      if (!picked.length) h('span', 'plate-empty', plateEl, text.empty);
+      picked.forEach((id, i) => {
+        const card = byId.get(id)!;
+        const chip = h('button', 'ingredient on-plate', plateEl);
+        chip.innerHTML = `<span class="ing-icon">${card.icon}</span><span class="ing-name">${i + 1}. ${card.name}</span>`;
+        chip.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          if (done) return;
+          picked.splice(i, 1);
+          status.textContent = '';
+          draw();
+        });
+      });
+    };
+    draw();
+
+    clearBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (done) return;
+      picked.length = 0;
+      status.textContent = '';
+      draw();
+    });
+    confirmBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (done) return;
+      if (picked.length < correct.length) {
+        status.textContent = text.incomplete;
+        return;
+      }
+      const hits = correct.filter((id, i) => picked[i] === id).length;
+      if (hits === correct.length) {
+        done = true;
+        plateEl.classList.add('ok');
+        setTimeout(() => close(), 900);
+      } else {
+        status.textContent = text.wrong.replace('{n}', String(hits));
+      }
     });
   });
 }

@@ -1083,3 +1083,12 @@
   border-color: #ffe08a;
   box-shadow: 0 0 20px rgba(255, 224, 138, 0.8), inset 0 0 14px rgba(0, 0, 0, 0.3);
 }
+
+/* ordenar lembranças (castelo): cartas mais largas que os ingredientes */
+.order-box .ingredient {
+  width: 6.4rem;
+}
+.order-box .ing-name {
+  font-size: 0.7rem;
+  line-height: 0.9rem;
+}

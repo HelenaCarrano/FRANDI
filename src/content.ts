@@ -714,6 +714,137 @@ export const content = {
     done: 'A safra está guardada e a última garrafa já está com você.',
   },
 
+  // ---------- Castelo ----------
+  // Textos de exemplo ([EXEMPLO]): troque pelas falas e pelas pistas reais.
+  castle: {
+    areaName: 'Castelo',
+    zoneNames: ['Pátio do Portão', 'Labirinto Escuro', 'Salão das Memórias'],
+    intro: [
+      'O castelo se ergue contra o céu escuro, enorme e silencioso. Um portão de ferro e madeira fecha o pátio.',
+      'Ao lado dele, três fechaduras brilham fracas: espiga, estrela e cobre. Você já conhece essas chaves.',
+    ],
+    back: { prompt: 'Voltar ao mapa' },
+    gate: {
+      examinePrompt: 'Examinar o portão',
+      sealed: ['O portão não se mexe. Três fechaduras seguram as trancas, e todas precisam girar.'],
+      enterPrompt: 'Entrar no castelo',
+      opened: ['As três trancas caem juntas, e o portão se abre devagar, rangendo como quem acorda.', 'Lá dentro, só escuridão. Os corredores esperam.'],
+    },
+    locks: {
+      trigo: {
+        name: 'Fechadura de trigo',
+        key: 'chave_trigo',
+        prompt: 'Usar a chave de trigo',
+        missing: ['A fechadura tem o desenho de uma espiga de trigo. Falta a chave que o moleiro guardava.'],
+        turned: ['A chave de trigo gira e se desfaz em grãos dourados. Um clique ecoa pelo pátio.'],
+      },
+      estrela: {
+        name: 'Fechadura de estrela',
+        key: 'chave_estrela',
+        prompt: 'Usar a chave de estrela',
+        missing: ['Uma fechadura em forma de estrela. A chave certa veio do alto de uma torre.'],
+        turned: ['A chave de estrela gira e se apaga como uma estrela cadente. Outro clique ecoa.'],
+      },
+      cobre: {
+        name: 'Fechadura de cobre',
+        key: 'chave_cobre',
+        prompt: 'Usar a chave de cobre',
+        missing: ['Uma fechadura de cobre, manchada de fumaça. Essa chave cheira a pão e a lenha.'],
+        turned: ['A chave de cobre gira e esquenta na mão antes de sumir. O último clique é o mais grave.'],
+      },
+    },
+    maze: {
+      intro: [
+        'O corredor é estreito e a tocha só alcança alguns passos. Atrás de cada esquina, outra esquina.',
+        'No chão, junto à entrada, um pedestal vazio com a forma de um cristal.',
+      ],
+      pedestalPrompt: 'Pôr o cristal no pedestal',
+      pedestalNoCrystal: ['Um pedestal com a forma de um cristal. Quem sabe as Ruínas tenham algo que encaixe aqui.'],
+      pedestalLit: ['O cristal encaixa e pulsa. No chão, setas de luz azul acendem nas bifurcações, apontando o caminho.'],
+      potionPrompt: 'Beber a Poção de Coragem',
+      potionLines: ['Tem gosto de morango. A tocha parece queimar mais alto, e a escuridão recua alguns passos.'],
+      webPrompt: 'Cortar a teia',
+      webNoSword: ['Uma teia grossa bloqueia o corredor. Algo bem afiado resolveria.'],
+      webCut: ['Um golpe de espada, e a teia se abre como uma cortina velha.'],
+      exitPrompt: 'Subir ao Salão das Memórias',
+      backPrompt: 'Descer ao pátio',
+    },
+    hall: {
+      intro: [
+        'O salão é largo e quieto. Nas paredes, seis molduras douradas esperam por lembranças.',
+        'Ao centro, uma mesa posta com dois cálices vazios. No fundo, uma porta alta com um selo de luz.',
+      ],
+      downPrompt: 'Descer ao labirinto',
+      guardian: {
+        name: 'Guardiã Aurora',
+        prompt: 'Falar com a Guardiã',
+        greet: [
+          'Seja bem-vindo, Matheus. Eu cuido do que o castelo não pode esquecer. [EXEMPLO]',
+          'Cada moldura guarda uma lembrança sua. Para a porta do trono se abrir, elas precisam estar na ordem em que aconteceram.',
+          'Eu vou lembrar a ordem, uma pista por vez.',
+        ],
+        clueLine: '{n}ª: {clue}',
+        noMemories: ['Você ainda não reuniu lembranças suficientes. Visite as ruínas, a torre, a taverna e o vinhedo.'],
+        right: ['Isso! Todas no lugar. As molduras acenderam por inteiro.', 'Falta o brinde. A mesa está pronta e a garrafa certa já está com você.'],
+        after: ['As lembranças estão em ordem. Faça o brinde, e a porta do trono se abre.'],
+      },
+      order: [
+        { id: 'ruinas_chamas', clue: 'Onde tudo começou.' },
+        { id: 'ruinas_simbolos', clue: 'Um dia qualquer, desses que a gente guarda sem perceber.' },
+        { id: 'ruinas_eco', clue: 'Uma risada que ninguém explica.' },
+        { id: 'taverna_jantar', clue: 'Uma mesa, comida boa e conversa até esfriar o prato.' },
+        { id: 'torre_topo', clue: 'Um lugar alto, de onde se enxerga longe.' },
+        { id: 'vinhedo_brinde', clue: 'A primeira vez que brindaram com qualquer coisa.' },
+      ],
+      memoryGame: {
+        title: 'Molduras do Salão',
+        hint: 'Toque nas lembranças na ordem em que aconteceram. Toque numa lembrança já escolhida para tirá-la.',
+        empty: 'Escolha as lembranças',
+        confirm: 'Conferir',
+        clear: 'Limpar',
+        incomplete: 'Ainda faltam lembranças na sequência.',
+        wrong: 'Só {n} estão no lugar certo. Releia as pistas da Guardiã e tente de novo.',
+        icon: '🖼️',
+      },
+      framePrompt: 'Examinar a moldura',
+      frameDark: 'Uma moldura apagada. Ainda falta reunir essa lembrança.',
+      table: {
+        prompt: 'Fazer o brinde',
+        locked: ['A mesa está posta, mas o brinde só faz sentido depois que as lembranças estiverem em ordem. Fale com a Guardiã.'],
+        noBottle: ['Os cálices esperam por um vinho especial. Será que você guardou a garrafa do vinhedo?'],
+        lines: [
+          'Você enche dois cálices com a última garrafa do vinhedo. O vinho é dourado e cheira a tarde de sol.',
+          '"Às lembranças", diz a Guardiã. O brinde tilinta pelo salão inteiro, e o selo da porta do trono se desfaz.',
+        ],
+        done: ['Os cálices ainda estão quentes de brinde. A porta do trono já está livre.'],
+      },
+      throne: {
+        sealedPrompt: 'Examinar a porta do trono',
+        sealed: ['Um selo de luz fecha a porta do trono. Falta uma coisa que só se faz em boa companhia: o brinde.'],
+        prompt: 'Abrir a porta do trono',
+        finale: [
+          'A porta alta se abre sem um som. Do outro lado, uma luz quente, como a de uma lareira acesa.',
+          'Você respira fundo. Foi um longo caminho até aqui, e cada passo dele tinha um motivo.',
+        ],
+        endTitle: 'Você chegou ao fim do caminho',
+        endText: 'A porta do trono se abriu. O que o espera na Sala do Tesouro merece uma entrada à altura.',
+        endButton: 'Seguir em frente',
+        done: ['A porta do trono está aberta. A Sala do Tesouro espera.'],
+      },
+    },
+    objective: {
+      gate: 'Abra as três fechaduras do portão ({n}/3)',
+      enter: 'Entre no castelo pelo portão aberto',
+      maze: 'Encontre a saída do labirinto escuro',
+      crystal: 'Ponha o cristal no pedestal para ver o caminho',
+      webs: 'Corte as teias com a espada ({n}/{total})',
+      memories: 'Fale com a Guardiã e ponha as lembranças em ordem',
+      toast: 'Faça o brinde na mesa do salão',
+      throne: 'Abra a porta do trono',
+      done: 'A porta do trono está aberta: siga para a Sala do Tesouro',
+    },
+  },
+
   // ---------- Memórias (aparecem quando um altar acende) ----------
   // Textos de exemplo ([EXEMPLO]). `photo` é o nome do arquivo em public/photos/ (sem foto, mostra a moldura vazia).
   memories: {
@@ -752,6 +883,12 @@ export const content = {
       text: ['[EXEMPLO] A gente brindou com qualquer coisa e achou que era o melhor vinho do mundo. Era só a companhia.'],
       caption: '[EXEMPLO] O brinde',
       photo: 'vinhedo_brinde.jpg',
+    },
+    castelo_brinde: {
+      title: 'Às lembranças',
+      text: ['[EXEMPLO] Teve um brinde que não precisou de motivo. Foi só a gente, e já era o bastante.'],
+      caption: '[EXEMPLO] O brinde final',
+      photo: 'castelo_brinde.jpg',
     },
   },
 
