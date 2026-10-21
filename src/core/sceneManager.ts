@@ -145,6 +145,7 @@ export class SceneManager {
     player.position.set(spawn.x, 0, spawn.z);
     player.face(spawn.rot);
     player.torch.setLit(area.torchLit ?? true);
+    player.torch.setReach(1);
     area.scene.add(player.object);
     area.scene.add(player.torch.sparks.points);
 

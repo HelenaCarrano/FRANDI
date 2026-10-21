@@ -143,6 +143,15 @@ export class Torch {
   baseIntensity = TORCH.intensity;
 
   private lit = true;
+  private reach = 1;
+
+  /** Alcance da luz em relação ao normal (1). Abaixo de 1 a tocha ilumina menos (labirinto escuro do Castelo). */
+  setReach(scale: number) {
+    this.reach = scale;
+    this.light.distance = TORCH.distance * scale;
+    this.light.shadow.camera.far = TORCH.distance * scale;
+    this.light.shadow.camera.updateProjectionMatrix();
+  }
 
   get isLit() {
     return this.lit;
@@ -174,7 +183,7 @@ export class Torch {
 
     // ruído barato: soma de senos com frequências "quebradas"
     const n = Math.sin(t * 9.1) * 0.5 + Math.sin(t * 15.7 + 1.3) * 0.3 + Math.sin(t * 23.3 + 2.1) * 0.2;
-    this.light.intensity = this.baseIntensity * (1 + n * TORCH.flicker);
+    this.light.intensity = this.baseIntensity * (0.4 + 0.6 * this.reach) * (1 + n * TORCH.flicker);
     this.light.position.x = Math.sin(t * 7.3) * 0.03;
     this.light.position.z = Math.cos(t * 6.1) * 0.03;
     this.flame.update(dt);

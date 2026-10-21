@@ -580,6 +580,83 @@
   box-shadow: 0 0 16px rgba(110, 210, 255, 0.7);
 }
 
+/* montar o prato (taverna): fichas arrastáveis para um prato */
+.plate-shelf {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0.2rem 0 0.8rem;
+  touch-action: none;
+}
+.ingredient {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  width: 4.4rem;
+  padding: 0.3rem 0.2rem;
+  border: 2px solid #5b3c18;
+  border-radius: 10px;
+  background: #3a2614;
+  color: inherit;
+  font: inherit;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.ing-icon {
+  font-size: 1.6rem;
+  line-height: 1.8rem;
+}
+.ing-name {
+  font-size: 0.62rem;
+  line-height: 0.8rem;
+  text-align: center;
+}
+.ingredient.dragging {
+  position: fixed;
+  z-index: 100;
+  transform: translate(-50%, -60%) scale(1.15);
+  pointer-events: none;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.6);
+  opacity: 0.92;
+}
+.plate {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-height: 7.5rem;
+  padding: 0.6rem;
+  border: 4px solid #d9cfb8;
+  border-radius: 18px;
+  background: radial-gradient(circle at 50% 40%, #efe6d0, #c9bea3);
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.35), 0 4px 10px rgba(0, 0, 0, 0.5);
+  touch-action: none;
+}
+.plate .ingredient {
+  color: #2a1c0e;
+  background: rgba(255, 255, 255, 0.55);
+  border-color: #a8987a;
+  cursor: pointer;
+}
+.plate-empty {
+  align-self: center;
+  color: #6a5c40;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+.plate.ok {
+  border-color: #9dffae;
+  box-shadow: 0 0 18px rgba(130, 255, 150, 0.7), inset 0 0 14px rgba(0, 0, 0, 0.3);
+}
+.plate-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
 /* janela de memória (altares das Ruínas) */
 .modal-box.memory-box {
   width: min(24rem, 100%);
@@ -951,4 +1028,67 @@
   .map-go {
     width: 100%;
   }
+}
+
+/* lagar (vinhedo): barras de doçura, acidez e corpo */
+.blend-bars {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.7rem 0;
+}
+.blend-row {
+  display: grid;
+  grid-template-columns: 4.6rem 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+}
+.blend-track {
+  position: relative;
+  height: 0.9rem;
+  border: 2px solid #5b3c18;
+  border-radius: 8px;
+  background: #2a1c0e;
+  overflow: hidden;
+}
+.blend-target {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(255, 224, 138, 0.28);
+  border-left: 2px dashed #ffe08a;
+  border-right: 2px dashed #ffe08a;
+}
+.blend-fill {
+  position: absolute;
+  left: 0;
+  top: 25%;
+  bottom: 25%;
+  border-radius: 4px;
+  background: #b8793a;
+  transition: width 0.18s ease-out;
+}
+.blend-fill.good {
+  background: #9dffae;
+  box-shadow: 0 0 8px rgba(130, 255, 150, 0.7);
+}
+.blend-barrel {
+  background: radial-gradient(circle at 50% 40%, #6a4528, #3a2412);
+  border-color: #8a5a2e;
+}
+.blend-barrel .plate-empty {
+  color: #c8a878;
+}
+.blend-barrel.ok {
+  border-color: #ffe08a;
+  box-shadow: 0 0 20px rgba(255, 224, 138, 0.8), inset 0 0 14px rgba(0, 0, 0, 0.3);
+}
+
+/* ordenar lembranças (castelo): cartas mais largas que os ingredientes */
+.order-box .ingredient {
+  width: 6.4rem;
+}
+.order-box .ing-name {
+  font-size: 0.7rem;
+  line-height: 0.9rem;
 }

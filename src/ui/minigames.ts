@@ -4,6 +4,7 @@ import type { UI } from './ui';
  * Minijogos em janelas HTML sobre o jogo. Nenhum trava o progresso: errar só gera uma fala e outra tentativa.
  *  - Forja: um brilho vai e volta numa barra; toque no momento em que ele passa pela faixa verde (3 acertos).
  *  - Engrenagens: três rodas; tocar numa gira ela e a vizinha ao contrário, até todas as marcas apontarem para cima.
+ *  - Ordem das lembranças: toque nas cartas na ordem em que aconteceram (Castelo).
  *  - Anéis de símbolos: três discos de pedra com seis símbolos; tocar num gira ele e o vizinho ao contrário, até o ✦ ficar no alto de todos.
  */
 
@@ -170,6 +171,127 @@ export function playGears(ui: UI, text: GearsText): Promise<void> {
   });
 }
 
+export interface PlatingIngredient {
+  id: string;
+  icon: string;
+  name: string;
+}
+
+export interface PlatingText {
+  title: string;
+  hint: string;
+  empty: string;
+  serve: string;
+  clear: string;
+  missing: string;
+  extra: string;
+  emptyPlate: string;
+}
+
+/**
+ * Montar o prato: arraste fichas da prateleira para o prato (mouse ou dedo); tocar numa ficha do prato a tira.
+ * `check` diz se o prato servido está certo; errar só mostra a dica e deixa o jogador corrigir.
+ * Resolve com os ids do prato certo.
+ */
+export function playPlating(
+  ui: UI,
+  text: PlatingText,
+  shelf: readonly PlatingIngredient[],
+  check: (plate: readonly string[]) => 'ok' | 'missing' | 'extra',
+): Promise<string[]> {
+  return ui.modal<string[]>('plating-box', (box, close) => {
+    h('h3', 'mg-title', box, text.title);
+    h('p', 'mg-hint', box, text.hint);
+    const shelfEl = h('div', 'plate-shelf', box);
+    const plateEl = h('div', 'plate', box);
+    const status = h('p', 'mg-status', box);
+    const actions = h('div', 'plate-actions', box);
+    const clearBtn = h('button', 'btn', actions, text.clear);
+    const serveBtn = h('button', 'btn primary', actions, text.serve);
+
+    const byId = new Map(shelf.map((s) => [s.id, s]));
+    const plate: string[] = [];
+    let done = false;
+
+    const drawPlate = () => {
+      plateEl.replaceChildren();
+      if (!plate.length) {
+        h('span', 'plate-empty', plateEl, text.empty);
+        return;
+      }
+      plate.forEach((id, i) => {
+        const chip = h('button', 'ingredient on-plate', plateEl);
+        chip.innerHTML = `<span class="ing-icon">${byId.get(id)!.icon}</span><span class="ing-name">${byId.get(id)!.name}</span>`;
+        chip.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          if (done) return;
+          plate.splice(i, 1);
+          status.textContent = '';
+          drawPlate();
+        });
+      });
+    };
+    drawPlate();
+
+    shelf.forEach((ing) => {
+      const chip = h('button', 'ingredient', shelfEl);
+      chip.innerHTML = `<span class="ing-icon">${ing.icon}</span><span class="ing-name">${ing.name}</span>`;
+      chip.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (done) return;
+        const ghost = h('div', 'ingredient dragging', document.body);
+        ghost.innerHTML = chip.innerHTML;
+        const move = (x: number, y: number) => {
+          ghost.style.left = `${x}px`;
+          ghost.style.top = `${y}px`;
+        };
+        move(e.clientX, e.clientY);
+        const onMove = (ev: PointerEvent) => move(ev.clientX, ev.clientY);
+        const end = (ev: PointerEvent) => {
+          window.removeEventListener('pointermove', onMove);
+          window.removeEventListener('pointerup', end);
+          window.removeEventListener('pointercancel', end);
+          ghost.remove();
+          const r = plateEl.getBoundingClientRect();
+          const over = ev.type === 'pointerup' && ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
+          if (over && !plate.includes(ing.id)) {
+            plate.push(ing.id);
+            status.textContent = '';
+            drawPlate();
+          }
+        };
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', end);
+        window.addEventListener('pointercancel', end);
+      });
+    });
+
+    clearBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (done) return;
+      plate.length = 0;
+      status.textContent = '';
+      drawPlate();
+    });
+    serveBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (done) return;
+      if (!plate.length) {
+        status.textContent = text.emptyPlate;
+        return;
+      }
+      const result = check(plate);
+      if (result === 'ok') {
+        done = true;
+        plateEl.classList.add('ok');
+        setTimeout(() => close([...plate]), 900);
+      } else {
+        status.textContent = result === 'missing' ? text.missing : text.extra;
+      }
+    });
+  });
+}
+
 export interface RunesText {
   title: string;
   hint: string;
@@ -232,6 +354,227 @@ export function playRunes(ui: UI, text: RunesText): Promise<void> {
           setTimeout(() => close(), 1400);
         }
       });
+    });
+  });
+}
+
+export type BlendAxis = 'doce' | 'acido' | 'corpo';
+const BLEND_AXES: readonly BlendAxis[] = ['doce', 'acido', 'corpo'];
+const BLEND_SCALE = 3;
+
+export interface BlendGrape extends Record<BlendAxis, number> {
+  id: string;
+  icon: string;
+  name: string;
+}
+
+export interface BlendText {
+  title: string;
+  hint: string;
+  empty: string;
+  taste: string;
+  clear: string;
+  emptyBarrel: string;
+  labels: Record<BlendAxis, string>;
+  high: Record<BlendAxis, string>;
+  low: Record<BlendAxis, string>;
+  ok: string;
+}
+
+/**
+ * Lagar: toque nas uvas para pôr cachos no barril (até `max`). As três barras mostram a média de doçura, acidez e corpo;
+ * "Provar" só aceita quando as três estão dentro da faixa de `targets`. Errar mostra qual barra passou ou faltou.
+ */
+export function playBlend(
+  ui: UI,
+  text: BlendText,
+  grapes: readonly BlendGrape[],
+  targets: Record<BlendAxis, readonly [number, number]>,
+  max = 6,
+): Promise<void> {
+  return ui.modal<void>('blend-box', (box, close) => {
+    h('h3', 'mg-title', box, text.title);
+    h('p', 'mg-hint', box, text.hint);
+    const shelfEl = h('div', 'plate-shelf', box);
+    const barrelEl = h('div', 'plate blend-barrel', box);
+    const bars = h('div', 'blend-bars', box);
+    const status = h('p', 'mg-status', box);
+    const actions = h('div', 'plate-actions', box);
+    const clearBtn = h('button', 'btn', actions, text.clear);
+    const tasteBtn = h('button', 'btn primary', actions, text.taste);
+
+    const byId = new Map(grapes.map((g) => [g.id, g]));
+    const barrel: string[] = [];
+    let done = false;
+
+    const fills = {} as Record<BlendAxis, HTMLElement>;
+    for (const axis of BLEND_AXES) {
+      const row = h('div', 'blend-row', bars);
+      h('span', 'blend-label', row, text.labels[axis]);
+      const track = h('div', 'blend-track', row);
+      const [lo, hi] = targets[axis];
+      const zone = h('div', 'blend-target', track);
+      zone.style.left = `${(lo / BLEND_SCALE) * 100}%`;
+      zone.style.width = `${((hi - lo) / BLEND_SCALE) * 100}%`;
+      fills[axis] = h('div', 'blend-fill', track);
+    }
+
+    const average = (axis: BlendAxis) => (barrel.length ? barrel.reduce((sum, id) => sum + byId.get(id)![axis], 0) / barrel.length : 0);
+    const inRange = (axis: BlendAxis) => {
+      const v = average(axis);
+      return v >= targets[axis][0] && v <= targets[axis][1];
+    };
+
+    const draw = () => {
+      barrelEl.replaceChildren();
+      if (!barrel.length) h('span', 'plate-empty', barrelEl, text.empty);
+      barrel.forEach((id, i) => {
+        const g = byId.get(id)!;
+        const chip = h('button', 'ingredient on-plate', barrelEl);
+        chip.innerHTML = `<span class="ing-icon">${g.icon}</span><span class="ing-name">${g.name}</span>`;
+        chip.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          if (done) return;
+          barrel.splice(i, 1);
+          status.textContent = '';
+          draw();
+        });
+      });
+      for (const axis of BLEND_AXES) {
+        fills[axis].style.width = `${(average(axis) / BLEND_SCALE) * 100}%`;
+        fills[axis].classList.toggle('good', barrel.length > 0 && inRange(axis));
+      }
+    };
+    draw();
+
+    grapes.forEach((g) => {
+      const chip = h('button', 'ingredient', shelfEl);
+      chip.innerHTML = `<span class="ing-icon">${g.icon}</span><span class="ing-name">${g.name}</span>`;
+      chip.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (done || barrel.length >= max) return;
+        barrel.push(g.id);
+        status.textContent = '';
+        draw();
+      });
+    });
+
+    clearBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (done) return;
+      barrel.length = 0;
+      status.textContent = '';
+      draw();
+    });
+    tasteBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (done) return;
+      if (!barrel.length) {
+        status.textContent = text.emptyBarrel;
+        return;
+      }
+      const off = BLEND_AXES.find((axis) => !inRange(axis));
+      if (off) {
+        status.textContent = average(off) > targets[off][1] ? text.high[off] : text.low[off];
+        return;
+      }
+      done = true;
+      barrelEl.classList.add('ok');
+      status.textContent = text.ok;
+      setTimeout(() => close(), 1200);
+    });
+  });
+}
+
+export interface OrderCard {
+  id: string;
+  icon: string;
+  name: string;
+}
+
+export interface OrderText {
+  title: string;
+  hint: string;
+  empty: string;
+  confirm: string;
+  clear: string;
+  incomplete: string;
+  /** Usa {n} para quantas estão no lugar certo. */
+  wrong: string;
+}
+
+/**
+ * Ordenar lembranças (Castelo): toque nas cartas na ordem certa; tocar numa carta já escolhida a tira.
+ * Errar só diz quantas estão no lugar certo e deixa tentar de novo. Resolve quando a ordem bate com `correct`.
+ */
+export function playMemoryOrder(ui: UI, text: OrderText, cards: readonly OrderCard[], correct: readonly string[]): Promise<void> {
+  return ui.modal<void>('plating-box order-box', (box, close) => {
+    h('h3', 'mg-title', box, text.title);
+    h('p', 'mg-hint', box, text.hint);
+    const shelfEl = h('div', 'plate-shelf', box);
+    const plateEl = h('div', 'plate', box);
+    const status = h('p', 'mg-status', box);
+    const actions = h('div', 'plate-actions', box);
+    const clearBtn = h('button', 'btn', actions, text.clear);
+    const confirmBtn = h('button', 'btn primary', actions, text.confirm);
+
+    const byId = new Map(cards.map((c) => [c.id, c]));
+    const picked: string[] = [];
+    let done = false;
+
+    const draw = () => {
+      shelfEl.replaceChildren();
+      for (const card of cards) {
+        if (picked.includes(card.id)) continue;
+        const chip = h('button', 'ingredient', shelfEl);
+        chip.innerHTML = `<span class="ing-icon">${card.icon}</span><span class="ing-name">${card.name}</span>`;
+        chip.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          if (done) return;
+          picked.push(card.id);
+          status.textContent = '';
+          draw();
+        });
+      }
+      plateEl.replaceChildren();
+      if (!picked.length) h('span', 'plate-empty', plateEl, text.empty);
+      picked.forEach((id, i) => {
+        const card = byId.get(id)!;
+        const chip = h('button', 'ingredient on-plate', plateEl);
+        chip.innerHTML = `<span class="ing-icon">${card.icon}</span><span class="ing-name">${i + 1}. ${card.name}</span>`;
+        chip.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          if (done) return;
+          picked.splice(i, 1);
+          status.textContent = '';
+          draw();
+        });
+      });
+    };
+    draw();
+
+    clearBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (done) return;
+      picked.length = 0;
+      status.textContent = '';
+      draw();
+    });
+    confirmBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (done) return;
+      if (picked.length < correct.length) {
+        status.textContent = text.incomplete;
+        return;
+      }
+      const hits = correct.filter((id, i) => picked[i] === id).length;
+      if (hits === correct.length) {
+        done = true;
+        plateEl.classList.add('ok');
+        setTimeout(() => close(), 900);
+      } else {
+        status.textContent = text.wrong.replace('{n}', String(hits));
+      }
     });
   });
 }
