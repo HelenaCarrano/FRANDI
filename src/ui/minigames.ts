@@ -292,6 +292,125 @@ export function playPlating(
   });
 }
 
+export interface SortingText {
+  title: string;
+  hint: string;
+  confirm: string;
+  incomplete: string;
+  /** Texto com {n} = quantos itens estavam no cesto errado. */
+  wrong: string;
+}
+export interface SortItem {
+  id: string;
+  icon: string;
+  name: string;
+  /** Cesto certo. */
+  bin: string;
+}
+export interface SortBin {
+  id: string;
+  icon: string;
+  name: string;
+}
+
+/**
+ * Separar a encomenda: arraste cada item para o cesto certo; tocar num item já guardado o devolve à bancada.
+ * Ao conferir, os que estão no cesto errado voltam para a bancada e a fala diz quantos eram.
+ */
+export function playSorting(ui: UI, text: SortingText, items: readonly SortItem[], bins: readonly SortBin[]): Promise<void> {
+  return ui.modal<void>('plating-box sorting-box', (box, close) => {
+    h('h3', 'mg-title', box, text.title);
+    h('p', 'mg-hint', box, text.hint);
+    const pool = h('div', 'plate-shelf', box);
+    const binsEl = h('div', 'sort-bins', box);
+    const status = h('p', 'mg-status', box);
+    const actions = h('div', 'plate-actions', box);
+    const confirmBtn = h('button', 'btn primary', actions, text.confirm);
+
+    const placed = new Map<string, string>();
+    let done = false;
+    const binEls = new Map<string, HTMLElement>();
+    const byId = new Map(items.map((i) => [i.id, i]));
+
+    const chipHtml = (i: SortItem) => `<span class="ing-icon">${i.icon}</span><span class="ing-name">${i.name}</span>`;
+
+    const draw = () => {
+      pool.replaceChildren();
+      for (const b of bins) binEls.get(b.id)!.querySelector('.sort-items')!.replaceChildren();
+      for (const it of items) {
+        const bin = placed.get(it.id);
+        const parent = bin ? binEls.get(bin)!.querySelector<HTMLElement>('.sort-items')! : pool;
+        const chip = h('button', bin ? 'ingredient on-plate' : 'ingredient', parent);
+        chip.innerHTML = chipHtml(it);
+        chip.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          if (done) return;
+          if (bin) {
+            placed.delete(it.id);
+            status.textContent = '';
+            draw();
+            return;
+          }
+          const ghost = h('div', 'ingredient dragging', document.body);
+          ghost.innerHTML = chipHtml(byId.get(it.id)!);
+          const move = (x: number, y: number) => {
+            ghost.style.left = `${x}px`;
+            ghost.style.top = `${y}px`;
+          };
+          move(e.clientX, e.clientY);
+          const onMove = (ev: PointerEvent) => move(ev.clientX, ev.clientY);
+          const end = (ev: PointerEvent) => {
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup', end);
+            window.removeEventListener('pointercancel', end);
+            ghost.remove();
+            if (ev.type !== 'pointerup') return;
+            for (const [id, el] of binEls) {
+              const r = el.getBoundingClientRect();
+              if (ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom) {
+                placed.set(it.id, id);
+                status.textContent = '';
+                draw();
+                return;
+              }
+            }
+          };
+          window.addEventListener('pointermove', onMove);
+          window.addEventListener('pointerup', end);
+          window.addEventListener('pointercancel', end);
+        });
+      }
+    };
+
+    for (const b of bins) {
+      const el = h('div', 'plate sort-bin', binsEl);
+      h('div', 'sort-bin-title', el, `${b.icon} ${b.name}`);
+      h('div', 'sort-items', el);
+      binEls.set(b.id, el);
+    }
+    draw();
+
+    confirmBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (done) return;
+      if (placed.size < items.length) {
+        status.textContent = text.incomplete;
+        return;
+      }
+      const wrong = items.filter((i) => placed.get(i.id) !== i.bin);
+      if (!wrong.length) {
+        done = true;
+        binsEl.classList.add('ok');
+        setTimeout(() => close(), 900);
+        return;
+      }
+      for (const w of wrong) placed.delete(w.id);
+      status.textContent = text.wrong.replace('{n}', String(wrong.length));
+      draw();
+    });
+  });
+}
+
 export interface RunesText {
   title: string;
   hint: string;

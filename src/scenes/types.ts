@@ -4,6 +4,7 @@ import type { UI } from '../ui/ui';
 import type { GameState } from '../core/gameState';
 import type { Player } from '../entities/player';
 import type { QualitySettings } from '../core/quality';
+import type { CombatSystem } from '../core/combat';
 
 /** Algo com que o jogador pode interagir ao chegar perto (botão de ação / tecla E). */
 export interface Interactable {
@@ -86,7 +87,7 @@ export interface SpawnPoint {
 }
 
 /** Identificadores das áreas (também gravados no save). */
-export type AreaId = 'village' | 'map' | 'forest' | 'ruins' | 'tower' | 'tavern' | 'vineyard' | 'castle' | 'ending' | 'visual';
+export type AreaId = 'village' | 'map' | 'forest' | 'ruins' | 'tavern' | 'vineyard' | 'castle' | 'ending' | 'visual';
 
 /** O que cada área recebe ao ser criada. `goTo` troca de área com fade. */
 export interface AreaContext {
@@ -105,6 +106,8 @@ export interface AreaContext {
   teleport: (x: number, z: number, rot?: number) => void;
   /** Abre o Mapa do Reino; se o jogador escolher outro lugar, viaja para lá. */
   openMap: () => Promise<void>;
+  /** A galinha companheira passa a seguir o Matheus a partir de (x, z). */
+  summonHen: (x: number, z: number) => void;
 }
 
 /** Contrato de uma área do jogo. Cada área é uma cena 3D pequena. */
@@ -134,6 +137,8 @@ export interface Area {
   env?: AreaEnv;
   /** A tocha do jogador começa acesa? Padrão: sim. */
   torchLit?: boolean;
+  /** Combate da área (encontros, corações); o jogo repassa golpe/esquiva e chama `update`. */
+  combat?: CombatSystem;
   /** Só para depuração (`?debug`): objetos da área expostos em `__dev.area.debug`. */
   debug?: Record<string, unknown>;
   update(dt: number, time: number, playerPos: THREE.Vector3): void;

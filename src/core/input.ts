@@ -15,12 +15,16 @@ const KEY_MAP: Record<string, 'up' | 'down' | 'left' | 'right'> = {
 };
 
 const ACTION_KEYS = new Set(['KeyE', 'Space', 'Enter']);
+const ATTACK_KEYS = new Set(['KeyJ', 'KeyF']);
+const DODGE_KEYS = new Set(['KeyK', 'ShiftLeft', 'ShiftRight']);
 const JOYSTICK_RADIUS = 55;
 
 export class Input {
   readonly move = { x: 0, y: 0 };
   private keys = { up: false, down: false, left: false, right: false };
   private actionQueued = false;
+  private attackQueued = false;
+  private dodgeQueued = false;
   private anyKeyListeners: (() => void)[] = [];
   private zoomListeners: ((factor: number) => void)[] = [];
   private pinchDist = 0;
@@ -48,6 +52,8 @@ export class Input {
         this.actionQueued = true;
         e.preventDefault();
       }
+      if (ATTACK_KEYS.has(e.code) && !e.repeat) this.attackQueued = true;
+      if (DODGE_KEYS.has(e.code) && !e.repeat) this.dodgeQueued = true;
       this.anyKeyListeners.forEach((fn) => fn());
     });
     window.addEventListener('keyup', (e) => {
@@ -103,6 +109,24 @@ export class Input {
   /** Chamado pelo botão de ação da interface. */
   pressAction() {
     this.actionQueued = true;
+  }
+
+  /** Botão de combate da interface. */
+  pressCombat(kind: 'attack' | 'dodge') {
+    if (kind === 'attack') this.attackQueued = true;
+    else this.dodgeQueued = true;
+  }
+
+  consumeAttack(): boolean {
+    const a = this.attackQueued;
+    this.attackQueued = false;
+    return a;
+  }
+
+  consumeDodge(): boolean {
+    const a = this.dodgeQueued;
+    this.dodgeQueued = false;
+    return a;
   }
 
   /** Quanto o jogador arrastou para girar a câmera desde a última chamada (pixels). */

@@ -73,6 +73,7 @@ export class UI {
   constructor(
     private readonly isTouch: boolean,
     onAction: () => void,
+    private readonly onCombat: (kind: 'attack' | 'dodge') => void = () => {},
   ) {
     const root = document.createElement('div');
     root.className = 'ui';
@@ -299,6 +300,10 @@ export class UI {
 
   /** Avança o que estiver aberto: diálogo (completa a linha ou passa) ou carta. */
   advance() {
+    if (this.modalAdvance) {
+      this.modalAdvance();
+      return;
+    }
     if (this.letterState) {
       this.advanceLetter();
       return;
@@ -482,6 +487,87 @@ export class UI {
       btn.textContent = content.ui.memoryKeep;
       btn.addEventListener('click', () => close());
     });
+  }
+
+  private modalAdvance: (() => void) | null = null;
+
+  /**
+   * Texto sobre fundo escuro, um parágrafo por toque (abertura da Floresta e fragmentos de memória).
+   * `kind` 'fragment' ganha o visual embaçado de lembrança.
+   */
+  narrate(header: string, paragraphs: readonly string[], kind: 'narrate' | 'fragment' = 'narrate'): Promise<void> {
+    return this.modal<void>(`narrate-box ${kind}`, (box, close) => {
+      const overlay = box.parentElement!;
+      overlay.classList.add('narrate-overlay', kind);
+      el('h2', 'narrate-header', box).textContent = header;
+      // todas as falas ocupam o mesmo lugar: aparece uma de cada vez, a anterior some
+      const stack = el('div', 'narrate-stack', box);
+      const paras = paragraphs.map((t) => {
+        const p = el('p', 'narrate-line', stack);
+        p.textContent = t;
+        return p;
+      });
+      const more = el('div', 'narrate-more', box);
+      more.textContent = this.isTouch ? content.controls.dialogContinue : 'E / Espaço ▸';
+      let shown = 0;
+      let leaving = false;
+      const next = () => {
+        if (leaving) return;
+        if (shown < paras.length) {
+          if (shown > 0) paras[shown - 1].classList.remove('show');
+          paras[shown++].classList.add('show');
+          return;
+        }
+        leaving = true;
+        this.modalAdvance = null;
+        overlay.classList.add('leaving');
+        setTimeout(() => close(), 450);
+      };
+      this.modalAdvance = next;
+      overlay.addEventListener('pointerdown', next);
+      // a primeira linha aparece sozinha, depois de um instante no escuro
+      setTimeout(() => shown === 0 && next(), 900);
+    });
+  }
+
+  // ---------- corações e botões de combate ----------
+
+  private heartsEl: HTMLDivElement | null = null;
+  private combatEl: HTMLDivElement | null = null;
+
+  /** Corações de vida (só em áreas com combate). `null` esconde. */
+  setHearts(current: number | null, max = 3) {
+    if (current === null) {
+      if (this.heartsEl) this.heartsEl.hidden = true;
+      if (this.combatEl) this.combatEl.hidden = true;
+      return;
+    }
+    if (!this.heartsEl) {
+      this.heartsEl = el('div', 'hearts', this.root);
+      this.combatEl = el('div', 'combat-btns', this.root);
+      const mk = (cls: string, label: string, kind: 'attack' | 'dodge') => {
+        const b = el('button', `combat-btn ${cls}`, this.combatEl!);
+        b.textContent = label;
+        b.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!this.inDialog) this.onCombat(kind);
+        });
+      };
+      mk('attack', this.isTouch ? '⚔️' : '⚔️ J', 'attack');
+      mk('dodge', this.isTouch ? '💨' : '💨 K', 'dodge');
+    }
+    this.heartsEl.hidden = false;
+    this.combatEl!.hidden = false;
+    let html = '';
+    for (let i = 0; i < max; i++) html += `<span class="heart${i < current ? '' : ' empty'}">${i < current ? '❤️' : '🖤'}</span>`;
+    if (this.heartsEl.innerHTML !== html) this.heartsEl.innerHTML = html;
+  }
+
+  /** Pisca vermelho na tela quando o Matheus apanha. */
+  hurtFlash() {
+    const f = el('div', 'hurt-flash', this.root);
+    setTimeout(() => f.remove(), 450);
   }
 
   // ---------- barra de progresso (ex.: confiança do cavalo) ----------

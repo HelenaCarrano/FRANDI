@@ -62,7 +62,7 @@ export interface VillageWorld {
   /** Entrada de quem volta do mapa: logo dentro do portão norte. */
   gateEntry: { x: number; z: number; rot: number };
   /** Posições soltas úteis. */
-  spots: Record<'tito' | 'brutus' | 'pimenta' | 'alvim' | 'clotilde' | 'gears' | 'well', THREE.Vector3>;
+  spots: Record<'tito' | 'brutus' | 'pimenta' | 'alvim' | 'clotilde' | 'gears' | 'well' | 'hen', THREE.Vector3>;
   /** Onde as galinhas fugidas ficam no começo (fora do cercado). */
   wildHens: [number, number][];
   /** Passeios de moradores de fundo. */
@@ -528,6 +528,7 @@ export function buildVillageWorld(scene: THREE.Scene, world: CollisionWorld, qua
     clotilde: new THREE.Vector3(penAt.x + 9, 0, penAt.z + 6),
     gears: at(millAt.x, millAt.z, millRot, 6.2, -1.5),
     well: new THREE.Vector3(0, 0, 0),
+    hen: at(marketAt.x, marketAt.z, marketRot, 4.6, 9.8),
   };
   for (const k of Object.keys(spots) as (keyof typeof spots)[]) spots[k].y = ground(spots[k].x, spots[k].z);
 

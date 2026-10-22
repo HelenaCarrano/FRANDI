@@ -5,7 +5,7 @@ import { TORCH } from '../entities/torch';
 import { GOLDEN_MORNING, NIGHT_FOREST, SUNSET, Outdoor, cloneEnv, lerpEnv } from '../fx/atmosphere';
 import { Fireflies, GuideFireflies } from '../fx/fireflies';
 import { MoonBeams } from '../fx/moonBeams';
-import { LeafBurst } from '../fx/leafBurst';
+import { CombatSystem } from '../core/combat';
 import { HORSE_MODEL } from '../entities/horse';
 import { HorseCompanion } from '../entities/horseCompanion';
 import { Terrain, GOLDEN_PALETTE } from '../world/terrain';
@@ -16,17 +16,18 @@ import { scatter } from '../world/scatter';
 import { updateWind } from '../world/wind';
 import {
   PINE_STYLES, bushGeometry, fenceLine, instancedChunked as instanced, logGeometry, lupineGeometry, daisyGeometry, mushroomCapGeometry,
-  mushroomStemGeometry, natureMaterial, pebbleGeometry, pineGeometry, rockGeometry, roundTreeGeometry, stumpGeometry, thornGeometry, tint, type Inst,
+  mushroomStemGeometry, natureMaterial, pebbleGeometry, pineGeometry, rockGeometry, roundTreeGeometry, stumpGeometry, tint, type Inst,
 } from '../world/nature';
 import { sparkleMarker, type Marker } from '../fx/markers';
-import { content } from '../content';
+import { content, fmt } from '../content';
 import { doneFlag } from './registry';
 import type { Area, AreaContext, AreaEnv, Interactable } from './types';
 
 /**
- * Floresta dos Sussurros: uma trilha de terra de ~330 m que começa num fim de tarde dourado e entra na noite
- * verde-azulada. Duas bifurcações (os vagalumes mostram o lado certo; o errado acaba numa clareira), duas
- * moitas de espinhos que a espada corta e, no fim, o portal de pedra das Ruínas. O cavalo vai até o escuro e espera.
+ * Floresta dos Sussurros: onde a história começa. O Matheus acorda sozinho numa trilha de ~370 m, no escuro e na névoa,
+ * sem lembrar de nada. A fita da Helena traz a primeira lembrança, as pegadas mostram que o cavalo sumiu, um galho vira
+ * a primeira arma e três muralhas de névoa guardam espíritos que ele precisa vencer. Duas bifurcações (os vagalumes
+ * mostram o lado certo; o errado acaba numa clareira) levam ao portal de pedra, onde o dia amanhece e vem a segunda lembrança.
  */
 
 const DUNGEON_NAMES = ['wall_arched', 'pillar_decorated', 'column', 'rubble_large', 'rubble_half', 'torch_lit'];
@@ -42,20 +43,11 @@ const MAIN2: [number, number][] = [[-4, -196], [-8, -214], [-6, -234]];
 const LEFT2: [number, number][] = [[-6, -234], [-22, -250], [-31, -272], [-22, -294], [-8, -312]];
 const RIGHT2: [number, number][] = [[-6, -234], [10, -252], [23, -270]];
 
-/** Onde a noite começa a cair e onde o cavalo para (fração do caminho certo). */
-const HORSE_STOPS_AT = 0.3;
-
-interface Thorn {
-  group: THREE.Group;
-  colliders: ReturnType<CollisionWorld['addCircle']>[];
-  x: number;
-  z: number;
-  cut: boolean;
-  shrink: number;
-}
+/** Onde o dia já amanheceu e o cavalo pode ir junto (fração do caminho certo). */
+const HORSE_WAKES_AT = 0.55;
 
 export function createForest(ctx: AreaContext): Area {
-  const { ui, game, player, quality, camera, fillLight, openMap } = ctx;
+  const { ui, game, player, quality, camera, fillLight, openMap, goTo, teleport, entry } = ctx;
   const scene = new THREE.Scene();
   const world = new CollisionWorld();
   const rand = rng(88);
@@ -99,9 +91,9 @@ export function createForest(ctx: AreaContext): Area {
   const ground = terrain.heightAt;
 
   // ---------- luz e clima (muda com o avanço pela trilha) ----------
-  const env: AreaEnv = cloneEnv(GOLDEN_MORNING);
+  const env: AreaEnv = cloneEnv(NIGHT_FOREST);
   const tmpEnv: AreaEnv = cloneEnv(SUNSET);
-  const outdoor = new Outdoor(scene, quality, GOLDEN_MORNING.outdoor!);
+  const outdoor = new Outdoor(scene, quality, (entry === 'portal' ? GOLDEN_MORNING : NIGHT_FOREST).outdoor!);
   disposables.push(outdoor);
 
   // ---------- paredes invisíveis ao longo da trilha (a mata é fechada) ----------
@@ -323,38 +315,132 @@ export function createForest(ctx: AreaContext): Area {
     return l;
   });
 
-  // ---------- espinhos ----------
-  const thornGeos = [thornGeometry(61), thornGeometry(62)];
-  const thornMat = natureMaterial(0);
-  disposables.push(...thornGeos, thornMat);
-  const makeThorn = (path: Path, f: number): Thorn => {
-    const p = path.at(f);
-    const tg = path.tangent(f);
-    const nx = -tg.y;
-    const nz = tg.x;
-    const group = new THREE.Group();
-    const colliders: Thorn['colliders'] = [];
-    const span = path.width / 2 + 3.2;
-    for (let k = -3; k <= 3; k++) {
-      const off = (k / 3) * span;
-      const x = p.x + nx * off;
-      const z = p.y + nz * off;
-      const m = new THREE.Mesh(thornGeos[Math.abs(k) % 2], thornMat);
-      m.position.set(x, ground(x, z) - 0.1, z);
-      m.rotation.y = rand() * 6.28;
-      m.scale.setScalar(1.5 + rand() * 0.5);
-      m.castShadow = true;
-      m.receiveShadow = true;
-      group.add(m);
-      colliders.push(world.addCircle(x, z, 1.5));
-    }
-    scene.add(group);
-    return { group, colliders, x: p.x, z: p.y, cut: false, shrink: 0 };
+  // ---------- achados do começo: fita, pegadas, galho ----------
+  const fm = (m: number) => m / route.length;
+  /** Ponto da rota na fração f, com deslocamento lateral `side` (metros). */
+  const spot = (f: number, side = 0) => {
+    const p = route.at(f);
+    const tg = route.tangent(f);
+    return { x: p.x - tg.y * side, z: p.y + tg.x * side, tx: tg.x, tz: tg.y };
   };
-  const thorns = [makeThorn(main2, 0.5), makeThorn(left2, 0.34)];
-  const leaf = new LeafBurst(quality.level === 'high' ? 160 : 100);
-  scene.add(leaf.points, leaf.slash);
-  disposables.push(leaf);
+
+  // fita da Helena presa a uma estaca
+  const ribbonSpot = spot(0.055, 2.5);
+  const ribbonGroup = new THREE.Group();
+  const stakeMat = new THREE.MeshStandardMaterial({ color: 0x5b4126, roughness: 1 });
+  const ribbonMat = new THREE.MeshStandardMaterial({ color: 0xd8334a, emissive: 0x551018, emissiveIntensity: 0.8, side: THREE.DoubleSide, roughness: 0.6 });
+  const stakeGeo = new THREE.CylinderGeometry(0.05, 0.07, 1.3, 6);
+  const ribbonGeo = new THREE.PlaneGeometry(0.16, 0.7, 1, 6);
+  ribbonGeo.translate(0, -0.35, 0);
+  const stake = new THREE.Mesh(stakeGeo, stakeMat);
+  stake.position.y = 0.65;
+  stake.castShadow = true;
+  const ribbonMesh = new THREE.Mesh(ribbonGeo, ribbonMat);
+  ribbonMesh.position.set(0.05, 1.25, 0);
+  ribbonGroup.add(stake, ribbonMesh);
+  ribbonGroup.position.set(ribbonSpot.x, ground(ribbonSpot.x, ribbonSpot.z), ribbonSpot.z);
+  scene.add(ribbonGroup);
+  disposables.push(stakeMat, ribbonMat, stakeGeo, ribbonGeo);
+
+  // pegadas de ferradura: um trecho na trilha e dois rastros que se separam e somem na mata
+  const TRACKS_AT = 0.17;
+  const hoofGeo = new THREE.CircleGeometry(0.15, 8);
+  hoofGeo.rotateX(-Math.PI / 2);
+  hoofGeo.scale(0.8, 1, 1.15);
+  const hoofMat = new THREE.MeshBasicMaterial({ color: 0x1b120b, transparent: true, opacity: 0.8, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  disposables.push(hoofGeo, hoofMat);
+  const prints: [number, number, number][] = [];
+  for (let i = 0; i < 8; i++) {
+    const s = spot(TRACKS_AT - fm(7) + fm(i * 1.7), i % 2 ? 0.45 : -0.45);
+    prints.push([s.x, s.z, Math.atan2(s.tx, s.tz)]);
+  }
+  for (const dir of [-1, 1]) {
+    for (let i = 1; i <= 7; i++) {
+      const s = spot(TRACKS_AT + fm(i * 1.7), dir * (i * 0.8 + (i % 2 ? 0.3 : -0.3)));
+      prints.push([s.x, s.z, Math.atan2(s.tx, s.tz) + dir * i * 0.07]);
+    }
+  }
+  const printMesh = new THREE.InstancedMesh(hoofGeo, hoofMat, prints.length * 2);
+  const tmpM = new THREE.Matrix4();
+  const tmpQ = new THREE.Quaternion();
+  const up = new THREE.Vector3(0, 1, 0);
+  let pi = 0;
+  for (const [x, z, rot] of prints) {
+    tmpQ.setFromAxisAngle(up, rot);
+    // cada passo deixa duas marcas lado a lado (as ferraduras)
+    for (const k of [-0.1, 0.1]) {
+      const cx = x + Math.cos(rot) * k;
+      const cz = z - Math.sin(rot) * k;
+      tmpM.compose(new THREE.Vector3(cx, ground(cx, cz) + 0.03, cz), tmpQ, new THREE.Vector3(1, 1, 1));
+      printMesh.setMatrixAt(pi++, tmpM);
+    }
+  }
+  scene.add(printMesh);
+  disposables.push(printMesh);
+
+  // galho firme caído junto de um tronco
+  const stickSpot = spot(0.215, -2.9);
+  const groundStick = new THREE.Group();
+  const stickWood = new THREE.MeshStandardMaterial({ color: 0x6b4a2b, roughness: 0.9 });
+  const stickGeo = new THREE.CylinderGeometry(0.035, 0.05, 1.0, 6);
+  stickGeo.rotateZ(Math.PI / 2);
+  const stickMesh = new THREE.Mesh(stickGeo, stickWood);
+  stickMesh.position.y = 0.08;
+  stickMesh.rotation.y = 0.8;
+  stickMesh.castShadow = true;
+  groundStick.add(stickMesh);
+  groundStick.position.set(stickSpot.x, ground(stickSpot.x, stickSpot.z), stickSpot.z);
+  scene.add(groundStick);
+  disposables.push(stickWood, stickGeo);
+
+  // ---------- combate: três encontros com espíritos da névoa ----------
+  const combat = new CombatSystem({
+    scene,
+    world,
+    ground,
+    player,
+    ui,
+    game,
+    teleport,
+    start: { x: stickSpot.x, z: stickSpot.z, rot: Math.PI },
+    torchLit: () => player.torch.isLit,
+  });
+  /** Muralha de névoa atravessando a trilha na fração f. */
+  const mistWall = (f: number, span = 6.4) => {
+    const pts: { x: number; z: number }[] = [];
+    for (let o = -span; o <= span + 0.01; o += 1.6) {
+      const s = spot(f, o);
+      pts.push({ x: s.x, z: s.z });
+    }
+    return pts;
+  };
+  const armed = () => game.has('galho') || game.has('espada');
+  const encounter = (id: string, f: number, ahead: number, enemies: { kind: 'fiapo' | 'sombra' | 'corvo'; dist: number; side: number; hp?: number }[], onStart?: () => void) => {
+    const trig = spot(f);
+    const wallF = f + fm(ahead);
+    const w = spot(wallF);
+    combat.add({
+      id,
+      x: trig.x,
+      z: trig.z,
+      radius: 9,
+      enemies: enemies.map((e) => {
+        const p = spot(f + fm(e.dist), e.side);
+        return { kind: e.kind, x: p.x, z: p.z, hp: e.hp };
+      }),
+      barrier: mistWall(wallF),
+      checkpoint: { x: w.x - w.tx * 3, z: w.z - w.tz * 3, rot: Math.atan2(w.tx, w.tz) },
+      enabled: armed,
+      onStart,
+    });
+  };
+  const isTouchLike = window.matchMedia('(pointer: coarse)').matches;
+  encounter('forest_1', 0.255, 18, [{ kind: 'fiapo', dist: 11, side: 0 }], () => {
+    ui.toast(T.mist.wall);
+    ui.toast(isTouchLike ? content.combat.tutorialTouch : content.combat.tutorialDesktop);
+  });
+  encounter('forest_2', 0.5, 20, [{ kind: 'fiapo', dist: 11, side: -1.5 }, { kind: 'fiapo', dist: 13, side: 1.5 }]);
+  encounter('forest_3', 0.86, 22, [{ kind: 'sombra', dist: 13, side: 0, hp: 5 }, { kind: 'fiapo', dist: 10, side: 2 }]);
 
   // ---------- portal de pedra das Ruínas ----------
   const place = (name: string, x: number, z: number, rot: number, scale: number) => {
@@ -405,10 +491,10 @@ export function createForest(ctx: AreaContext): Area {
   scene.add(beams.group);
   disposables.push(beams);
 
-  // ---------- cavalo ----------
+  // ---------- cavalo (só depois da vila: ele espera onde amanhece) ----------
   const hasHorse = game.flag('horseShod');
   const progressNow = () => route.progress(player.position.x, player.position.z);
-  const companion = hasHorse ? new HorseCompanion(scene, ui, game, player, world, ground, () => progressNow() < HORSE_STOPS_AT) : null;
+  const companion = hasHorse ? new HorseCompanion(scene, ui, game, player, world, ground, () => progressNow() > HORSE_WAKES_AT) : null;
 
   // ---------- interações ----------
   const add = (position: THREE.Vector3, radius: number, prompt: Interactable['prompt'], onInteract: () => void, enabled?: () => boolean) =>
@@ -421,25 +507,42 @@ export function createForest(ctx: AreaContext): Area {
     sparkles.push({ sprite, base: height, show });
   };
 
+  // voltar ao mapa: só quem já tem o mapa
   const backPos = new THREE.Vector3(0, ground(0, 18), 18);
-  add(backPos, 4.5, T.back.prompt, () => void openMap(), () => !companion?.riding);
+  add(backPos, 4.5, T.back.prompt, () => void openMap(), () => game.has('mapa') && !companion?.riding);
 
-  thorns.forEach((th) => {
-    add(new THREE.Vector3(th.x, ground(th.x, th.z), th.z), 6.2, T.thorns.prompt, () => void cutThorns(th), () => !th.cut);
-    sparkle(th.x, th.z, () => !th.cut && game.has('espada'), 2.6);
-  });
-  async function cutThorns(th: Thorn) {
-    if (!game.has('espada')) {
-      await ui.tell(T.thorns.noSword);
-      return;
-    }
-    if (companion?.riding) companion.dismount();
-    th.cut = true;
-    leaf.burst(new THREE.Vector3(th.x, ground(th.x, th.z), th.z), player.facing);
-    th.colliders.forEach((c) => world.remove(c));
-    ui.toast(T.thorns.cut[0]);
+  // a fita da Helena: dispara o primeiro fragmento de memória
+  add(new THREE.Vector3(ribbonSpot.x, ground(ribbonSpot.x, ribbonSpot.z), ribbonSpot.z), 3.6, T.ribbon.prompt, () => void useRibbon(), () => !game.flag('forest_ribbon'));
+  sparkle(ribbonSpot.x, ribbonSpot.z, () => !game.flag('forest_ribbon'), 1.8);
+  async function useRibbon() {
+    await ui.tell(T.ribbon.lines);
+    game.setFlag('forest_ribbon');
+    game.addItem('fita');
+    ui.toast(fmt(content.ui.gotItem, { name: content.items.fita.name }));
+    await ui.narrate(T.ribbon.fragment.title, T.ribbon.fragment.lines, 'fragment');
   }
 
+  // as pegadas: o cavalo sumiu
+  const tracksSpot = spot(TRACKS_AT + fm(6));
+  add(new THREE.Vector3(tracksSpot.x, ground(tracksSpot.x, tracksSpot.z), tracksSpot.z), 5.5, T.tracks.prompt, () => void useTracks(), () => !game.flag('forest_tracks'));
+  sparkle(tracksSpot.x, tracksSpot.z, () => !game.flag('forest_tracks') && game.flag('forest_ribbon'), 1.1);
+  async function useTracks() {
+    await ui.tell(T.tracks.lines);
+    game.setFlag('forest_tracks');
+  }
+
+  // o galho: a primeira arma
+  add(new THREE.Vector3(stickSpot.x, ground(stickSpot.x, stickSpot.z), stickSpot.z), 3.4, T.stick.prompt, () => void useStick(), () => game.flag('forest_tracks') && !game.has('galho') && !game.has('espada'));
+  sparkle(stickSpot.x, stickSpot.z, () => game.flag('forest_tracks') && !game.has('galho') && !game.has('espada'), 0.9);
+  async function useStick() {
+    await ui.tell(T.stick.lines);
+    game.addItem('galho');
+    ui.toast(fmt(content.ui.gotItem, { name: content.items.galho.name }));
+    groundStick.visible = false;
+  }
+  groundStick.visible = !game.has('galho') && !game.has('espada');
+
+  // o portal: segundo fragmento de memória e a saída para a vila
   const archPos = new THREE.Vector3(ARCH.x, ground(ARCH.x, ARCH.z + 8), ARCH.z + 8);
   add(archPos, 6.5, T.portal.prompt, () => void usePortal());
   sparkle(ARCH.x, ARCH.z + 5, () => !game.flag(doneFlag('forest')), 1.6);
@@ -447,28 +550,29 @@ export function createForest(ctx: AreaContext): Area {
     if (companion?.riding) companion.dismount();
     if (!game.flag(doneFlag('forest'))) {
       await ui.tell(T.portal.lines);
+      await ui.narrate(T.portal.fragment.title, T.portal.fragment.lines, 'fragment');
       game.setFlag(doneFlag('forest'));
+      await ui.tell(T.portal.after);
     } else await ui.tell([T.portal.done]);
-    await openMap();
+    await goTo('village');
   }
 
   // ---------- objetivo ----------
   const objective = () => {
-    const done = game.flag(doneFlag('forest'));
-    if (done) return T.objective.done;
+    if (game.flag(doneFlag('forest'))) return T.objective.done;
     const f = progressNow();
-    const t1 = thorns[0];
-    const t2 = thorns[1];
-    const near = (th: Thorn) => !th.cut && Math.hypot(player.position.x - th.x, player.position.z - th.z) < 40;
-    if (near(t1) || near(t2)) return T.objective.thorns;
+    if (!game.flag('forest_ribbon') && f < 0.2) return f > 0.03 ? T.objective.ribbon : T.objective.follow;
+    if (!game.flag('forest_tracks')) return T.objective.horse;
+    if (!armed()) return T.objective.stick;
+    if (combat.fighting) return T.objective.fight;
     if (f > 0.55) return T.objective.portal;
     if ((f > 0.18 && f < 0.34) || (f > 0.5 && f < 0.7)) return T.objective.fireflies;
     return T.objective.follow;
   };
 
   // ---------- estado ----------
-  let progress = 0;
-  let torchLit = false;
+  let progress = entry === 'portal' ? 0.97 : 0;
+  let torchLit = entry !== 'portal';
   let lastObjective = '';
   let objTimer = 0;
   const deadFired = [false, false];
@@ -481,16 +585,24 @@ export function createForest(ctx: AreaContext): Area {
     world,
     spawn: new THREE.Vector3(0, 0, 16),
     spawnRot: Math.PI,
-    entries: { start: { x: 0, z: 16, rot: Math.PI } },
+    entries: {
+      start: { x: 0, z: 16, rot: Math.PI },
+      /** Quem volta pelo mapa depois de sair da floresta chega do lado do portal, já de dia. */
+      portal: { x: ARCH.x, z: ARCH.z + 15, rot: 0 },
+    },
     ground,
     interactables,
     occluders: [],
     env,
-    torchLit: false,
-    debug: { route, trails, thorns, companion, setProgress: (f: number) => { const p = route.at(f); player.position.set(p.x, ground(p.x, p.y), p.y); } },
+    torchLit: entry !== 'portal',
+    combat,
+    debug: { route, trails, companion, combat, setProgress: (f: number) => { const p = route.at(f); player.position.set(p.x, ground(p.x, p.y), p.y); } },
     onEnter() {
-      ui.say(T.intro);
-      if (companion && game.flag('riding')) companion.mount();
+      if (!game.flag('forest_woke')) {
+        game.setFlag('forest_woke');
+        void ui.narrate(T.wake.header, T.wake.lines);
+      }
+      if (companion && game.flag('riding') && progressNow() > HORSE_WAKES_AT) companion.mount();
     },
     dispose() {
       player.torch.baseIntensity = TORCH.intensity;
@@ -500,31 +612,33 @@ export function createForest(ctx: AreaContext): Area {
     update(dt, time, playerPos) {
       updateWind(time);
 
-      // quanto da trilha já foi: define a hora do dia
+      // quanto da trilha já foi: a floresta começa na noite fria e amanhece perto do portal
       progress += (progressNow() - progress) * (1 - Math.exp(-3 * dt));
-      const t1 = smoothstep(0.02, 0.27, progress);
-      const t2 = smoothstep(0.24, 0.46, progress);
-      lerpEnv(GOLDEN_MORNING, SUNSET, t1, tmpEnv);
-      lerpEnv(tmpEnv, NIGHT_FOREST, t2, env);
+      const toSunset = smoothstep(0.3, 0.64, progress);
+      const toDay = smoothstep(0.6, 0.93, progress);
+      lerpEnv(NIGHT_FOREST, SUNSET, toSunset, tmpEnv);
+      lerpEnv(tmpEnv, GOLDEN_MORNING, toDay, env);
       outdoor.apply(env.outdoor!);
       outdoor.update(playerPos, camera);
+      /** 1 = noite fechada, 0 = dia claro. */
+      const dark = 1 - smoothstep(0.3, 0.9, progress);
 
-      // tocha: acende ao escurecer
-      const lit = t2 > 0.08;
+      // tocha: acesa no escuro, apaga ao amanhecer
+      const lit = dark > 0.12;
       if (lit !== torchLit) {
         torchLit = lit;
         player.torch.setLit(lit);
         fillLight.visible = lit;
       }
-      player.torch.baseIntensity = TORCH.intensity * smoothstep(0.05, 0.85, t2);
+      player.torch.baseIntensity = TORCH.intensity * smoothstep(0.05, 0.85, dark);
 
       // vagalumes (ambientes e guia), luar, cogumelos
-      const night = THREE.MathUtils.clamp(t1 * 0.3 + t2, 0, 1);
+      const night = THREE.MathUtils.clamp(dark + (1 - toDay) * 0.15, 0, 1);
       flies.update(time, playerPos, night);
       const f = route.progress(playerPos.x, playerPos.z);
       guide.update(time, smoothstep(0.1, 0.6, night), Math.min(0.995, f + 0.004), Math.min(1, f + 0.085), (g) => route.at(g), ground);
-      beams.setAmount(smoothstep(0.35, 0.9, t2));
-      capMat.color.setScalar(0.45 + 1.1 * t2);
+      beams.setAmount(smoothstep(0.35, 0.9, dark));
+      capMat.color.setScalar(0.45 + 1.1 * dark);
       glowTimer -= dt;
       if (glowTimer <= 0) {
         glowTimer = 0.3;
@@ -538,22 +652,17 @@ export function createForest(ctx: AreaContext): Area {
           l.position.set(c.x, ground(c.x, c.z) + 0.8, c.z);
         });
       }
-      glowLights.forEach((l) => (l.intensity = 9 * t2));
-      veil.material.opacity = 0.28 + Math.sin(time * 1.7) * 0.08 + 0.1 * smoothstep(0.4, 1, t2);
+      glowLights.forEach((l) => (l.intensity = 9 * dark));
+      veil.material.opacity = 0.28 + Math.sin(time * 1.7) * 0.08 + 0.1 * smoothstep(0.4, 1, 1 - dark);
       archLight.intensity = 14 + Math.sin(time * 2.1) * 3;
 
       grass.update(camera.position);
-      leaf.update(dt);
 
-      // espinhos cortados encolhem e somem
-      for (const th of thorns) {
-        if (th.cut && th.shrink < 1) {
-          th.shrink = Math.min(1, th.shrink + dt * 2.2);
-          th.group.scale.setScalar(1 - th.shrink);
-          th.group.position.y = -th.shrink * 0.4;
-          if (th.shrink >= 1) th.group.visible = false;
-        }
-      }
+      // a fita balança sozinha, mesmo sem vento
+      ribbonMesh.rotation.z = Math.sin(time * 1.8) * 0.25;
+      ribbonMesh.rotation.x = Math.sin(time * 2.3) * 0.12;
+      groundStick.visible = !game.has('galho') && !game.has('espada');
+      ribbonGroup.visible = !game.flag('forest_ribbon');
 
       // clareiras sem saída: uma frase gentil, uma vez por visita
       deadEnds.forEach((d, i) => {

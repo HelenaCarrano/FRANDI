@@ -10,13 +10,12 @@ import type { UI } from './ui';
  */
 
 type PlaceId = Exclude<AreaId, 'map' | 'ending' | 'visual'>;
-const PLACES: PlaceId[] = ['village', 'forest', 'ruins', 'tower', 'tavern', 'vineyard', 'castle'];
+const PLACES: PlaceId[] = ['village', 'forest', 'ruins', 'tavern', 'vineyard', 'castle'];
 
 const POS: Record<PlaceId, [number, number]> = {
   village: [500, 598],
   forest: [500, 452],
   ruins: [185, 345],
-  tower: [815, 345],
   tavern: [300, 192],
   vineyard: [700, 192],
   castle: [500, 122],
@@ -28,7 +27,6 @@ const ROAD: Record<Exclude<PlaceId, 'village'> | 'village', [number, number][]> 
   forest: [HUB, [491, 410], POS.forest],
   village: [POS.forest, [512, 520], POS.village],
   ruins: [HUB, [402, 376], [300, 330], POS.ruins],
-  tower: [HUB, [598, 376], [700, 330], POS.tower],
   tavern: [HUB, [440, 305], [362, 240], POS.tavern],
   vineyard: [HUB, [560, 305], [638, 240], POS.vineyard],
   castle: [HUB, [506, 296], [494, 210], POS.castle],
@@ -63,7 +61,6 @@ const ICON: Record<PlaceId, string> = {
   village: `<path d="M-54 22 v-30 l18 -16 l18 16 v30z"/><path d="M-12 22 v-40 l22 -20 l22 20 v40z"/><path d="M34 22 v-26 l15 -13 l15 13 v26z"/><path d="M-1 22 v-14 h10 v14" class="door"/><path d="M-30 22 v-9 h8 v9" class="door"/>`,
   forest: `<path d="M-52 24 l22 -50 l22 50z"/><path d="M-22 28 l24 -62 l24 62z"/><path d="M14 22 l20 -44 l20 44z"/><path d="M-4 28 v10 M-32 24 v8 M34 22 v8" class="trunk"/>`,
   ruins: `<path d="M-56 26 v-44 h14 v44z"/><path d="M-22 26 v-62 l7 -6 l7 8 v60z"/><path d="M14 26 v-30 l10 -7 v37z"/><path d="M40 26 v-20 h14 v20z"/><path d="M-62 26 h124" class="ground"/>`,
-  tower: `<path d="M-22 30 v-88 h44 v88z"/><path d="M-30 -58 h60 l-30 -34z"/><path d="M-8 30 v-22 h16 v22" class="door"/><path d="M-6 -30 h12 v16 h-12z" class="door"/>`,
   tavern: `<path d="M-52 26 v-40 l52 -28 l52 28 v40z"/><path d="M-12 26 v-24 h24 v24" class="door"/><path d="M-40 -2 h16 v14 h-16z" class="door"/><path d="M26 -2 h16 v14 h-16z" class="door"/><path d="M34 -52 v-16 h12 v22" class="trunk"/>`,
   vineyard: `<path d="M-56 24 h112 M-56 4 h112 M-56 -16 h112" class="ground"/><circle cx="-40" cy="14" r="6"/><circle cx="-18" cy="14" r="6"/><circle cx="6" cy="14" r="6"/><circle cx="30" cy="14" r="6"/><circle cx="-30" cy="-6" r="6"/><circle cx="-6" cy="-6" r="6"/><circle cx="18" cy="-6" r="6"/><circle cx="42" cy="-6" r="6"/><path d="M-56 -30 v54 M56 -30 v54" class="trunk"/>`,
   castle: `<path d="M-60 30 v-60 h20 v-14 h12 v14 h16 v-30 l14 -14 l14 14 v30 h16 v-14 h12 v14 h20 v60z"/><path d="M-12 30 v-26 q12 -16 24 0 v26" class="door"/><path d="M0 -74 v-26 l22 8 l-22 8" class="flag"/>`,
@@ -132,7 +129,7 @@ export function openKingdomMap(ui: UI, o: MapOptions): Promise<AreaId | null> {
       const big = id === 'castle' ? 1.25 : 1;
       return `<g class="place" data-id="${id}" transform="translate(${x} ${y}) scale(${big})">
         <g class="icon">${ICON[id]}</g>
-        <text class="place-name" y="${id === 'tower' ? 56 : 62}" text-anchor="middle">${o.names[id]}</text>
+        <text class="place-name" y="62" text-anchor="middle">${o.names[id]}</text>
         <g class="cloud ${id === 'castle' ? 'dark' : ''}" transform="translate(0 -6) scale(${id === 'castle' ? 1.35 : 1.25})">${CLOUD}</g>
         <g class="done-mark"><circle r="15" cx="52" cy="-42"/><path d="M45 -42 l5 6 l10 -12"/></g>
       </g>`;
@@ -167,7 +164,7 @@ export function openKingdomMap(ui: UI, o: MapOptions): Promise<AreaId | null> {
     const toReveal: PlaceId[] = [];
     for (const id of PLACES) {
       const s = status(id);
-      const seen = id === 'village' || game.flag(`seen_${id}`);
+      const seen = id === 'village' || id === 'forest' || game.flag(`seen_${id}`);
       if (s.open && !seen) toReveal.push(id);
       const open = s.open && seen;
       place(id).classList.toggle('open', open);

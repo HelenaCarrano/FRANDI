@@ -13,6 +13,7 @@ import { PINE_STYLES, bushGeometry, instancedChunked as instanced, natureMateria
 import { sparkleMarker, type Marker } from '../fx/markers';
 import { playBlend, type BlendGrape } from '../ui/minigames';
 import { content, fmt, type ItemId } from '../content';
+import { CombatSystem } from '../core/combat';
 import { doneFlag } from './registry';
 import type { Area, AreaContext, AreaEnv, Interactable } from './types';
 
@@ -55,7 +56,7 @@ const grapeFlag = (id: GrapeId) => `vineyard_grape_${id}`;
 const KEEPER_ACCESSORIES: NpcAccessory[] = [{ kind: 'apron', color: 0xe8e0d0 }, { kind: 'scarf', color: 0xb0402a }];
 
 export function createVineyard(ctx: AreaContext): Area {
-  const { ui, game, quality, camera, openMap } = ctx;
+  const { ui, game, player, quality, camera, openMap, teleport } = ctx;
   const scene = new THREE.Scene();
   const world = new CollisionWorld();
   const rand = rng(515);
@@ -361,10 +362,31 @@ export function createVineyard(ctx: AreaContext): Area {
     await ui.tell([T.grapes[id].picked]);
     if (allPicked()) ui.toast(T.objective.press);
   }
+  // cada cacho é guardado por corvos de névoa: só dá para colher depois de vencê-los
+  const combat = new CombatSystem({ scene, world, ground, player, ui, game, teleport, start: { x: START.x, z: START.z - 4, rot: Math.PI }, torchLit: () => player.torch.isLit });
+  const WAVES: Record<GrapeId, ('corvo' | 'fiapo')[]> = {
+    roxa: ['corvo'],
+    verde: ['corvo', 'corvo'],
+    rosada: ['corvo', 'fiapo'],
+    dourada: ['corvo', 'corvo', 'fiapo'],
+  };
+  const guarded = (id: GrapeId) => game.flag(`foe_vineyard_${id}`);
   for (const id of GRAPE_IDS) {
     const { x, z } = SPOTS[id];
-    add(v3(x, z), 2.6, T.grapes[id].prompt, () => void pick(id), () => started() && !picked(id));
-    sparkle(x, z, 2, () => started() && !picked(id));
+    combat.add({
+      id: `vineyard_${id}`,
+      x,
+      z,
+      radius: 6.5,
+      enabled: () => started() && !picked(id),
+      enemies: WAVES[id].map((kind, k) => {
+        const a = (k / WAVES[id].length) * Math.PI * 2 + 0.7;
+        return { kind, x: x + Math.cos(a) * 6, z: z + Math.sin(a) * 6 };
+      }),
+      onStart: () => ui.toast(T.crows),
+    });
+    add(v3(x, z), 2.6, T.grapes[id].prompt, () => void pick(id), () => started() && !picked(id) && guarded(id));
+    sparkle(x, z, 2, () => started() && !picked(id) && guarded(id));
   }
   sparkle(PRESS.x, PRESS.z, 2.6, () => started() && allPicked() && !blended());
   sparkle(keeper.position.x, keeper.position.z, 3.4, () => !isDone() && (blended() || !started()));
@@ -392,7 +414,9 @@ export function createVineyard(ctx: AreaContext): Area {
     occluders,
     env,
     torchLit: false,
+    combat,
     debug: {
+      combat,
       harvestAll: () => {
         game.setFlag(STARTED);
         GRAPE_IDS.forEach((id) => game.setFlag(grapeFlag(id)));

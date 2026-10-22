@@ -35,10 +35,6 @@ const DEFS: Record<AreaId, AreaDef> = {
     const m = await import('./ruins');
     return { assets: m.RUINS_ASSETS, create: m.createRuins };
   } },
-  tower: { load: async () => {
-    const m = await import('./tower');
-    return { assets: m.TOWER_ASSETS, create: m.createTower };
-  } },
   tavern: { load: async () => {
     const m = await import('./tavern');
     return { assets: m.TAVERN_ASSETS, create: m.createTavern };
@@ -73,8 +69,8 @@ export function isBuilt(id: string): id is AreaId {
   return !!(DEFS as Record<string, AreaDef | undefined>)[id]?.load;
 }
 
-/** As quatro áreas do meio, que abrem juntas depois da Floresta. */
-export const MIDDLE_AREAS = ['ruins', 'tower', 'tavern', 'vineyard'] as const;
+/** As três áreas do meio, que abrem juntas depois que o Matheus sai da Vila. */
+export const MIDDLE_AREAS = ['ruins', 'tavern', 'vineyard'] as const;
 
 /** ?libera=tudo: mostra tudo destravado (só para conferir o visual; não grava nada). */
 export const unlockAll = urlParams.get('libera') === 'tudo';
@@ -82,21 +78,20 @@ export const unlockAll = urlParams.get('libera') === 'tudo';
 /** Marca gravada quando o jogador conclui uma área. */
 export const doneFlag = (id: AreaId) => `done_${id}`;
 
-/** A área já está aberta para o jogador? Semiaberto: Vila → Floresta → (4 do meio) → Castelo. */
+/** A área já está aberta para o jogador? Floresta (começo) → Vila → (3 do meio) → Castelo. */
 export function isUnlocked(id: AreaId, game: GameState): boolean {
   if (unlockAll) return true;
   switch (id) {
-    case 'village':
+    case 'forest':
     case 'map':
     case 'visual':
       return true;
-    case 'forest':
-      return game.flag('villageDone');
+    case 'village':
+      return game.flag(doneFlag('forest')) || game.flag('villageDone');
     case 'ruins':
-    case 'tower':
     case 'tavern':
     case 'vineyard':
-      return game.flag(doneFlag('forest'));
+      return game.flag('villageDone');
     case 'castle':
       return MIDDLE_AREAS.every((a) => game.flag(doneFlag(a)));
     case 'ending':

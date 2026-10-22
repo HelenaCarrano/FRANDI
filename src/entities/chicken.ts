@@ -54,6 +54,8 @@ export class Chicken {
   readonly position = this.object.position;
   /** Foi para o cercado (a missão conta). */
   penned = false;
+  /** Galinha companheira: segue este ponto (o Matheus) em vez de passear e nunca foge. */
+  followTarget: THREE.Vector3 | null = null;
 
   private readonly mixer: THREE.AnimationMixer;
   private readonly actions = new Map<State, THREE.AnimationAction>();
@@ -131,9 +133,48 @@ export class Chicken {
     return false;
   }
 
+  /** Muda a galinha de lugar (aparece de repente, sem andar). */
+  teleport(x: number, z: number, y = 0) {
+    this.position.set(x, y, z);
+    this.speed = 0;
+    this.hasTarget = false;
+  }
+
+  /** Segue o alvo: corre quando está longe, ciscando quando chega perto; se ficar para trás, reaparece atrás dele. */
+  private updateFollow(dt: number, ctx: ChickenContext, target: THREE.Vector3) {
+    const dx = target.x - this.position.x;
+    const dz = target.z - this.position.z;
+    const d = Math.hypot(dx, dz);
+    if (d > 16) {
+      const a = Math.random() * Math.PI * 2;
+      this.teleport(target.x + Math.cos(a) * 2.2, target.z + Math.sin(a) * 2.2, ctx.ground(target.x, target.z));
+    } else if (d > 2.6) {
+      const speed = Math.min(6.2, 1.1 + d * 1.0);
+      this.steer(target.x, target.z, speed, dt, ctx, 10);
+      this.setState(d > 5 ? 'flee' : 'walk');
+      this.wait = 0.6;
+    } else {
+      this.speed *= Math.exp(-8 * dt);
+      this.wait -= dt;
+      if (this.state === 'flee' || this.state === 'walk') this.setState('idle');
+      if (this.wait <= 0) {
+        this.setState(this.state === 'peck' ? 'idle' : 'peck');
+        this.wait = 1.5 + Math.random() * 2.5;
+      }
+    }
+    const gy = ctx.ground(this.position.x, this.position.z);
+    this.position.y += (gy - this.position.y) * (1 - Math.exp(-16 * dt));
+    this.object.rotation.y = this.heading;
+    this.mixer.update(dt);
+  }
+
   update(dt: number, ctx: ChickenContext) {
     this.stateTime += dt;
     const o = this.o;
+    if (this.followTarget) {
+      this.updateFollow(dt, ctx, this.followTarget);
+      return;
+    }
 
     // o que assusta mais de perto
     let nearest = Infinity;

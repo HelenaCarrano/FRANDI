@@ -9,6 +9,7 @@ import type { GameRenderer } from './renderer';
 import type { FollowCamera } from './followCamera';
 import type { GameState } from './gameState';
 import type { Player } from '../entities/player';
+import { HenCompanion } from '../entities/henCompanion';
 import type { UI } from '../ui/ui';
 import type { QualitySettings } from './quality';
 
@@ -37,8 +38,12 @@ export class SceneManager {
   busy = false;
   readonly fillLight = new THREE.PointLight(0xffd2a8, 1.6, 5, 2);
   private gfx: GameRenderer | null = null;
+  /** A galinha companheira: acompanha o Matheus de área em área. */
+  readonly hen: HenCompanion;
 
-  constructor(private readonly deps: SceneManagerDeps) {}
+  constructor(private readonly deps: SceneManagerDeps) {
+    this.hen = new HenCompanion(deps.ui, deps.game, deps.player);
+  }
 
   /** Liga o renderizador (criado depois da primeira área). */
   attach(gfx: GameRenderer) {
@@ -56,6 +61,10 @@ export class SceneManager {
       fillLight: this.fillLight,
       goTo: (id, to) => this.goTo(id, to),
       openMap: () => this.openMap(),
+      summonHen: (x, z) => {
+        game.setFlag('henMet');
+        this.hen.enter(this.area.scene, this.area.world, this.area.ground ?? (() => 0), { x, z });
+      },
       entry,
       teleport: (x, z, rot) => {
         player.position.set(x, 0, z);
@@ -105,7 +114,7 @@ export class SceneManager {
         isBuilt,
         names: content.areas,
       });
-      if (dest && dest !== this.id) await this.goTo(dest, dest === 'village' ? 'gate' : 'start');
+      if (dest && dest !== this.id) await this.goTo(dest, dest === 'village' ? 'gate' : dest === 'forest' && game.flag('done_forest') ? 'portal' : 'start');
     } finally {
       this.mapOpen = false;
     }
@@ -137,7 +146,7 @@ export class SceneManager {
 
   /** Coloca o jogador na área nova e ajusta câmera, luz e clima gráfico. */
   private activate(area: Area, id: AreaId, entry?: string, save = true) {
-    const { player, follow, game } = this.deps;
+    const { player, follow, game, ui } = this.deps;
     this.area = area;
     this.id = id;
 
@@ -173,6 +182,9 @@ export class SceneManager {
       this.gfx.applyEnv(area.env ?? DARK_ENV);
     }
     if (save) game.setArea(id, entry);
+    if (!area.combat) ui.setHearts(null);
+    player.resetCombat();
+    this.hen.enter(area.scene, area.world, area.ground ?? (() => 0));
   }
 
   /**
@@ -182,6 +194,7 @@ export class SceneManager {
    */
   private discard(area: Area, occlusion: OcclusionFader) {
     area.dispose?.();
+    area.combat?.dispose();
     occlusion.dispose();
     area.scene.traverse((o) => {
       if ((o as THREE.Light).isLight) (o as THREE.Light).dispose();

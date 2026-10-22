@@ -11,6 +11,7 @@ import { preload } from './core/assets';
 import { Player } from './entities/player';
 import { MATHEUS_ASSETS } from './entities/matheusModel';
 import { TORCH_MODEL } from './entities/torch';
+import { CHICKEN_MODEL } from './entities/chicken';
 import { createTestScene, TEST_SCENE_ASSETS } from './scenes/testScene';
 import { isBuilt, loadArea } from './scenes/registry';
 import { DARK_ENV, type Area, type AreaId, type Interactable } from './scenes/types';
@@ -32,32 +33,33 @@ input.onZoom((f) => follow.zoomBy(f));
 if (characterViewer) follow.zoomBy(urlParams.has('perto') ? 0.01 : 0.45);
 // &alvo=1.0 → o zoom mira essa altura (ex.: a mão) em vez do rosto
 if (urlParams.has('alvo')) follow.setFocusHeight(Number(urlParams.get('alvo')));
-const ui = new UI(quality.isTouch, () => input.pressAction());
+const ui = new UI(quality.isTouch, () => input.pressAction(), (kind) => input.pressCombat(kind));
 
 const game = new GameState();
 const hasSave = !useTestScene && GameState.hasSave();
 
 /** ?area=vila (ou floresta...) abre direto numa área; sem isso vale a do save, e sem save a vila. */
-const AREA_ALIASES: Record<string, AreaId> = { vila: 'village', floresta: 'forest', ruinas: 'ruins', torre: 'tower', taverna: 'tavern', vinhedo: 'vineyard', castelo: 'castle', visual: 'visual' };
+const AREA_ALIASES: Record<string, AreaId> = { vila: 'village', floresta: 'forest', ruinas: 'ruins', taverna: 'tavern', vinhedo: 'vineyard', castelo: 'castle', visual: 'visual' };
 function startTarget(): { id: AreaId; entry?: string } {
   const asked = urlParams.get('area');
   const wanted = asked && (AREA_ALIASES[asked] ?? asked);
   if (wanted && isBuilt(wanted)) return { id: wanted, entry: urlParams.get('entry') ?? undefined };
   if (isBuilt(game.area)) return { id: game.area, entry: game.entry };
   // save da época do mapa-maquete: volta para o portão norte da vila
-  return game.area === 'map' ? { id: 'village', entry: 'gate' } : { id: 'village' };
+  if (game.area === 'map') return { id: 'village', entry: 'gate' };
+  return { id: 'forest', entry: 'start' };
 }
 /** ?mapa abre o pergaminho logo no começo (depuração). */
 const openMapAtStart = urlParams.has('mapa');
 
 const loading = (async () => {
-  const assets = new Set<string>([...MATHEUS_ASSETS, TORCH_MODEL]);
+  const assets = new Set<string>([...MATHEUS_ASSETS, TORCH_MODEL, CHICKEN_MODEL]);
   if (useTestScene) TEST_SCENE_ASSETS.forEach((a) => assets.add(a));
   else {
     const target = startTarget();
     (await loadArea(target.id)).assets.forEach((a) => assets.add(a));
-    // com save, "Recomeçar" volta para a vila: já deixa os modelos dela prontos
-    if (hasSave && target.id !== 'village') (await loadArea('village')).assets.forEach((a) => assets.add(a));
+    // com save, "Recomeçar" volta para a floresta: já deixa os modelos dela prontos
+    if (hasSave && target.id !== 'forest') (await loadArea('forest')).assets.forEach((a) => assets.add(a));
   }
   const list = [...assets];
   await preload(list, (done, total) => ui.setLoadingProgress(done / total));
@@ -195,6 +197,15 @@ async function run(startClicked: Promise<void>) {
     player.update(dt, moveDir, current.world);
     if (characterViewer) player.object.rotation.y = fixedRot !== null ? Number(fixedRot) : time * 0.6;
     current.update(dt, time, player.position);
+    manager.hen.update(dt, time);
+    if (current.combat) {
+      if (canMove && input.consumeAttack()) current.combat.attack();
+      if (canMove && input.consumeDodge()) current.combat.dodge(moveDir);
+      current.combat.update(dt, time);
+    } else {
+      input.consumeAttack();
+      input.consumeDodge();
+    }
 
     const near = canMove ? nearestInteractable() : null;
     ui.setInteractPrompt(near ? (typeof near.prompt === 'function' ? near.prompt() : near.prompt) : null);

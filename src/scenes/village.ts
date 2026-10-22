@@ -5,7 +5,7 @@ import { sparkleMarker, type Marker } from '../fx/markers';
 import { Npc, disposeNpcMaterials } from '../entities/npc';
 import { Horse, SADDLE_Y } from '../entities/horse';
 import { Chicken, disposeChickenMaterials } from '../entities/chicken';
-import { playForge, playGears } from '../ui/minigames';
+import { playForge, playGears, playSorting } from '../ui/minigames';
 import { content, fmt, type ItemId } from '../content';
 import { GOLDEN_MORNING } from '../fx/atmosphere';
 import type { Area, AreaContext, Interactable } from './types';
@@ -21,14 +21,13 @@ export { VILLAGE_ASSETS };
  */
 
 const T = content.village;
-const MAP_PRICE = content.village.shop.find((s) => s.id === 'mapa')!.price;
 const HEN_NAMES = 6;
 const HEN_COLORS = [0xf4efe6, 0x9a5a2c, 0x3a3430, 0xe0c890, 0xb4472a];
 
 type QuestId = keyof typeof T.quests;
 
 export function createVillage(ctx: AreaContext): Area {
-  const { ui, game, player, quality, camera, openMap } = ctx;
+  const { ui, game, player, quality, camera, openMap, summonHen } = ctx;
   const scene = new THREE.Scene();
   const world = new CollisionWorld();
   const interactables: Interactable[] = [];
@@ -182,6 +181,10 @@ export function createVillage(ctx: AreaContext): Area {
       addHen(hx, hz, { x: pen.x, z: pen.z, r: pen.r - 1.8 }, true).enterPen({ x: pen.x, z: pen.z, r: pen.r - 1.8 });
     } else addHen(x, z, { x, z, r: 6 }, true);
   });
+  // a galinha que vai virar companheira: espera atrás de uma barraca do mercado
+  const demoHen = new Chicken({ x: S.hen.x, z: S.hen.z, tint: 0xf4efe6, roam: { x: S.hen.x, z: S.hen.z, r: 1.4 } });
+  demoHen.position.y = ground(S.hen.x, S.hen.z);
+  scene.add(demoHen.object);
   const pennedCount = () => wild.filter((c) => c.penned).length;
   let lastPenned = pennedCount();
 
@@ -211,7 +214,7 @@ export function createVillage(ctx: AreaContext): Area {
       if (mq === 'new') return o.talkMiller;
       return millRunning() ? o.returnMiller : o.fixMill;
     }
-    if (!game.has('mapa')) return game.coins >= MAP_PRICE ? o.needMap : o.needCoins;
+    if (!game.has('mapa')) return o.order;
     return o.gate;
   }
 
@@ -222,7 +225,7 @@ export function createVillage(ctx: AreaContext): Area {
     brutus.alert = letter && game.quest('shoes') === 'new';
     alvim.alert = letter && (game.quest('mill') === 'new' || (game.quest('mill') === 'active' && millRunning()));
     clotilde.alert = game.quest('hens') === 'new' || (game.quest('hens') === 'active' && pennedCount() >= HEN_NAMES);
-    pimenta.alert = false;
+    pimenta.alert = letter && game.quest('order') !== 'done';
     if (game.flag('villageDone') && gateBarrier) {
       gateBarrier.forEach((c) => world.remove(c));
       gateBarrier = null;
@@ -294,6 +297,7 @@ export function createVillage(ctx: AreaContext): Area {
     await ui.letter(T.letter.title, T.letter.paragraphs, T.letter.close);
     game.removeItem('maca');
     game.setFlag('letterRead');
+    giveItem('bilhete');
     finishQuest('horse');
     await ui.tell(T.stable.afterTrust, T.npcs.stable.name);
     trusting = false;
@@ -347,12 +351,14 @@ export function createVillage(ctx: AreaContext): Area {
       if (millRunning()) {
         await ui.tell(m.ready.slice(0, 2), who);
         giveItem('chave_trigo');
+        giveItem('farinha');
         alvim.play('Cheer');
         await ui.tell(m.ready.slice(2), who);
         giveItem('mochila');
         game.setEquipped({ backpack: true });
         player.setEquipment(game.data.equipped);
         finishQuest('mill');
+        await ui.narrate(m.fragment.title, m.fragment.lines, 'fragment');
       } else await ui.tell(m.progress, who);
     } else await ui.tell(m.done, who);
   }
@@ -372,7 +378,6 @@ export function createVillage(ctx: AreaContext): Area {
       if (pennedCount() >= HEN_NAMES) {
         await ui.tell(h.ready.slice(0, 2), who);
         clotilde.play('Cheer');
-        giveItem('ovos');
         finishQuest('hens');
         await ui.tell(h.ready.slice(2), who);
       } else await ui.tell([fmt(h.progress, { n: HEN_NAMES - pennedCount() })], who);
@@ -405,13 +410,40 @@ export function createVillage(ctx: AreaContext): Area {
     });
   }
 
+  /** A encomenda esquecida: separar os itens nos cestos certos; recompensa o mapa e um pão. */
+  async function orderQuest() {
+    const o = T.order;
+    const who = T.npcs.merchant.name;
+    if (game.quest('order') === 'new') {
+      const pick = await converse(o.intro, [o.yes, o.no], who);
+      if (pick !== 0) {
+        await ui.tell(o.decline, who);
+        return;
+      }
+      startQuest('order');
+      await ui.tell(o.accepted, who);
+    } else await ui.tell(o.resume, who);
+    await playSorting(ui, { title: o.title, hint: o.hint, confirm: o.confirm, incomplete: o.incomplete, wrong: o.wrong }, o.items, o.bins);
+    await ui.tell(o.solved, who);
+    pimenta.play('Cheer');
+    await ui.tell(o.reward.slice(0, 1), who);
+    giveItem('mapa');
+    giveItem('pao');
+    finishQuest('order');
+    await ui.tell(o.reward.slice(1), who);
+  }
+
   async function talkMerchant() {
     const m = T.merchant;
     const who = T.npcs.merchant.name;
     pimenta.play('Interact');
+    if (horseTrusted() && game.quest('order') !== 'done') {
+      await orderQuest();
+      return;
+    }
     const pick = await ui.ask(m.greet[0], [m.menuShop, m.menuChat, m.menuBye], who);
     if (pick === 0) await openShop();
-    else if (pick === 1) await ui.tell(shod() ? named(m.chatDone) : m.chat, who);
+    else if (pick === 1) await ui.tell(game.has('ovos') ? m.chatEggs : shod() ? named(m.chatDone) : m.chat, who);
     else await ui.tell(m.bye, who);
   }
 
@@ -447,6 +479,15 @@ export function createVillage(ctx: AreaContext): Area {
   add(clotilde.position, 3.2, T.npcs.hens.prompt, () => void talkHens());
   add(pimenta.position, 3.2, T.npcs.merchant.prompt, () => void talkMerchant());
 
+  async function meetHen() {
+    await ui.tell(T.hen.meet);
+    scene.remove(demoHen.object);
+    summonHen(demoHen.position.x, demoHen.position.z);
+    ui.toast(fmt(T.hen.joined, { name: T.henName }));
+  }
+  const henOn = () => horseTrusted() && !game.flag('henMet');
+  add(demoHen.position, 3.4, T.hen.prompt, () => void meetHen(), henOn);
+
   const gearsOn = () => game.quest('mill') === 'active' && !millRunning();
   add(S.gears, 3.4, T.gears.prompt, () => void fixGears(), gearsOn);
   sparkle(S.gears, gearsOn, 1.6);
@@ -472,6 +513,7 @@ export function createVillage(ctx: AreaContext): Area {
   const scareList = [new THREE.Vector3()];
   const hctx = { player: new THREE.Vector3(), playerSpeed: 0, world, ground };
   const cctx = { scare: scareList, scareRadius: 3.4, world, ground };
+  const cctxHen = { scare: [] as THREE.Vector3[], scareRadius: 0, world, ground };
   const shyHorse = () => !horseTrusted() && game.quest('horse') === 'active';
 
   const bubbleAt = (key: string, n: Npc, text: string | null) => {
@@ -495,7 +537,10 @@ export function createVillage(ctx: AreaContext): Area {
     env: GOLDEN_MORNING,
     torchLit: false,
     onEnter() {
-      if (!horseTrusted()) ui.say(T.intro);
+      if (!horseTrusted() && !game.flag('village_arrived')) {
+        game.setFlag('village_arrived');
+        ui.say(T.arrival);
+      }
       if (game.flag('riding') && shod() && !riding) mount();
     },
     dispose() {
@@ -520,6 +565,11 @@ export function createVillage(ctx: AreaContext): Area {
       }
 
       for (const n of npcs) n.update(dt, playerPos);
+      if (!game.flag('henMet')) {
+        demoHen.object.visible = horseTrusted();
+        cctxHen.ground = ground;
+        demoHen.update(dt, cctxHen);
+      }
 
       // moinho e portão
       fanSpeed += ((millRunning() ? 0.8 : 0) - fanSpeed) * (1 - Math.exp(-0.8 * dt));

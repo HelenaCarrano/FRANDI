@@ -52,8 +52,6 @@ export const content = {
     no: 'Voltar',
     close: 'Fechar',
     memoryKeep: 'Guardar memória',
-    cookieOption: '🥠 Quebrar o biscoito da sorte',
-    cookieUsed: 'O biscoito se parte: uma resposta errada some.',
     memoryNoPhoto: 'foto em breve',
     buy: 'Comprar',
     owned: 'Comprado',
@@ -70,54 +68,72 @@ export const content = {
   // ---------- itens ----------
   // Cada item tem uso real mais adiante (usedIn). [EXEMPLO] nas piadas internas.
   items: {
+    galho: { name: 'Galho firme', icon: '🌿', desc: 'Um galho resistente achado na trilha. Não é uma espada, mas serve para se defender da névoa.', usedIn: 'Floresta' },
+    fita: { name: 'Fita da Helena', icon: '🎀', desc: 'Uma fita que você reconhece de algum lugar. Só não lembra de onde.', usedIn: 'Lembranças' },
+    bilhete: { name: 'Bilhete da Helena', icon: '📜', desc: 'A letra dela: uma lista de coisas para buscar na vila e um pedido para voltar para casa.', usedIn: 'Vila' },
     maca: { name: 'Maçã do Tito', icon: '🍎', desc: 'Vermelha e brilhante. Cavalos desconfiados costumam mudar de ideia por uma maçã.', usedIn: 'Estábulo' },
     ferradura: { name: 'Ferraduras novas', icon: '🧲', desc: 'Quatro ferraduras forjadas pelo Brutus, ainda mornas. Cada uma tem um "M" riscado.', usedIn: 'Estábulo' },
-    espada: { name: 'Espada do Ferreiro', icon: '🗡️', desc: 'Forjada para você. Corta arbustos, teias e, quem sabe, pão.', usedIn: 'Floresta e Castelo' },
+    espada: { name: 'Espada do Ferreiro', icon: '🗡️', desc: 'Forjada para você. Golpeia espíritos, corta teias e, quem sabe, pão.', usedIn: 'Ruínas, Vinhedo e Castelo' },
     mochila: { name: 'Mochila', icon: '🎒', desc: 'Leva tudo o que você coletar pelo caminho.', usedIn: 'Toda a aventura' },
     chave_trigo: { name: 'Chave de trigo', icon: '🌾', desc: 'Uma chave em forma de espiga de trigo. A primeira das três chaves do castelo.', usedIn: 'Portão do Castelo' },
     mapa: { name: 'Mapa do Reino', icon: '🗺️', desc: 'Mostra o caminho para além da vila.', usedIn: 'Portão da vila e mapa central' },
-    ovos: { name: 'Ovos da Clotilde', icon: '🥚', desc: 'Meia dúzia de ovos caipiras, ainda quentinhos. "Os melhores do vale", segundo ela.', usedIn: 'Taverna' },
+    ovos: { name: 'Ovos da Pipoca', icon: '🥚', desc: 'Frescos, ainda quentinhos, botados pela sua companheira de viagem. Receitas especiais começam com ingredientes simples.', usedIn: 'Taverna e surpresa final' },
     pocao: { name: 'Poção de Coragem', icon: '🧪', desc: 'Tem gosto de morango. Dizem que cura o medo do escuro.', usedIn: 'Castelo' },
     pao: { name: 'Pão quentinho', icon: '🍞', desc: 'Saído do forno agora há pouco. Ainda solta vapor.', usedIn: 'Taverna' },
-    farinha: { name: 'Pacote de farinha misterioso', icon: '🌫️', desc: 'A Dona Pimenta jura que "vai ser importante mais tarde". Não faz sentido nenhum... por enquanto.', usedIn: 'Taverna' },
-    biscoito: { name: 'Biscoito da sorte', icon: '🥠', desc: 'O papelzinho dentro diz: "Você vai comer este biscoito." Acertou.', usedIn: 'Torre' },
+    farinha: { name: 'Farinha do Seu Alvim', icon: '🌫️', desc: 'Farinha fininha, moída agora no moinho que você consertou. Cheira a pão... e a lembrança.', usedIn: 'Taverna e surpresa final' },
     cristal: { name: 'Cristal das Ruínas', icon: '💎', desc: 'Pulsa devagar, como se lembrasse de tudo o que viu. Os três altares das Ruínas deixaram uma luz dentro dele.', usedIn: 'Castelo' },
-    chave_estrela: { name: 'Chave de estrela', icon: '⭐', desc: 'Uma chave com a ponta em forma de estrela, ainda fria do alto da torre. A segunda das três chaves do castelo.', usedIn: 'Portão do Castelo' },
+    chave_estrela: { name: 'Chave de estrela', icon: '⭐', desc: 'Uma chave com a ponta em forma de estrela, que o cristal deixou cair quando você o pegou. A segunda das três chaves do castelo.', usedIn: 'Portão do Castelo' },
     chave_cobre: { name: 'Chave de cobre', icon: '🗝️', desc: 'Uma chave de cobre com cheiro de pão e de lenha. A terceira das três chaves do castelo.', usedIn: 'Portão do Castelo' },
     garrafa: { name: 'Garrafa do Vinhedo', icon: '🍷', desc: 'A última garrafa da safra, com a rolha ainda úmida de cera. Guardada para um brinde importante.', usedIn: 'Castelo' },
+  },
+
+  // ---------- combate ----------
+  combat: {
+    defeat: 'Tudo fica escuro de novo…',
+    wake: 'Você acorda tonto, mas inteiro. Respire fundo e tente outra vez.',
+    rest: 'Você respira fundo. Os corações se enchem de novo.',
+    tutorialDesktop: 'J ou F para golpear · K ou Shift para esquivar',
+    tutorialTouch: 'Toque em ⚔️ para golpear e em 💨 para esquivar',
+    foesNear: 'Algo se mexe na névoa à sua frente…',
   },
 
   // ---------- Vila ----------
   // Tudo aqui é texto de exemplo ([EXEMPLO]): troque pelos nomes, bichos e piadas reais.
   village: {
     areaName: 'Vila do Amanhecer',
-    intro: [
-      'Uma mensagem misteriosa ecoa pelo vale...',
-      '"Seu presente foi escondido. Atravesse este mundo para encontrá-lo."',
-      'Ao amanhecer, um cavalo chegou sozinho à vila. Na sela, uma bolsa com o seu nome.',
+    /** Chegada: o jogador reconhece o lugar de que se lembrava vagamente. */
+    arrival: [
+      '"Finalmente… a vila!"',
+      'Você reconhece as casas, a praça e o caminho até a ferraria. Aos poucos, tudo começa a voltar.',
+      '"Certo. A Helena me pediu para buscar algumas coisas aqui. Preciso encontrar meu cavalo, conseguir os itens e voltar para casa antes que seja tarde."',
+      'Você olha ao redor.',
+      '"Agora… por onde eu começo?"',
     ],
 
     letter: {
-      title: 'Uma carta sem remetente',
+      title: 'O bilhete da Helena',
       paragraphs: [
-        'Matheus,',
-        'Seu presente foi escondido em algum lugar deste mundo.',
-        'Para encontrá-lo, você vai atravessar florestas, ruínas, torres e castelos.',
-        'Este cavalo veio buscar você. Cuide bem dele: ele sabe o caminho.',
+        'Amor,',
+        'Se você está lendo isto, o cavalo chegou antes de você. Eu sabia que ele sabia o caminho.',
+        'Passe pela vila e resolva a lista: ferraduras novas para ele, farinha fresca do Seu Alvim e a encomenda da Dona Pimenta. Ela te entrega o mapa.',
+        'Depois volte para casa. Tem uma coisa esperando por você. Nada de espiar!',
         '— H.',
       ],
-      close: 'Guardar a carta',
+      close: 'Guardar o bilhete',
     },
 
     quests: {
       horse: { title: 'O cavalo desconfiado', coins: 6 },
       shoes: { title: 'Ferraduras novas', coins: 12 },
-      mill: { title: 'O moinho parado', coins: 10 },
+      mill: { title: 'O moinho emperrado', coins: 10 },
+      order: { title: 'A encomenda esquecida', coins: 12 },
       hens: { title: 'Fuga das galinhas', coins: 15 },
     },
 
     /** Nome do cavalo. [EXEMPLO] */
     horseName: 'Trovão',
+    /** Nome da galinha companheira. [EXEMPLO] */
+    henName: 'Pipoca',
 
     npcs: {
       stable: { name: 'Tito, o Cavalariço', prompt: 'Falar com o Tito' },
@@ -130,9 +146,9 @@ export const content = {
     // ----- Tito e o cavalo -----
     stable: {
       first: [
-        'Ah, graças a Deus, alguém! O senhor é o Matheus? Aquele da bolsa?',
-        'Esse cavalo chegou sozinho ao amanhecer, trotando pela estrada como quem tem hora marcada.',
-        'Na sela, uma bolsa com seu nome. Só que ele morde quem chega perto. Perdi um chapéu e metade da paciência.',
+        'Ah, graças a Deus, alguém! O senhor é o Matheus? Esse cavalo chegou sozinho ao amanhecer, trotando pela estrada como quem tem hora marcada.',
+        '(É o meu cavalo! Mas como ele chegou antes de mim?)',
+        'Na sela, uma bolsa com o seu nome. Só que ele morde quem chega perto. Perdi um chapéu e metade da paciência.',
         'Mas ele me parece um cavalo que quer ser ganho, não pego. Leve esta maçã e vá DEVAGAR. Cavalo sente pressa de longe.',
       ],
       offer: 'Ele só vai deixar chegar quem se aproxima com calma, segurando a maçã.',
@@ -162,7 +178,8 @@ export const content = {
       trustLabel: 'Confiança de {name}',
       trusted: [
         '{name} abaixa a cabeça e cheira a maçã. Depois cheira você. Respira fundo.',
-        'A bolsa da sela se solta com um clique. Dentro, um envelope com a letra de alguém que você conhece bem.',
+        '"Aí está você, cabeça-dura. Eu sabia que a gente se encontrava."',
+        'A bolsa da sela se solta com um clique. Dentro, um bilhete dobrado com a letra de alguém que você conhece bem.',
       ],
       mount: 'Montar em {name}',
       dismount: 'Desmontar',
@@ -195,7 +212,7 @@ export const content = {
       forgeHit: ['CLANG! Primeira, e já saiu faísca.', 'CLANG! Isso aí, agora o ferro entendeu.', 'CLANG! A forja sorriu.'],
       forged: [
         'Pronto! Quatro ferraduras novas, e uma delas ficou até bonita.',
-        'E para a estrada vai precisar de algo mais que cenoura: esta espada. Forjei hoje cedo sem saber para quem. Agora sei.',
+        'E para a estrada vai precisar de algo mais que cenoura: esta espada. Dizem que tem uma névoa estranha rondando o reino. Forjei hoje cedo sem saber para quem. Agora sei.',
         'Leve as ferraduras ao Tito. Ele sabe colocar.',
       ],
       progress: ['As ferraduras já estão com você. Leve ao Tito, no estábulo.'],
@@ -206,20 +223,29 @@ export const content = {
     miller: {
       noLetter: ['Hm? Visita? Estou ocupado olhando para o moinho. Ele me ignora, eu ignoro ele.'],
       offer: [
-        'Você é o do cavalo? Ótimo, notícia corre mais que o vento por aqui, e o vento anda parado.',
-        'O moinho emperrou na semana passada. As engrenagens da casa de máquinas saíram do encaixe: três rodas, e cada uma que eu mexo arrasta a vizinha.',
-        'Se conseguir alinhar as marcas todas para cima, eu devolvo o favor com a chave da despensa de trigo.',
+        'Ainda bem que apareceu! O moinho parou bem na hora em que eu precisava preparar um lote de farinha. As engrenagens saíram do encaixe.',
+        'São três rodas, e cada uma que eu mexo arrasta a vizinha. Sem farinha, não há pão. E, sem o moinho, não consigo preparar nada.',
+        'Você me dá uma mão?',
       ],
-      yes: 'Eu dou uma olhada',
+      yes: 'Acho que consigo ajudar',
       no: 'Agora não',
       decline: ['Tudo bem. O moinho não vai a lugar nenhum. É esse o problema.'],
-      accepted: ['A casa de máquinas fica aos pés do moinho. É só chegar e mexer nas rodas. Elas giram quando você toca.'],
+      accepted: ['Não prometo entender de moinhos, mas já sobrevivi a uma floresta inteira hoje.', 'Então temos esperança! A casa de máquinas fica aos pés do moinho. É só chegar e mexer nas rodas.'],
       progress: ['As engrenagens ficam na casa de máquinas, aos pés do moinho. Toque nelas até as marcas ficarem para cima.'],
       ready: [
-        'ELE VOLTOU A GIRAR! Escute só esse rangido bom.',
-        'Prometi uma chave, e aqui está: a chave em forma de espiga, a primeira das três do castelo.',
-        'E aceite esta mochila de couro. Foi do meu avô e carregou mais farinha que histórias.',
+        'ELE VOLTOU A GIRAR! Escute só esse rangido bom. A farinha já está caindo no recipiente.',
+        'Muito bem! Às vezes, basta colocar cada peça no lugar certo para tudo voltar a funcionar.',
+        'Prometi uma chave, e aqui está: a espiga de trigo, a primeira das três do castelo. E leve um pouco da farinha fresca também.',
+        'Leve esta mochila resistente. Uma boa viagem exige espaço para carregar aquilo que você encontrar pelo caminho.',
       ],
+      fragment: {
+        title: 'FRAGMENTO DE MEMÓRIA 03',
+        lines: [
+          'Você observa a farinha fina sobre a mesa.',
+          'Por um instante, uma lembrança surge: uma bancada coberta de farinha, mãos trabalhando uma massa e alguém rindo ao seu lado.',
+          '"De novo essa imagem… farinha, uma cozinha… Por que continuo me lembrando disso?"',
+        ],
+      },
       done: ['O moinho agora gira tão bem que a farinha chega sozinha. Meus braços estão agradecendo.'],
       gearsTitle: 'Engrenagens do moinho',
       gearsHint: 'Tocar numa roda gira ela e a vizinha ao contrário.',
@@ -245,11 +271,33 @@ export const content = {
       progress: 'Ainda faltam {n} galinhas soltas. Cuidado para não correr atrás delas: elas correm mais!',
       ready: [
         'TODAS AQUI! Nuggets, Bela Adormecida, Dona Frango, Frida, Maria Fofoca e... Bartolomeu, vem cá, meu bem.',
-        'Você salvou a minha manhã. Tome as moedas e estes ovos: os melhores do vale, rigorosamente.',
-        'E uma dica de ouro: quem leva ovos à taverna ganha o respeito do cozinheiro.',
+        'Você salvou a minha manhã. Tome as moedas, é o mínimo.',
+        'E quando precisar de ovos, é só dizer. Quer dizer... pelo jeito você já tem fornecedora própria.',
       ],
       done: ['A Beyoncé conta pra todo mundo da fuga. Ela é dramática como a dona.'],
       penToast: 'Galinha no cercado: {n} de {total}',
+    },
+
+    // ----- a galinha companheira -----
+    hen: {
+      prompt: 'Chegar perto da galinha',
+      meet: [
+        'Você está atravessando a praça quando escuta um cacarejo atrás de uma barraca.',
+        'Uma galinha aparece, olha para você e começa a andar na sua direção.',
+        '"Oi, pequenininha. Cadê o seu dono?"',
+        'Você continua andando. Ela vai atrás.',
+        '"Ah, não. Você também vai me seguir agora?"',
+        'A galinha cacareja como se tivesse acabado de tomar uma decisão muito importante.',
+        '"Tudo bem. Mas não espere que eu saiba cuidar de você. Eu mal estou conseguindo cuidar de mim!"',
+      ],
+      joined: 'A {name} agora viaja com você',
+      eggFirst: [
+        '"Espera… você botou um ovo?"',
+        'Você olha para a galinha.',
+        '"Você vem comigo, me segue por todo lugar e ainda me dá provisões? Acho que encontrei a melhor companheira de viagem possível."',
+      ],
+      eggMore: ['Mais um ovo! A {name} não para.', 'Outro ovo quentinho na mochila.', 'A {name} cacareja, orgulhosa: ovo novo!'],
+      eggToast: 'Ovo da {name} guardado na mochila',
     },
 
     // ----- Dona Pimenta e a loja -----
@@ -264,17 +312,58 @@ export const content = {
         'Cavalo que sabe o que quer é raro. Cavalo que sabe o que você quer... é de outro mundo.',
       ],
       chatDone: ['Agora a vila toda fala de você e do {name}. Você é o novo assunto preferido. Parabéns?'],
+      chatEggs: ['Ora, ovos frescos! Cuide bem deles. Um bom cozinheiro sabe que receitas especiais começam com ingredientes simples.'],
       shopTitle: 'Loja da Dona Pimenta',
-      shopHint: 'Dica: o mapa é obrigatório para passar pelo portão da vila.',
+      shopHint: 'Dica: poções e pão ajudam em viagens longas.',
     },
 
-    /** Itens da loja, na ordem exibida, e o preço. As quests pagam bem mais que o mapa. */
+    // ----- A encomenda esquecida (Dona Pimenta) -----
+    order: {
+      intro: [
+        'Ora, ora… olha quem apareceu! Faz tempo que não vejo alguém tão perdido dentro da minha loja.',
+        '(Estou procurando algumas coisas, mas, para ser sincero, nem lembro direito o quê.)',
+        'Isso acontece quando a cabeça está cheia de preocupações. Vamos por partes. Uma boa viagem começa com boas provisões.',
+        'Ah! Antes que eu me esqueça, tenho uma encomenda que preciso separar. Mas, com esse movimento todo, acabei misturando as etiquetas.',
+        'Você parece estar precisando de alguma coisa para fazer. E eu preciso de alguém que saiba distinguir o que vai na mochila do que fica na prateleira. Me ajuda?',
+      ],
+      yes: 'Claro, eu separo',
+      no: 'Mais tarde',
+      decline: ['Sem pressa. As etiquetas não vão a lugar nenhum. Infelizmente.'],
+      accepted: ['Maravilha! Provisões vão na mochila, ferramentas no cesto das ferramentas e o que não serve para a viagem volta para a prateleira.'],
+      resume: ['A encomenda ainda está toda misturada. Vamos lá?'],
+      title: 'Encomenda da Dona Pimenta',
+      hint: 'Arraste cada item para o cesto certo. Toque num item já guardado para devolvê-lo à bancada.',
+      confirm: 'Conferir',
+      incomplete: 'Ainda tem coisa sobrando na bancada. Guarde tudo antes de conferir.',
+      wrong: 'Hmm, {n} coisa(s) foram para o cesto errado. Elas voltaram para a bancada: pense no que realmente vai na viagem.',
+      bins: [
+        { id: 'provisoes', icon: '🎒', name: 'Provisões' },
+        { id: 'ferramentas', icon: '🧰', name: 'Ferramentas' },
+        { id: 'prateleira', icon: '🪑', name: 'Fica na prateleira' },
+      ],
+      items: [
+        { id: 'pao', icon: '🍞', name: 'Pão', bin: 'provisoes' },
+        { id: 'queijo', icon: '🧀', name: 'Queijo', bin: 'provisoes' },
+        { id: 'maca', icon: '🍎', name: 'Maçãs', bin: 'provisoes' },
+        { id: 'corda', icon: '🪢', name: 'Corda', bin: 'ferramentas' },
+        { id: 'martelo', icon: '🔨', name: 'Martelo', bin: 'ferramentas' },
+        { id: 'lanterna', icon: '🏮', name: 'Lanterna', bin: 'ferramentas' },
+        { id: 'vaso', icon: '🏺', name: 'Vaso enfeitado', bin: 'prateleira' },
+        { id: 'vela', icon: '🕯️', name: 'Velas de enfeite', bin: 'prateleira' },
+        { id: 'boneca', icon: '🪆', name: 'Boneca de pano', bin: 'prateleira' },
+      ],
+      solved: ['Perfeito! Cada coisa no seu lugar. Você tem olho de comerciante.'],
+      reward: [
+        'Aqui está o mapa do reino, com os meus agradecimentos. Sem ele você se perderia no primeiro cruzamento.',
+        'E leve um pão quentinho para a estrada. Uma boa viagem começa com boas provisões.',
+      ],
+      done: ['A encomenda seguiu viagem. E o mapa, pelo jeito, também.'],
+    },
+
+    /** Itens da loja, na ordem exibida, e o preço. */
     shop: [
-      { id: 'mapa', price: 10 },
       { id: 'pao', price: 4 },
       { id: 'pocao', price: 8 },
-      { id: 'farinha', price: 6 },
-      { id: 'biscoito', price: 7 },
     ],
 
     gate: {
@@ -287,11 +376,11 @@ export const content = {
       ],
       noMap: [
         'A chave de trigo gira na fechadura, mas você hesita.',
-        'Sem um mapa, você se perderia no primeiro cruzamento. A Dona Pimenta vende um.',
+        'Sem um mapa, você se perderia no primeiro cruzamento. A Dona Pimenta tem uma encomenda para você resolver, e o mapa vem junto.',
       ],
       open: [
         'A chave de trigo gira na fechadura. Com o mapa na mão, você respira fundo.',
-        'O portão se abre devagar. A aventura de verdade começa agora.',
+        'O portão se abre devagar. Hora de recuperar o resto das lembranças.',
       ],
     },
 
@@ -310,36 +399,83 @@ export const content = {
       talkMiller: 'Fale com o Moleiro, no moinho',
       fixMill: 'Conserte as engrenagens do moinho',
       returnMiller: 'Volte ao Seu Alvim',
-      needMap: 'Compre um mapa com a Dona Pimenta',
-      needCoins: 'Ganhe moedas ajudando os moradores',
+      order: 'Resolva a encomenda da Dona Pimenta, na barraca do mercado',
       gate: 'Atravesse o portão norte da vila',
       done: 'Siga pelo portão até o mapa do reino',
       hens: 'Leve as galinhas ao cercado ({n}/6)',
     },
   },
 
-  // ---------- Floresta dos Sussurros ----------
+  // ---------- Floresta dos Sussurros (o começo da história) ----------
   // Textos de exemplo ([EXEMPLO]).
   forest: {
     areaName: 'Floresta dos Sussurros',
-    intro: [
-      'A estrada de terra entra na mata. A luz do fim de tarde ainda atravessa as copas.',
-      'Mas a floresta escurece depressa. Dizem que, quando a noite cai, os vagalumes mostram o caminho a quem sabe segui-los.',
-    ],
+    wake: {
+      header: 'FLORESTA DOS SUSSURROS · INÍCIO',
+      lines: [
+        'Está frio.',
+        'Você abre os olhos devagar. O chão está úmido, as árvores parecem muito mais altas do que deveriam e uma névoa fina cobre tudo ao seu redor.',
+        'Você tenta se levantar, ainda tonto.',
+        '"Onde eu estou?"',
+        'Você se lembra de estar em algum lugar familiar. Havia luzes, vozes… alguém estava falando com você.',
+        'Mas, por mais que tente, as lembranças escapam.',
+        '"Como foi que eu vim parar aqui?"',
+        'Uma trilha estreita desaparece entre as árvores. Pequenos vagalumes iluminam o caminho.',
+      ],
+    },
     objective: {
       follow: 'Siga a trilha pela floresta',
+      ribbon: 'Algo brilha ao lado da trilha',
+      horse: 'Procure o seu cavalo',
+      stick: 'Encontre algo para se defender',
+      fight: 'Enfrente os espíritos da névoa',
       fireflies: 'Siga os vagalumes',
-      thorns: 'Corte os espinhos com a espada',
       portal: 'Chegue ao portal de pedra',
-      done: 'Volte ao mapa: novos caminhos se abriram',
+      done: 'Atravesse o portal em direção à vila',
     },
     back: {
       prompt: 'Voltar ao mapa',
+    },
+    ribbon: {
+      prompt: 'Examinar a fita',
+      lines: ['Presa num galho baixo, uma fita de cetim balança sozinha, mesmo sem vento.', '"Espera… eu conheço isso."'],
+      fragment: {
+        title: 'FRAGMENTO DE MEMÓRIA 01',
+        lines: [
+          'Uma voz surge vagamente em sua cabeça.',
+          '— Ah, Helena tinha falado alguma coisa…',
+          'Você fecha os olhos, tentando se lembrar.',
+          '— Ela pediu para eu ir até a vila buscar umas coisas. Eu acho que era isso…',
+          'A lembrança desaparece tão rápido quanto surgiu.',
+          '"Mas por que eu vim por essa floresta?"',
+        ],
+      },
+    },
+    tracks: {
+      prompt: 'Examinar as pegadas',
+      lines: [
+        'Você para de repente.',
+        '"Pera aí…"',
+        'Olha para os lados, procurando algo familiar.',
+        '"E o meu cavalo?!"',
+        'Você se lembra de ter vindo montado. Pelo menos, acha que estava montado. Há marcas de ferraduras no chão, mas nenhum sinal do animal.',
+        'As pegadas seguem em direções diferentes, até desaparecerem na terra úmida.',
+        '"Ótimo. Estou perdido no meio de uma floresta e agora estou sem cavalo."',
+        'Você respira fundo.',
+        '"Primeiro eu preciso sair daqui. Depois encontro esse cabeça-dura."',
+      ],
+    },
+    stick: {
+      prompt: 'Pegar o galho',
+      lines: ['Caído junto de um tronco, um galho firme, do tamanho certo para a mão.', '"Não é uma espada. Mas é melhor que nada."', 'A névoa mais à frente parece se mexer…'],
     },
     horseStops: [
       '{name} para na beira da sombra, bufa e recua dois passos.',
       'Ele tem medo do escuro. Vai esperar aqui por você, e vai estar aqui na volta.',
     ],
+    mist: {
+      wall: 'A névoa se fecha à sua frente, densa como uma parede. Algo se mexe dentro dela.',
+    },
     deadEnd: [
       [
         'A trilha termina numa clareira vazia, com um tronco caído e cogumelos tímidos.',
@@ -350,19 +486,25 @@ export const content = {
         'Hora de voltar até a bifurcação e escolher o outro lado.',
       ],
     ],
-    thorns: {
-      prompt: 'Cortar os espinhos',
-      noSword: ['Os espinhos são grossos demais para passar. Algo bem afiado resolveria.'],
-      cut: ['Você abre caminho a golpes de espada. Folhas e gravetos voam para todo lado.'],
-    },
     portal: {
       prompt: 'Examinar o portal',
-      lines: [
-        'No fim da trilha, um arco de pedra muito antigo brilha com símbolos azuis.',
-        'Os símbolos lembram uma escrita que você já viu... mas ainda não sabe onde.',
-        'Do outro lado do arco, o ar tem cheiro de memória. As Ruínas esperam.',
-      ],
-      done: 'O portal pulsa devagar, como um coração. O caminho para as Ruínas está aberto.',
+      lines: ['No fim da trilha, um arco de pedra muito antigo brilha com símbolos azuis.', 'Ao tocar as pedras antigas, você sente uma pontada na cabeça.'],
+      fragment: {
+        title: 'FRAGMENTO DE MEMÓRIA 02',
+        lines: [
+          'Dessa vez, a lembrança é mais nítida.',
+          'Você está em casa. Há uma conversa, uma lista de coisas para buscar e uma sensação estranha de que alguém está escondendo alguma coisa de você.',
+          '— Eu precisava buscar alguns itens na vila…',
+          'Você começa a entender.',
+          '— Isso! Eu tinha que pegar tudo e voltar para casa.',
+          'Uma última imagem aparece: algo embrulhado, guardado cuidadosamente, longe dos seus olhos. Você sorri, sem saber exatamente por quê.',
+          '— E tinha alguma coisa sobre o meu aniversário…',
+          'A imagem desaparece.',
+          '"Espera. Meu aniversário? O que a Helena está aprontando?"',
+        ],
+      },
+      after: ['O arco se abre para a luz da manhã. Do outro lado, uma estradinha desce até a Vila do Amanhecer.'],
+      done: 'O portal pulsa devagar, como um coração. A estrada para a vila está logo ali.',
     },
   },
 
@@ -378,10 +520,12 @@ export const content = {
     objective: {
       explore: 'Explore o pátio das ruínas',
       altars: 'Acenda os altares ({n}/3)',
+      fight: 'Enfrente os espíritos que despertaram',
       crystal: 'Pegue o cristal no centro do pátio',
       done: 'Volte ao mapa: novos caminhos se abriram',
     },
     altarLit: 'O cristal acende. Uma lembrança vem à tona...',
+    ambush: 'Os três altares acesos acordam o pátio. A névoa sobe do chão, e vultos se levantam em volta do cristal.',
     altarDone: 'O cristal deste altar já está aceso.',
     flames: {
       name: 'Altar das Chamas',
@@ -420,112 +564,11 @@ export const content = {
       lines: [
         'Os três altares acesos soltam uma coluna de luz no centro do pátio. No alto dela, um cristal do tamanho de um punho flutua devagar.',
         'Ele pesa quase nada e esquenta na mão. Dentro dele, as três memórias giram como pequenas estrelas.',
+        'Quando você o pega, uma chave com a ponta em forma de estrela desliza para a sua outra mão, como se estivesse esperando por isso.',
         'Algo no castelo vai querer saber disso.',
       ],
     },
     done: 'O pedestal está vazio, mas o pátio ainda guarda um brilho azul. O caminho de volta está livre.',
-  },
-
-  // ---------- Torre do Saber ----------
-  // Textos de exemplo ([EXEMPLO]): troque pelas perguntas e pelas memórias reais.
-  tower: {
-    areaName: 'Torre do Saber',
-    intro: [
-      'A porta da torre range sozinha. Lá dentro, uma escada de pedra sobe de sala em sala.',
-      'Cada andar tem um guardião, e cada guardião faz uma pergunta. Quem acerta ganha a escada. Quem erra ganha uma dica.',
-    ],
-    floorNames: ['Biblioteca', 'Sala dos Relógios', 'Laboratório', 'Salão dos Espelhos', 'Observatório'],
-    floorLabel: '{n}º andar · {name}',
-    door: {
-      up: 'Subir para o {n}º andar',
-      down: 'Descer para o {n}º andar',
-      exit: 'Voltar ao mapa',
-      sealedPrompt: 'Examinar o selo',
-      sealed: ['A passagem está selada por uma luz vermelha. O guardião deste andar sabe como abri-la.'],
-      opened: 'O selo se desfaz. A escada está livre.',
-    },
-    guardians: [
-      {
-        name: 'Madame Lívia, a Bibliotecária',
-        prompt: 'Falar com a Bibliotecária',
-        greet: ['Shhh! Aqui se lê em silêncio, mas se responde em voz alta. [EXEMPLO]', 'Uma pergunta fácil para aquecer, e a escada é sua.'],
-        after: ['Pode subir, querido. E leve um livro, se quiser.'],
-        quiz: {
-          question: 'Qual é a cor favorita do Matheus? [EXEMPLO]',
-          options: ['Azul', 'Verde', 'Vermelho'],
-          answer: 0,
-          hint: ['Tente pensar na cor do céu numa tarde sem nuvens.'],
-          right: ['Isso! Está tudo escrito nos livros. Pode subir.'],
-        },
-      },
-      {
-        name: 'Relojoeiro Ambrósio',
-        prompt: 'Falar com o Relojoeiro',
-        greet: ['Tique, taque. Tudo aqui tem hora, menos a minha paciência. [EXEMPLO]'],
-        after: ['O tempo passa, mas você já passou. Suba.'],
-        quiz: {
-          question: 'Em que mês o Matheus faz aniversário? [EXEMPLO]',
-          options: ['Março', 'Julho', 'Outubro'],
-          answer: 1,
-          hint: ['Pense nas férias de inverno.'],
-          right: ['Pontual como um relógio suíço!'],
-        },
-      },
-      {
-        name: 'Alquimista Bruma',
-        prompt: 'Falar com a Alquimista',
-        greet: ['Cuidado com o caldeirão! Ele borbulha quando mente. [EXEMPLO]'],
-        after: ['A poção aprovou você. Siga em frente.'],
-        quiz: {
-          question: 'Qual é a comida preferida do Matheus? [EXEMPLO]',
-          options: ['Pizza', 'Churrasco', 'Lasanha'],
-          answer: 1,
-          hint: ['O cheiro da brasa já diz tudo.'],
-          right: ['O caldeirão borbulhou de alegria. Acertou!'],
-        },
-      },
-      {
-        name: 'O Espelho Falante',
-        prompt: 'Falar com o Espelho',
-        greet: ['Eu só mostro o que você já sabe. Vamos ver se sabe mesmo. [EXEMPLO]'],
-        after: ['Seu reflexo sorri. Pode seguir.'],
-        quiz: {
-          question: 'Qual é o bicho de estimação do Matheus? [EXEMPLO]',
-          options: ['Um gato', 'Um cachorro', 'Um papagaio'],
-          answer: 0,
-          hint: ['Ele ronrona e dorme em cima do teclado.'],
-          right: ['O reflexo concorda. A escada se abre.'],
-        },
-      },
-      {
-        name: 'Astrônomo Orion',
-        prompt: 'Falar com o Astrônomo',
-        greet: ['Cheguei até aqui contando estrelas. Última pergunta, e o baú é seu. [EXEMPLO]'],
-        after: ['As estrelas estão a seu favor. O baú espera.'],
-        quiz: {
-          question: 'Onde foi a primeira viagem do Matheus e da H.? [EXEMPLO]',
-          options: ['Na praia', 'Na serra', 'Numa cidade grande'],
-          answer: 1,
-          hint: ['Fazia frio e tinha lareira.'],
-          right: ['Ah, essa constelação eu conheço! Pode abrir o baú.'],
-        },
-      },
-    ],
-    chest: {
-      prompt: 'Abrir o baú',
-      locked: ['O baú está trancado por um feitiço. O Astrônomo sabe a palavra.'],
-      lines: [
-        'O baú abre devagar. Dentro, sobre um tecido azul, há uma chave com a ponta em forma de estrela.',
-        'Ela brilha como se tivesse guardado uma lembrança.',
-      ],
-    },
-    objective: {
-      talk: 'Fale com o guardião do {n}º andar',
-      climb: 'Suba para o {n}º andar',
-      chest: 'Abra o baú no observatório',
-      done: 'Volte ao mapa: a segunda chave está com você',
-    },
-    done: 'O baú está vazio, mas a torre ainda cintila. A chave de estrela já está com você.',
   },
 
   // ---------- Taverna do Zé ----------
@@ -652,6 +695,7 @@ export const content = {
       'Lá no fundo, debaixo de um galpão de pedra, uma mulher de lenço na cabeça pisa em alguma coisa e canta sozinha.',
     ],
     back: { prompt: 'Voltar ao mapa' },
+    crows: 'Corvos de névoa descem das videiras, atraídos pelo cacho brilhante!',
     keeper: {
       name: 'Dona Vitória, a Vinicultora',
       prompt: 'Falar com a Dona Vitória',
@@ -742,7 +786,7 @@ export const content = {
         name: 'Fechadura de estrela',
         key: 'chave_estrela',
         prompt: 'Usar a chave de estrela',
-        missing: ['Uma fechadura em forma de estrela. A chave certa veio do alto de uma torre.'],
+        missing: ['Uma fechadura em forma de estrela. A chave certa estava guardada junto do cristal das Ruínas.'],
         turned: ['A chave de estrela gira e se apaga como uma estrela cadente. Outro clique ecoa.'],
       },
       cobre: {
@@ -762,7 +806,8 @@ export const content = {
       pedestalNoCrystal: ['Um pedestal com a forma de um cristal. Quem sabe as Ruínas tenham algo que encaixe aqui.'],
       pedestalLit: ['O cristal encaixa e pulsa. No chão, setas de luz azul acendem nas bifurcações, apontando o caminho.'],
       potionPrompt: 'Beber a Poção de Coragem',
-      potionLines: ['Tem gosto de morango. A tocha parece queimar mais alto, e a escuridão recua alguns passos.'],
+      potionLines: ['Tem gosto de morango. A tocha parece queimar mais alto, e a escuridão recua alguns passos.', 'Seus corações se enchem de coragem.'],
+      foes: 'Algo se arrasta no corredor à frente. A névoa daqui tem olhos.',
       webPrompt: 'Cortar a teia',
       webNoSword: ['Uma teia grossa bloqueia o corredor. Algo bem afiado resolveria.'],
       webCut: ['Um golpe de espada, e a teia se abre como uma cortina velha.'],
@@ -771,7 +816,7 @@ export const content = {
     },
     hall: {
       intro: [
-        'O salão é largo e quieto. Nas paredes, seis molduras douradas esperam por lembranças.',
+        'O salão é largo e quieto. Nas paredes, cinco molduras douradas esperam por lembranças.',
         'Ao centro, uma mesa posta com dois cálices vazios. No fundo, uma porta alta com um selo de luz.',
       ],
       downPrompt: 'Descer ao labirinto',
@@ -784,7 +829,7 @@ export const content = {
           'Eu vou lembrar a ordem, uma pista por vez.',
         ],
         clueLine: '{n}ª: {clue}',
-        noMemories: ['Você ainda não reuniu lembranças suficientes. Visite as ruínas, a torre, a taverna e o vinhedo.'],
+        noMemories: ['Você ainda não reuniu lembranças suficientes. Visite as ruínas, a taverna e o vinhedo.'],
         right: ['Isso! Todas no lugar. As molduras acenderam por inteiro.', 'Falta o brinde. A mesa está pronta e a garrafa certa já está com você.'],
         after: ['As lembranças estão em ordem. Faça o brinde, e a porta do trono se abre.'],
       },
@@ -793,7 +838,6 @@ export const content = {
         { id: 'ruinas_simbolos', clue: 'Um dia qualquer, desses que a gente guarda sem perceber.' },
         { id: 'ruinas_eco', clue: 'Uma risada que ninguém explica.' },
         { id: 'taverna_jantar', clue: 'Uma mesa, comida boa e conversa até esfriar o prato.' },
-        { id: 'torre_topo', clue: 'Um lugar alto, de onde se enxerga longe.' },
         { id: 'vinhedo_brinde', clue: 'A primeira vez que brindaram com qualquer coisa.' },
       ],
       memoryGame: {
@@ -866,12 +910,6 @@ export const content = {
       caption: '[EXEMPLO] A risada',
       photo: 'ruinas_eco.jpg',
     },
-    torre_topo: {
-      title: 'Lá do alto',
-      text: ['[EXEMPLO] De cima a gente enxerga longe. Foi num lugar alto assim que a gente teve a certeza.'],
-      caption: '[EXEMPLO] Lá do alto',
-      photo: 'torre_topo.jpg',
-    },
     taverna_jantar: {
       title: 'O jantar',
       text: ['[EXEMPLO] Nada de especial: uma mesa, comida boa e conversa até esfriar o prato. Foi tudo.'],
@@ -910,7 +948,7 @@ export const content = {
     ],
     locked: {
       forest: 'O portão da vila ainda não se abriu para este caminho.',
-      middle: 'Uma nuvem espessa cobre este lugar. Talvez a floresta guarde uma pista de como dissipá-la.',
+      middle: 'Uma nuvem espessa cobre este lugar. Quem sabe, depois de resolver as pendências da vila, ela se dissipe.',
       castle: 'Nuvens escuras envolvem o castelo. Só quem passar por todos os lugares do reino chegará até aqui.',
       ending: 'Ainda não é hora de abrir este lugar.',
     },
@@ -927,7 +965,6 @@ export const content = {
     map: 'Mapa do Reino',
     forest: 'Floresta dos Sussurros',
     ruins: 'Ruínas Esquecidas',
-    tower: 'Torre do Saber',
     tavern: 'Taverna do Zé',
     vineyard: 'Vinhedo Dourado',
     castle: 'Castelo',

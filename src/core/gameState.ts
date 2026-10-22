@@ -24,7 +24,7 @@ export interface SaveData {
 const KEY = 'aventura-matheus:v1';
 
 function fresh(): SaveData {
-  return { v: 1, area: 'village', coins: 0, items: {}, quests: {}, flags: {}, equipped: { sword: false, backpack: false } };
+  return { v: 1, area: 'forest', coins: 0, items: {}, quests: {}, flags: {}, equipped: { sword: false, backpack: false } };
 }
 
 function readStorage(): SaveData | null {

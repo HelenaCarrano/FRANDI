@@ -17,6 +17,7 @@ import {
   PINE_STYLES, bushGeometry, instancedChunked as instanced, natureMaterial, pineGeometry, rockGeometry, tint, type Inst,
 } from '../world/nature';
 import { playRunes } from '../ui/minigames';
+import { CombatSystem } from '../core/combat';
 import { content, fmt, type ItemId } from '../content';
 import { doneFlag } from './registry';
 import type { Area, AreaContext, AreaEnv, Interactable } from './types';
@@ -137,7 +138,7 @@ interface Brazier {
 }
 
 export function createRuins(ctx: AreaContext): Area {
-  const { ui, game, player, quality, camera, openMap } = ctx;
+  const { ui, game, player, quality, camera, openMap, teleport } = ctx;
   const scene = new THREE.Scene();
   const world = new CollisionWorld();
   const rand = rng(404);
@@ -435,7 +436,27 @@ export function createRuins(ctx: AreaContext): Area {
   scene.add(beam);
   disposables.push(beam.geometry, beam.material as THREE.Material);
   let centerShow = 0;
-  const crystalAvailable = () => allLit() && !game.flag(doneFlag('ruins'));
+  const ambushDone = () => game.flag('foe_ruins_ambush');
+  const crystalAvailable = () => allLit() && ambushDone() && !game.flag(doneFlag('ruins'));
+
+  // emboscada: quando os três altares acendem, a névoa acorda em volta do cristal
+  const combat = new CombatSystem({ scene, world, ground, player, ui, game, teleport, start: { x: START.x, z: START.z, rot: Math.PI }, torchLit: () => player.torch.isLit });
+  const ring = (a: number, r: number) => ({ x: C.x + Math.cos(a) * r, z: C.z + Math.sin(a) * r });
+  combat.add({
+    id: 'ruins_ambush',
+    x: C.x,
+    z: C.z,
+    radius: 17,
+    enabled: allLit,
+    enemies: [
+      { kind: 'fiapo', ...ring(0.4, 7) },
+      { kind: 'fiapo', ...ring(2.5, 7) },
+      { kind: 'fiapo', ...ring(4.4, 7.5) },
+      { kind: 'sombra', ...ring(5.6, 9) },
+    ],
+    checkpoint: { x: START.x, z: START.z - 4, rot: Math.PI },
+    onStart: () => ui.toast(T.ambush),
+  });
 
   // ---------- marcadores de brilho ----------
   const sparkles: { sprite: Marker; base: number; show: () => boolean }[] = [];
@@ -465,7 +486,7 @@ export function createRuins(ctx: AreaContext): Area {
     game.setFlag(memoryFlag(MEMORY_OF[id]));
     await ui.tell([T.altarLit]);
     await ui.showMemory(content.memories[MEMORY_OF[id]]);
-    if (allLit()) ui.toast(T.objective.crystal);
+    if (allLit() && ambushDone()) ui.toast(T.objective.crystal);
   }
 
   const doneToast = () => ui.toast(T.altarDone);
@@ -515,6 +536,7 @@ export function createRuins(ctx: AreaContext): Area {
   async function takeCrystal() {
     await ui.tell(T.crystal.lines);
     giveItem('cristal');
+    giveItem('chave_estrela');
     game.setFlag(doneFlag('ruins'));
     await openMap();
   }
@@ -523,7 +545,7 @@ export function createRuins(ctx: AreaContext): Area {
   // ---------- objetivo ----------
   const objective = () => {
     if (game.flag(doneFlag('ruins'))) return T.objective.done;
-    if (allLit()) return T.objective.crystal;
+    if (allLit()) return ambushDone() ? T.objective.crystal : T.objective.fight;
     if (litCount() > 0 || distC(player.position.x, player.position.z) < RING - 4) return fmt(T.objective.altars, { n: litCount() });
     return T.objective.explore;
   };
@@ -542,7 +564,9 @@ export function createRuins(ctx: AreaContext): Area {
     occluders,
     env,
     torchLit: true,
+    combat,
     debug: {
+      combat,
       altars,
       braziers,
       solveAll: () => {

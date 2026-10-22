@@ -7,6 +7,7 @@ import { sparkleMarker, type Marker } from '../fx/markers';
 import { rng } from '../world/noise';
 import { playMemoryOrder } from '../ui/minigames';
 import { content, fmt } from '../content';
+import { CombatSystem } from '../core/combat';
 import { doneFlag } from './registry';
 import { ISOMETRIC, type Area, type AreaContext, type Interactable } from './types';
 
@@ -488,10 +489,62 @@ export function createCastle(ctx: AreaContext): Area {
   const inZone = (z: number) => () => cur === z && !switching;
   const and = (...fns: (() => boolean)[]) => () => fns.every((f) => f());
 
+  // espíritos da névoa no labirinto: três emboscadas em trechos retos do caminho certo, cada uma fechada por uma muralha de névoa
+  const combat = new CombatSystem({
+    scene,
+    world,
+    ground: () => 0,
+    player,
+    ui,
+    game,
+    teleport: ctx.teleport,
+    start: { x: tx(START_TILE.c), z: tz(START_TILE.r), rot: Math.PI },
+    torchLit: () => player.torch.isLit,
+  });
+  /** Procura, perto de `from`, um trecho reto do caminho (7 casas alinhadas) e devolve o índice do meio. */
+  const straightRun = (from: number) => {
+    for (let d = 0; d < path.length; d++) {
+      for (const i of [from + d, from - d]) {
+        if (i < 4 || i > path.length - 5) continue;
+        const [r0, c0] = path[i - 3];
+        const [r1, c1] = path[i + 3];
+        if (r0 === r1 || c0 === c1) return i;
+      }
+    }
+    return -1;
+  };
+  const MAZE_FOES: { frac: number; kinds: ('fiapo' | 'sombra')[] }[] = [
+    { frac: 0.2, kinds: ['fiapo', 'fiapo'] },
+    { frac: 0.5, kinds: ['sombra', 'fiapo'] },
+    { frac: 0.8, kinds: ['fiapo', 'fiapo', 'fiapo'] },
+  ];
+  MAZE_FOES.forEach((m, k) => {
+    const i = straightRun(Math.floor(path.length * m.frac));
+    if (i < 0) return;
+    const at = (j: number) => ({ x: tx(path[j][1]), z: tz(path[j][0]) });
+    const [r0, c0] = path[i - 3];
+    const [r1, c1] = path[i + 3];
+    const alongZ = r0 !== r1;
+    const wall = at(i + 3);
+    const trig = at(i - 1);
+    combat.add({
+      id: `castle_maze_${k}`,
+      x: trig.x,
+      z: trig.z,
+      radius: 3.6,
+      enabled: () => cur === 1 && !switching,
+      enemies: m.kinds.map((kind, n) => ({ kind, ...at(i + 1 + (n % 2)) })),
+      barrier: alongZ ? [{ x: wall.x - 0.7, z: wall.z }, { x: wall.x + 0.7, z: wall.z }] : [{ x: wall.x, z: wall.z - 0.7 }, { x: wall.x, z: wall.z + 0.7 }],
+      checkpoint: { x: at(i - 2).x, z: at(i - 2).z, rot: Math.atan2(Math.sign(c1 - c0), Math.sign(r1 - r0)) },
+      onStart: k === 0 ? () => ui.toast(T.maze.foes) : undefined,
+    });
+  });
+
   async function changeZone(to: number, x: number, z: number, rot: number, entry: string) {
     if (switching) return;
     switching = true;
     try {
+      if (cur === 1 && to !== 1) combat.abort();
       await ui.fade(true, T.zoneNames[to]);
       cur = to;
       zones.forEach((zn, i) => (zn.group.visible = i === cur));
@@ -556,6 +609,7 @@ export function createCastle(ctx: AreaContext): Area {
     () => {
       game.removeItem('pocao');
       game.setFlag(FLAGS.potion);
+      combat.heal();
       void ui.tell(T.maze.potionLines);
     },
     and(inZone(1), () => game.has('pocao') && !game.flag(FLAGS.potion) && (game.flag(FLAGS.crystal) || !game.has('cristal'))),
@@ -679,7 +733,9 @@ export function createCastle(ctx: AreaContext): Area {
     interactables,
     occluders,
     torchLit: true,
+    combat,
     debug: {
+      combat,
       zones,
       webs,
       path,
