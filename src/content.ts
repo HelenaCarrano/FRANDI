@@ -889,6 +889,88 @@ export const content = {
     },
   },
 
+  // ---------- Sala do Tesouro (final) ----------
+  // Textos de exemplo ([EXEMPLO]): troque pela carta, pelos dados do voucher e pelas falas reais.
+  ending: {
+    areaName: 'Sala do Tesouro',
+    intro: [
+      'A porta do trono se abre para uma sala quente, cheia de ouro e de velas.',
+      'No fundo, sobre um degrau de pedra, um baú dourado espera por você.',
+    ],
+    objective: {
+      chest: 'Abra o baú dourado, no fundo da sala',
+      voucher: 'Veja o seu presente no baú',
+      done: 'Feliz aniversário, Matheus!',
+    },
+    chest: {
+      prompt: 'Abrir o baú',
+      promptDone: 'Ver o voucher',
+      try: [
+        'Você segura a tampa e puxa. Nada. Empurra. Nada.',
+        'O baú tem duas fechaduras, e você só alcança uma. Este tesouro não pode ser aberto sozinho.',
+      ],
+      company: [
+        'Atrás de você, a porta da sala range.',
+        'Passos. Uma luz quente de tocha corre pelas paredes.',
+        'E você já sabe de quem é a sombra no chão antes mesmo de virar.',
+      ],
+      open: [
+        'Vocês viram as duas chaves ao mesmo tempo.',
+        'A tampa se ergue devagar, e uma luz dourada enche a sala inteira.',
+      ],
+    },
+    helena: {
+      name: 'Helena',
+      prompt: 'Falar com a Helena',
+      greet: [
+        'Demorou, hein?',
+        'Eu sabia que você ia conseguir. Cada chave, cada lembrança, cada passo... tudo isso tinha um motivo.',
+        'Feliz aniversário, Matheus.',
+        'Esse baú tem duas fechaduras. Uma é sua. A outra sempre foi minha. Vamos abrir juntos?',
+      ],
+      after: ['Ainda não acredito que você chegou até aqui. Estou orgulhosa de você. [EXEMPLO]'],
+    },
+    reveal: [
+      'Dentro do baú, um envelope dourado e um cheirinho de cozinha.',
+      '"Farinha, ovos, vinho... então era isso! As lembranças de massa, a bancada, a risada."',
+      'Tudo fazia sentido agora: cada ingrediente da viagem era uma pista.',
+    ],
+    letter: {
+      title: 'Para o Matheus',
+      paragraphs: [
+        'Matheus,',
+        'Se você chegou até aqui, então atravessou florestas, ruínas e um castelo inteiro por mim. [EXEMPLO]',
+        'Eu queria te dar um presente que não coubesse numa caixa: uma tarde só nossa, de mãos na massa, rindo e fazendo bagunça.',
+        'Feliz aniversário. Obrigada por ser o meu melhor companheiro de aventura.',
+        '— H.',
+      ],
+      close: 'Guardar a carta',
+    },
+    voucher: {
+      title: 'Workshop de Massas e Vinhos',
+      place: 'La Mia Cuzina',
+      lines: [
+        'Válido para: Matheus e a Helena',
+        'Uma tarde de massas frescas feitas à mão, harmonizadas com vinhos.',
+        'Data: a combinar [EXEMPLO]',
+        'Local: La Mia Cuzina [EXEMPLO: endereço]',
+      ],
+      footer: 'Com amor, H.',
+      save: 'Salvar o voucher',
+      close: 'Guardar',
+      fileName: 'voucher-workshop-matheus.png',
+    },
+    finale: [
+      'Vocês ficam lado a lado, diante do baú aberto, com o ouro brilhando nas paredes.',
+      '"E agora?", você pergunta.',
+      '"Agora a gente vai cozinhar.", ela responde, sorrindo.',
+    ],
+    endTitle: 'Feliz aniversário, Matheus!',
+    endText: 'Fim da aventura. O presente de verdade começa agora.',
+    endButton: 'Continuar na sala',
+    done: ['A sala está quieta, quente e cheia de ouro. O melhor tesouro está ao seu lado.'],
+  },
+
   // ---------- Memórias (aparecem quando um altar acende) ----------
   // Textos de exemplo ([EXEMPLO]). `photo` é o nome do arquivo em public/photos/ (sem foto, mostra a moldura vazia).
   memories: {

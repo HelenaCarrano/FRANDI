@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { CHARACTER, gltf, model } from '../core/assets';
 import { exclamationMarker } from '../fx/markers';
+import { TORCH_MODEL, createFlame } from './torch';
 
 /**
  * Pessoa da vila, feita com os modelos do KayKit Adventurers (CC0): fica "parada" com um gesto de
@@ -42,9 +43,15 @@ export interface NpcConfig {
   patrol?: readonly [number, number][];
   /** Frases soltas quando o Matheus passa por perto. */
   mutters?: readonly string[];
+  /** Pode andar até um ponto com `walkTo` (cenas). */
+  walker?: boolean;
+  /** Segura uma tocha acesa na mão direita (com luz própria). */
+  torch?: boolean;
 }
 
 export const NPC_ASSETS = ['Barbarian', 'Rogue_Hooded', 'Rogue', 'Mage', 'axe_1handed', 'mug_full', 'dagger'].map(CHARACTER);
+/** Modelos extras de quem usa `torch: true`. */
+export const NPC_TORCH_ASSETS = [TORCH_MODEL];
 
 const LOOK_RADIUS = 5.5;
 const PATROL_SPEED = 1.15;
@@ -112,6 +119,8 @@ export class Npc {
   readonly position: THREE.Vector3;
   /** Mostra o "!" sobre a cabeça. */
   alert = false;
+  /** Vira o rosto para o Matheus quando ele chega perto (desligue em cenas). */
+  lookAtPlayer = true;
   readonly mutters: readonly string[];
   /** Altura do terreno (a área informa); sem isso o chão é plano. */
   ground: (x: number, z: number) => number = () => 0;
@@ -122,7 +131,7 @@ export class Npc {
   private walkAction: THREE.AnimationAction | null = null;
   private readonly marker = exclamationMarker();
   private heading: number;
-  private readonly home: number;
+  private home: number;
   private t = Math.random() * 10;
   private workTimer: number;
   private patrolIndex = 0;
@@ -130,6 +139,9 @@ export class Npc {
   private walking = false;
   private busy = false;
   private readonly owned: THREE.Object3D[] = [];
+  private script: { x: number; z: number; speed: number; resolve: () => void } | null = null;
+  private readonly flames: ReturnType<typeof createFlame>[] = [];
+  private torchLight: THREE.PointLight | null = null;
 
   constructor(private readonly cfg: NpcConfig) {
     const path = CHARACTER(cfg.character);
@@ -158,7 +170,7 @@ export class Npc {
     this.idle = this.mixer.clipAction(this.clips.get('Idle')!);
     this.idle.time = Math.random() * this.idle.getClip().duration;
     this.idle.play();
-    if (cfg.patrol) {
+    if (cfg.patrol || cfg.walker) {
       this.walkAction = this.mixer.clipAction(this.clips.get('Walking_A')!);
       this.walkAction.play();
       this.walkAction.setEffectiveWeight(0);
@@ -173,6 +185,30 @@ export class Npc {
       if (p.position) prop.position.set(...p.position);
       bone.add(prop);
     }
+    if (cfg.torch) {
+      const bone = root.getObjectByName(THREE.PropertyBinding.sanitizeNodeName('handslot.r'));
+      if (bone) {
+        const handle = model(TORCH_MODEL);
+        handle.scale.setScalar(0.75);
+        handle.traverse((o) => {
+          const mesh = o as THREE.Mesh;
+          if (mesh.isMesh) {
+            const mat = (mesh.material as THREE.MeshStandardMaterial).clone();
+            mat.color.setHex(0x4a4a50);
+            mesh.material = mat;
+            this.owned.push(mesh);
+          }
+        });
+        const flame = createFlame(0.42, 4.5);
+        flame.mesh.position.y = 0.42;
+        this.flames.push(flame);
+        this.torchLight = new THREE.PointLight(0xffb070, 7, 11, 2);
+        this.torchLight.position.y = 0.9;
+        const holder = new THREE.Group();
+        holder.add(handle, flame.mesh, this.torchLight);
+        bone.add(holder);
+      }
+    }
     for (const a of cfg.accessories ?? []) {
       const { part, bone } = accessory(a);
       const target = root.getObjectByName(bone);
@@ -185,6 +221,18 @@ export class Npc {
     this.marker.position.y = 2.6;
     this.marker.visible = false;
     this.object.add(this.marker);
+  }
+
+  /** Anda até (x, z) e resolve ao chegar (para cenas). Precisa de `walker: true`. */
+  walkTo(x: number, z: number, speed = 1.7): Promise<void> {
+    return new Promise((resolve) => {
+      this.script = { x, z, speed, resolve };
+    });
+  }
+
+  /** Para onde ela olha quando ninguém está por perto (rotação em Y). */
+  face(rot: number) {
+    this.home = rot;
   }
 
   /** Toca um gesto uma vez e volta ao "parado". */
@@ -214,12 +262,31 @@ export class Npc {
 
     const dx = playerPos.x - this.position.x;
     const dz = playerPos.z - this.position.z;
-    const near = Math.hypot(dx, dz) < LOOK_RADIUS;
+    const near = this.lookAtPlayer && Math.hypot(dx, dz) < LOOK_RADIUS;
 
     // ronda: anda até o próximo ponto, para um pouco, segue
     const patrol = this.cfg.patrol;
     let target = near ? Math.atan2(dx, dz) : this.home;
-    if (patrol && patrol.length > 1 && !near) {
+    const sc = this.script;
+    if (sc) {
+      const ex = sc.x - this.position.x;
+      const ez = sc.z - this.position.z;
+      const d = Math.hypot(ex, ez);
+      if (d < 0.15) {
+        this.script = null;
+        this.setWalking(false);
+        sc.resolve();
+      } else {
+        target = Math.atan2(ex, ez);
+        this.setWalking(true);
+        const step = Math.min(d, sc.speed * dt);
+        this.position.x += (ex / d) * step;
+        this.position.z += (ez / d) * step;
+      }
+    }
+    if (sc) {
+      /* andando em cena: a ronda espera */
+    } else if (patrol && patrol.length > 1 && !near) {
       if (this.patrolWait > 0) {
         this.patrolWait -= dt;
         this.setWalking(false);
@@ -257,6 +324,7 @@ export class Npc {
       }
     }
 
+    for (const f of this.flames) f.update(dt);
     this.marker.visible = this.alert;
     if (this.alert) this.marker.position.y = 2.55 + Math.sin(this.t * 3.2) * 0.07;
   }
@@ -275,6 +343,7 @@ export class Npc {
 
   /** Libera o que o NPC criou por conta própria (acessórios). */
   dispose() {
+    this.torchLight?.dispose();
     for (const o of this.owned) {
       o.traverse((c) => {
         const m = c as THREE.Mesh;

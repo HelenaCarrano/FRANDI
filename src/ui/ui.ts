@@ -25,6 +25,62 @@ export interface ShopEntry {
   owned: boolean;
 }
 
+export interface VoucherData {
+  place: string;
+  title: string;
+  lines: readonly string[];
+  footer: string;
+}
+
+/** Desenha o voucher numa imagem 1200 × 720 (borda dourada, texto centralizado). */
+function drawVoucher(v: VoucherData): HTMLCanvasElement {
+  const W = 1200;
+  const H = 720;
+  const c = document.createElement('canvas');
+  c.width = W;
+  c.height = H;
+  const g = c.getContext('2d')!;
+  const bg = g.createRadialGradient(W / 2, H / 2, 80, W / 2, H / 2, W * 0.7);
+  bg.addColorStop(0, '#fbefcf');
+  bg.addColorStop(1, '#d8b77a');
+  g.fillStyle = bg;
+  g.fillRect(0, 0, W, H);
+  g.strokeStyle = '#8a5a1c';
+  g.lineWidth = 10;
+  g.strokeRect(28, 28, W - 56, H - 56);
+  g.lineWidth = 2;
+  g.strokeRect(46, 46, W - 92, H - 92);
+  g.textAlign = 'center';
+  g.fillStyle = '#7a4a14';
+  g.font = '600 30px Georgia, serif';
+  g.fillText(v.place.toUpperCase(), W / 2, 130);
+  g.fillStyle = '#3a2208';
+  g.font = 'bold 68px Georgia, serif';
+  g.fillText(v.title, W / 2, 230);
+  g.font = '34px Georgia, serif';
+  g.fillStyle = '#4a2f10';
+  let y = 330;
+  for (const line of v.lines) {
+    // quebra de linha simples
+    const words = line.split(' ');
+    let cur = '';
+    for (const w of words) {
+      const test = cur ? `${cur} ${w}` : w;
+      if (g.measureText(test).width > W - 200 && cur) {
+        g.fillText(cur, W / 2, y);
+        y += 46;
+        cur = w;
+      } else cur = test;
+    }
+    g.fillText(cur, W / 2, y);
+    y += 62;
+  }
+  g.font = 'italic 36px Georgia, serif';
+  g.fillStyle = '#7a4a14';
+  g.fillText(v.footer, W / 2, H - 90);
+  return c;
+}
+
 export interface ShopConfig {
   title: string;
   hint: string;
@@ -527,6 +583,37 @@ export class UI {
       overlay.addEventListener('pointerdown', next);
       // a primeira linha aparece sozinha, depois de um instante no escuro
       setTimeout(() => shown === 0 && next(), 900);
+    });
+  }
+
+  /**
+   * O voucher do presente: um cartão dourado na tela, com botão para salvar como imagem (PNG gerada na hora).
+   * Resolve quando o jogador o guarda.
+   */
+  showVoucher(v: VoucherData, saveLabel: string, closeLabel: string, fileName: string): Promise<void> {
+    return this.modal<void>('voucher-box', (box, close) => {
+      const card = el('div', 'voucher-card', box);
+      el('div', 'voucher-place', card).textContent = v.place;
+      el('h3', 'voucher-title', card).textContent = v.title;
+      for (const l of v.lines) el('p', 'voucher-line', card).textContent = l;
+      el('div', 'voucher-footer', card).textContent = v.footer;
+      const row = el('div', 'voucher-actions', box);
+      const save = el('button', 'btn', row);
+      save.textContent = saveLabel;
+      save.addEventListener('click', () => {
+        const canvas = drawVoucher(v);
+        canvas.toBlob((blob) => {
+          if (!blob) return;
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = fileName;
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+        }, 'image/png');
+      });
+      const ok = el('button', 'btn primary', row);
+      ok.textContent = closeLabel;
+      ok.addEventListener('click', () => close());
     });
   }
 

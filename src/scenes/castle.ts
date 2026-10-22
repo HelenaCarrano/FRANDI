@@ -672,13 +672,12 @@ export function createCastle(ctx: AreaContext): Area {
     const H = T.hall.throne;
     if (game.flag(doneFlag('castle'))) {
       await ui.tell(H.done);
-      await ctx.openMap();
+      await ctx.goTo('ending');
       return;
     }
     await ui.tell(H.finale);
     game.setFlag(doneFlag('castle'));
-    await ui.showEndCard(H.endTitle, H.endText, H.endButton);
-    await ctx.openMap();
+    await ctx.goTo('ending');
   }
 
   // ---------- marcadores de brilho ----------

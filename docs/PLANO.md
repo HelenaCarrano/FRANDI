@@ -47,7 +47,7 @@ Cada área do jogo implementa `Area` (scenes/types.ts) e é carregada sob demand
 | 1 | Base técnica | Vite+TS+Three, tocha com sombra, pós-processamento, controles teclado/toque, câmera isométrica, content.ts | **feito** |
 | 2 | Personagem | Matheus montado com KayKit (corpo Mage + cabeça Knight + barba Barbarian, recoloridos), animações parado/andar/correr, pose da tocha, cruz e tatuagens | **feito** (espada e mochila nas costas via `Player.setEquipment`) |
 | 3 | Vila | Abertura com mensagem misteriosa, 3 NPCs, sistema de diálogos, miniquest do Ferreiro (3 materiais), inventário (barra), lojinha do Comerciante, `SaveSystem` em localStorage + "recomeçar" | **feito** (textos `[EXEMPLO]`) |
-| 4 | Final | Sala do Tesouro, sequência do baú (tentativa → "companhia" → entrada dela com tocha → abertura), carta animada, voucher salvável, encerramento lado a lado | |
+| 4 | Final | Sala do Tesouro, sequência do baú (tentativa → "companhia" → entrada dela com tocha → abertura), carta animada, voucher salvável, encerramento lado a lado | **feito** (textos `[EXEMPLO]`; Helena provisória) |
 | 5 | Mapa central | Hub com áreas bloqueadas/desbloqueadas, `SceneManager`, transições com fade | **feito** (as áreas do meio ainda dizem "em preparação") |
 | 6 | Áreas do meio | Ruínas (3 altares + emboscada) → Taverna (montar prato por arrasto) → Vinhedo (combinar uvas, cachos guardados por corvos). A Torre foi retirada | **feita** |
 | 7 | Castelo | Portão com 3 chaves, labirinto escuro, usos de espada/cristal/garrafa/memórias | **feito** (a Sala do Tesouro, etapa 4, ainda não existe: o fim do Castelo mostra um cartão e volta ao mapa) |
@@ -201,4 +201,17 @@ o biscoito da sorte também). A chave de estrela agora vem das Ruínas, junto do
     labirinto do Castelo (3 emboscadas; a Poção de Coragem também enche os corações).
 - **Depuração:** `?debug` → `__dev.area.combat` (`killAll()`, `god = true`, `heal()`), `__dev.area.debug.setProgress(f)` na Floresta;
   `?area=floresta&entry=portal`.
-- **Pendências:** áudio (ainda sem som de cacarejo/golpe), textos `[EXEMPLO]` (nomes da galinha, Pimenta etc.), Sala do Tesouro (etapa 4).
+- **Pendências:** áudio (ainda sem som de cacarejo/golpe) e textos `[EXEMPLO]` (nomes da galinha, Pimenta etc.).
+
+## Etapa 4 — Sala do Tesouro (`scenes/ending.ts`)
+
+- **Chegada:** a porta do trono do Castelo (`castle.ts`, `openThrone`) grava `done_castle` e leva para a Sala do Tesouro (`ctx.goTo('ending')`).
+  Atalho de depuração: `?area=final`.
+- **Cenário:** sala quente de 16 m com ouro, velas, tochas e o baú dourado (`chest_gold`) sobre um degrau; câmera isométrica.
+- **Sequência (`useChest`):** tentativa sozinho (duas fechaduras) → "companhia" → a Helena entra pela porta com uma tocha (`Npc.walkTo`, `torch: true`) →
+  fala dela → os dois viram as chaves e a tampa se abre (luz, faíscas, feixe dourado) → revelação dos ingredientes (farinha, ovos, vinho) →
+  carta animada (`ui.letter`) → voucher (`ui.showVoucher`, com **Salvar o voucher** gerando um PNG na hora) → os dois lado a lado → cartão de encerramento.
+- **Save:** marcas `ending_tried|helena|chest_open|done`, `done_ending`. Reabrir o baú depois mostra o voucher; a Helena fica na sala.
+- **Textos:** `content.ending` (todos `[EXEMPLO]`: carta, dados do voucher, falas). **A aparência da Helena é provisória** (aventureira KayKit `Rogue`
+  com lenço vermelho): trocar quando houver a descrição/fotos dela.
+- **Depuração:** `?area=final` (com `?debug`, `__dev.area.debug.helena`).

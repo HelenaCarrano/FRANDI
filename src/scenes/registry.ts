@@ -47,7 +47,10 @@ const DEFS: Record<AreaId, AreaDef> = {
     const m = await import('./castle');
     return { assets: m.CASTLE_ASSETS, create: m.createCastle };
   } },
-  ending: {},
+  ending: { load: async () => {
+    const m = await import('./ending');
+    return { assets: m.ENDING_ASSETS, create: m.createEnding };
+  } },
 };
 
 const modules = new Map<AreaId, Promise<AreaModule>>();
