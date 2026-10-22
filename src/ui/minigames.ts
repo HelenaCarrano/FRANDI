@@ -1,4 +1,5 @@
 import type { UI } from './ui';
+import { audio } from '../core/audio';
 
 /**
  * Minijogos em janelas HTML sobre o jogo. Nenhum trava o progresso: errar só gera uma fala e outra tentativa.
@@ -81,6 +82,7 @@ export function playForge(ui: UI, text: ForgeText): Promise<void> {
       lock = performance.now() + 380;
       if (Math.abs(pos - zoneAt) <= width / 2) {
         status.textContent = text.hits[Math.min(hits, 2)];
+        audio.play('clang');
         hits++;
         speed += 0.18;
         drawHits();
@@ -93,6 +95,7 @@ export function playForge(ui: UI, text: ForgeText): Promise<void> {
         newZone();
       } else {
         status.textContent = text.misses[Math.floor(Math.random() * text.misses.length)];
+        audio.play('whoosh', 0.5);
       }
     };
     const onKey = (e: KeyboardEvent) => {

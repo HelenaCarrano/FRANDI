@@ -51,7 +51,7 @@ Cada área do jogo implementa `Area` (scenes/types.ts) e é carregada sob demand
 | 5 | Mapa central | Hub com áreas bloqueadas/desbloqueadas, `SceneManager`, transições com fade | **feito** (as áreas do meio ainda dizem "em preparação") |
 | 6 | Áreas do meio | Ruínas (3 altares + emboscada) → Taverna (montar prato por arrasto) → Vinhedo (combinar uvas, cachos guardados por corvos). A Torre foi retirada | **feita** |
 | 7 | Castelo | Portão com 3 chaves, labirinto escuro, usos de espada/cristal/garrafa/memórias | **feito** (a Sala do Tesouro, etapa 4, ainda não existe: o fim do Castelo mostra um cartão e volta ao mapa) |
-| 8 | Polimento | Áudio (desbloqueado no 1º toque), efeitos, desempenho, conteúdo real | |
+| 8 | Polimento | Áudio (desbloqueado no 1º toque), efeitos, desempenho, conteúdo real | **áudio feito**; falta desempenho no celular e conteúdo real |
 | 8b | Nova narrativa + combate | Começa acordando na Floresta, fragmentos de memória, cavalo sumido, Vila com contexto, galinha companheira, espíritos da névoa (ver seção abaixo) | **feito** |
 | 9 | Teste completo | Jogar do início ao fim no celular | |
 
@@ -215,3 +215,13 @@ o biscoito da sorte também). A chave de estrela agora vem das Ruínas, junto do
 - **Textos:** `content.ending` (todos `[EXEMPLO]`: carta, dados do voucher, falas). **A aparência da Helena é provisória** (aventureira KayKit `Rogue`
   com lenço vermelho): trocar quando houver a descrição/fotos dela.
 - **Depuração:** `?area=final` (com `?debug`, `__dev.area.debug.helena`).
+
+## Áudio (`core/audio.ts`)
+
+- **Tudo em código (WebAudio):** nenhum arquivo de som. O contexto só nasce no primeiro toque/tecla (regra dos navegadores); a música da área pedida antes disso fica na fila.
+- **Música por área (`SCENES`):** um pad que troca de acorde devagar (tom, acordes, timbre e filtro próprios) mais notinhas soltas; cruzamento suave ao trocar de área
+  (`SceneManager.activate` chama `audio.setScene`).
+- **Ambiente:** vento, pássaros (dia), grilos e coruja (noite), burburinho (Taverna) e fogueira (Castelo, Taverna, Final). Na Floresta o dia/noite do som acompanha o amanhecer (`audio.mood`).
+- **Efeitos (`audio.play`):** passos (grama/pedra/cavalo, por distância andada), golpe, acerto, espírito se desfazendo, dano, esquiva, derrota, item, moeda, galinha,
+  ovo, baú, lembrança, whoosh de troca de área, forja, montar. Itens e moedas tocam direto do `GameState`.
+- **Silenciar:** botão 🔊/🔇 no canto da tela; a escolha fica salva (`aventura-matheus:mudo`). Depuração: `__dev.audio.play('chest')`.

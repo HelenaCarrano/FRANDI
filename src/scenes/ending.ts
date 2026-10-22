@@ -7,6 +7,7 @@ import { Sparks } from '../fx/particles';
 import { sparkleMarker, type Marker } from '../fx/markers';
 import { rng } from '../world/noise';
 import { content } from '../content';
+import { audio } from '../core/audio';
 import { doneFlag } from './registry';
 import { DARK_ENV, ISOMETRIC, type Area, type AreaContext, type AreaEnv, type Interactable } from './types';
 
@@ -165,6 +166,7 @@ export function createEnding(ctx: AreaContext): Area {
   const openChest = () =>
     new Promise<void>((resolve) => {
       opening = true;
+      audio.play('chest');
       lidDone = resolve;
     });
   const finished = () => game.flag(FLAGS.done);

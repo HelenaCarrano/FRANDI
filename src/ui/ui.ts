@@ -1,5 +1,6 @@
 import { content } from '../content';
 import { debug } from '../core/quality';
+import { audio } from '../core/audio';
 
 /**
  * Interface HTML sobre o canvas: tela inicial (continuar/recomeçar), nome da área, dica de
@@ -179,6 +180,18 @@ export class UI {
       if (!this.asking) onAction();
     });
 
+    const mute = el('button', 'mute-btn', root);
+    const paint = () => {
+      mute.textContent = audio.muted ? '🔇' : '🔊';
+      mute.title = audio.muted ? 'Ligar o som' : 'Silenciar';
+    };
+    paint();
+    mute.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      audio.setMuted(!audio.muted);
+      paint();
+    });
     window.addEventListener('keydown', (e) => this.onKey(e));
     if (debug) this.fps = el('div', 'fps', root);
   }
@@ -339,6 +352,7 @@ export class UI {
   }
 
   private choose(i: number) {
+    audio.play('select');
     const fn = this.asking;
     this.asking = null;
     fn?.(i);
@@ -377,6 +391,7 @@ export class UI {
       return;
     }
     this.lineIndex++;
+    if (this.lineIndex < this.lines.length) audio.play('tick');
     if (this.lineIndex >= this.lines.length) {
       this.dialog.hidden = true;
       const cb = this.onDialogEnd;
@@ -522,6 +537,7 @@ export class UI {
 
   /** Janela de memória: foto (ou moldura vazia), título e texto. Resolve quando o jogador a guarda. */
   showMemory(mem: { title: string; text: readonly string[]; caption?: string; photo?: string }): Promise<void> {
+    audio.play('memory');
     return this.modal<void>('memory-box', (box, close) => {
       const frame = el('div', 'memory-frame', box);
       const empty = el('div', 'memory-empty', frame);
@@ -555,6 +571,7 @@ export class UI {
     return this.modal<void>(`narrate-box ${kind}`, (box, close) => {
       const overlay = box.parentElement!;
       overlay.classList.add('narrate-overlay', kind);
+      if (kind === 'fragment') audio.play('memory');
       el('h2', 'narrate-header', box).textContent = header;
       // todas as falas ocupam o mesmo lugar: aparece uma de cada vez, a anterior some
       const stack = el('div', 'narrate-stack', box);
@@ -570,6 +587,7 @@ export class UI {
       const next = () => {
         if (leaving) return;
         if (shown < paras.length) {
+          if (shown > 0) audio.play('tick');
           if (shown > 0) paras[shown - 1].classList.remove('show');
           paras[shown++].classList.add('show');
           return;
@@ -789,6 +807,7 @@ export class UI {
       this.fadeEl.addEventListener('pointerdown', (e) => e.stopPropagation());
     }
     const node = this.fadeEl;
+    if (on) audio.play('whoosh');
     if (on && this.fadeLabel) this.fadeLabel.textContent = label;
     return new Promise((resolve) => {
       const done = () => {

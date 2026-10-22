@@ -5,6 +5,7 @@ import { DARK_ENV, THIRD_PERSON, type Area, type AreaContext, type AreaId, type 
 import { isBuilt, isUnlocked, loadArea } from '../scenes/registry';
 import { openKingdomMap } from '../ui/kingdomMap';
 import { content } from '../content';
+import { audio } from './audio';
 import type { GameRenderer } from './renderer';
 import type { FollowCamera } from './followCamera';
 import type { GameState } from './gameState';
@@ -182,6 +183,7 @@ export class SceneManager {
       this.gfx.applyEnv(area.env ?? DARK_ENV);
     }
     if (save) game.setArea(id, entry);
+    audio.setScene(id);
     if (!area.combat) ui.setHearts(null);
     player.resetCombat();
     this.hen.enter(area.scene, area.world, area.ground ?? (() => 0));

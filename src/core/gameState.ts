@@ -21,6 +21,8 @@ export interface SaveData {
   equipped: { sword: boolean; backpack: boolean };
 }
 
+import { audio } from './audio';
+
 const KEY = 'aventura-matheus:v1';
 
 function fresh(): SaveData {
@@ -82,6 +84,7 @@ export class GameState {
   }
   addCoins(n: number) {
     this.data.coins += n;
+    if (n > 0) audio.play('coin');
     this.commit();
   }
   /** Gasta moedas; devolve false (sem gastar) se não houver o bastante. */
@@ -101,6 +104,7 @@ export class GameState {
   }
   addItem(id: string, n = 1) {
     this.data.items[id] = this.count(id) + n;
+    audio.play('pickup');
     this.commit();
   }
   removeItem(id: string, n = 1) {

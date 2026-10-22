@@ -6,6 +6,7 @@ import { GOLDEN_MORNING, NIGHT_FOREST, SUNSET, Outdoor, cloneEnv, lerpEnv } from
 import { Fireflies, GuideFireflies } from '../fx/fireflies';
 import { MoonBeams } from '../fx/moonBeams';
 import { CombatSystem } from '../core/combat';
+import { audio } from '../core/audio';
 import { HORSE_MODEL } from '../entities/horse';
 import { HorseCompanion } from '../entities/horseCompanion';
 import { Terrain, GOLDEN_PALETTE } from '../world/terrain';
@@ -622,6 +623,7 @@ export function createForest(ctx: AreaContext): Area {
       outdoor.update(playerPos, camera);
       /** 1 = noite fechada, 0 = dia claro. */
       const dark = 1 - smoothstep(0.3, 0.9, progress);
+      audio.mood = dark;
 
       // tocha: acesa no escuro, apaga ao amanhecer
       const lit = dark > 0.12;

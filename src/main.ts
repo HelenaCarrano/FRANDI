@@ -6,6 +6,7 @@ import { GameRenderer } from './core/renderer';
 import { FollowCamera } from './core/followCamera';
 import { Input } from './core/input';
 import { SceneManager } from './core/sceneManager';
+import { audio } from './core/audio';
 import { GameState } from './core/gameState';
 import { preload } from './core/assets';
 import { Player } from './entities/player';
@@ -117,7 +118,7 @@ async function run(startClicked: Promise<void>) {
   follow.snapTo(player.position, player.facing);
   // ?debug expõe o jogo no console (window.__dev) para testes e capturas automáticas
   if (debug) {
-    const dev = { player, game, ui, manager, follow, goTo: (id: AreaId, entry?: string) => manager.goTo(id, entry) };
+    const dev = { player, game, ui, manager, follow, audio, goTo: (id: AreaId, entry?: string) => manager.goTo(id, entry) };
     Object.defineProperty(dev, 'area', { get: () => manager.area });
     Object.assign(window, { __dev: dev });
   }
@@ -198,6 +199,8 @@ async function run(startClicked: Promise<void>) {
     if (characterViewer) player.object.rotation.y = fixedRot !== null ? Number(fixedRot) : time * 0.6;
     current.update(dt, time, player.position);
     manager.hen.update(dt, time);
+    audio.update(dt);
+    audio.footsteps(dt, started && !manager.busy && !ui.inDialog ? player.speed : 0, player.riding);
     if (current.combat) {
       if (canMove && input.consumeAttack()) current.combat.attack();
       if (canMove && input.consumeDodge()) current.combat.dodge(moveDir);

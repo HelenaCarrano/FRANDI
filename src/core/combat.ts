@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { MistSpirit, type SpiritContext, type SpiritOptions } from '../entities/mistSpirit';
 import { MistPuff } from '../fx/mistPuff';
+import { audio } from './audio';
 import { content } from '../content';
 import type { CollisionWorld } from './collision';
 import type { GameState } from './gameState';
@@ -173,13 +174,16 @@ export class CombatSystem {
       }
     }
     if (best && !player.dodging) player.face(Math.atan2(best.position.x - player.position.x, best.position.z - player.position.z));
-    player.attack();
+    if (player.attack()) audio.play('swing');
   }
 
   dodge(moveDir: THREE.Vector3) {
     const { player } = this.o;
     if (this.paused || this.o.ui.inDialog) return;
-    if (player.dodge(moveDir)) this.puff.burst(player.position.x, player.position.y + 0.2, player.position.z, 10, 0.6);
+    if (player.dodge(moveDir)) {
+      audio.play('dodge');
+      this.puff.burst(player.position.x, player.position.y + 0.2, player.position.z, 10, 0.6);
+    }
   }
 
   // ---------- dano ao jogador ----------
@@ -188,6 +192,7 @@ export class CombatSystem {
     const { player, ui, world } = this.o;
     if (this.paused || player.invulnerable || this.god) return;
     this.hearts = Math.max(0, this.hearts - damage);
+    audio.play('hurt');
     player.hurt();
     ui.hurtFlash();
     ui.setHearts(this.hearts, MAX_HEARTS);
@@ -204,6 +209,7 @@ export class CombatSystem {
     const { player, ui } = this.o;
     this.paused = true;
     player.frozen = true;
+    audio.play('defeat');
     await ui.fade(true, content.combat.defeat);
     for (const r of this.runs) {
       if (r.state !== 'active') continue;
@@ -233,6 +239,7 @@ export class CombatSystem {
 
   private start(r: Runtime) {
     r.state = 'active';
+    audio.play('rise');
     // depois de muitas derrotas seguidas a luta fica um pouco mais branda
     const soften = r.defeats >= 3 ? 1 : 0;
     for (const e of r.def.enemies) {
@@ -256,6 +263,7 @@ export class CombatSystem {
       this.hearts = MAX_HEARTS;
       this.o.ui.setHearts(this.hearts, MAX_HEARTS);
       this.o.ui.toast(content.combat.rest);
+      audio.play('rest');
     }
     void r.def.onClear?.();
   }
@@ -340,7 +348,7 @@ export class CombatSystem {
           if (cos < Math.cos(1.0) && d > s.radius + 0.6) continue;
           if (!s.vulnerable) continue;
           s.lastSwing = player.swingId;
-          s.hit(sword ? 2 : 1, player.position.x, player.position.z, this.ctx);
+          audio.play(s.hit(sword ? 2 : 1, player.position.x, player.position.z, this.ctx) ? 'kill' : 'hit');
         }
       }
 

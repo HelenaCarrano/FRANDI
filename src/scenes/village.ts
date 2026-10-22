@@ -6,6 +6,7 @@ import { Npc, disposeNpcMaterials } from '../entities/npc';
 import { Horse, SADDLE_Y } from '../entities/horse';
 import { Chicken, disposeChickenMaterials } from '../entities/chicken';
 import { playForge, playGears, playSorting } from '../ui/minigames';
+import { audio } from '../core/audio';
 import { content, fmt, type ItemId } from '../content';
 import { GOLDEN_MORNING } from '../fx/atmosphere';
 import type { Area, AreaContext, Interactable } from './types';
@@ -138,6 +139,7 @@ export function createVillage(ctx: AreaContext): Area {
   function mount() {
     if (riding || !shod()) return;
     riding = true;
+    audio.play('mount');
     player.position.set(horse.position.x, player.position.y, horse.position.z);
     player.face(horse.heading);
     player.setRiding(SADDLE_Y);
@@ -480,6 +482,7 @@ export function createVillage(ctx: AreaContext): Area {
   add(pimenta.position, 3.2, T.npcs.merchant.prompt, () => void talkMerchant());
 
   async function meetHen() {
+    audio.play('cluck');
     await ui.tell(T.hen.meet);
     scene.remove(demoHen.object);
     summonHen(demoHen.position.x, demoHen.position.z);

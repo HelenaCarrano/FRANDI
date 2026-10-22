@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Horse, SADDLE_Y } from './horse';
 import { content, fmt } from '../content';
+import { audio } from '../core/audio';
 import type { CollisionWorld } from '../core/collision';
 import type { Player } from './player';
 import type { UI } from '../ui/ui';
@@ -45,6 +46,7 @@ export class HorseCompanion {
   mount() {
     if (this.riding || !this.allowed()) return;
     this.riding = true;
+    audio.play('mount');
     const h = this.horse;
     this.player.position.set(h.position.x, this.player.position.y, h.position.z);
     this.player.face(h.heading);

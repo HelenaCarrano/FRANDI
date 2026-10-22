@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Chicken } from './chicken';
 import { content, fmt } from '../content';
+import { audio } from '../core/audio';
 import type { CollisionWorld } from '../core/collision';
 import type { GameState } from '../core/gameState';
 import type { Player } from './player';
@@ -120,6 +121,7 @@ export class HenCompanion {
     const c = this.chicken!;
     this.cooldown = COOLDOWN;
     this.wiggle = 0.6;
+    audio.play('cluck');
     const mesh = new THREE.Mesh(this.eggGeo, this.eggMat);
     mesh.castShadow = true;
     const from = c.position.clone();
@@ -135,6 +137,7 @@ export class HenCompanion {
 
   private async deliver() {
     this.game.addItem('ovos');
+    audio.play('egg');
     this.ui.toast(fmt(content.village.hen.eggToast, { name: this.name }));
     if (!this.game.flag('egg_told')) {
       this.game.setFlag('egg_told');
