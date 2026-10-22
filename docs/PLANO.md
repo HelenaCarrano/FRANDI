@@ -49,9 +49,10 @@ Cada área do jogo implementa `Area` (scenes/types.ts) e é carregada sob demand
 | 3 | Vila | Abertura com mensagem misteriosa, 3 NPCs, sistema de diálogos, miniquest do Ferreiro (3 materiais), inventário (barra), lojinha do Comerciante, `SaveSystem` em localStorage + "recomeçar" | **feito** (textos `[EXEMPLO]`) |
 | 4 | Final | Sala do Tesouro, sequência do baú (tentativa → "companhia" → entrada dela com tocha → abertura), carta animada, voucher salvável, encerramento lado a lado | |
 | 5 | Mapa central | Hub com áreas bloqueadas/desbloqueadas, `SceneManager`, transições com fade | **feito** (as áreas do meio ainda dizem "em preparação") |
-| 6 | Áreas do meio | Floresta → Ruínas (3 altares) → Torre (quiz 5 andares) → Taverna (montar prato por arrasto) → Vinhedo (combinar uvas) | **feita** (Floresta, Ruínas, Torre, Taverna e Vinhedo) |
+| 6 | Áreas do meio | Ruínas (3 altares + emboscada) → Taverna (montar prato por arrasto) → Vinhedo (combinar uvas, cachos guardados por corvos). A Torre foi retirada | **feita** |
 | 7 | Castelo | Portão com 3 chaves, labirinto escuro, usos de espada/cristal/garrafa/memórias | **feito** (a Sala do Tesouro, etapa 4, ainda não existe: o fim do Castelo mostra um cartão e volta ao mapa) |
 | 8 | Polimento | Áudio (desbloqueado no 1º toque), efeitos, desempenho, conteúdo real | |
+| 8b | Nova narrativa + combate | Começa acordando na Floresta, fragmentos de memória, cavalo sumido, Vila com contexto, galinha companheira, espíritos da névoa (ver seção abaixo) | **feito** |
 | 9 | Teste completo | Jogar do início ao fim no celular | |
 
 ## Sistemas transversais (a criar quando a primeira área precisar)
@@ -95,8 +96,8 @@ textos de exemplo marcados com `[EXEMPLO]`.
   marco (`village`, `forest`, `ruins`...). Quem sai de uma área chama `goTo('map', '<id da área>')`.
 - **Ids das áreas:** `village`, `map`, `forest`, `ruins`, `tower`, `tavern`, `vineyard`, `castle`, `ending`.
   Para construir uma área nova, adicione `load` dela em `registry.ts` e crie o arquivo em `scenes/`.
-- **Destrave (registry.ts, `isUnlocked`):** Floresta abre com `villageDone`; Ruínas, Torre, Taverna e Vinhedo abrem juntas
-  com `done_forest`; o Castelo abre com `done_ruins`, `done_tower`, `done_tavern` e `done_vineyard`. Cada área nova deve
+- **Destrave (registry.ts, `isUnlocked`) — ordem atual:** Floresta (começo) → Vila (abre com `done_forest`) → Ruínas, Taverna e Vinhedo
+  (abrem juntas com `villageDone`) → Castelo (`done_ruins`, `done_tavern`, `done_vineyard`). Cada área nova deve
   chamar `game.setFlag(doneFlag('<id>'))` ao ser concluída. (`doneFlag` está em registry.ts.)
 - **Névoa:** área fechada fica sob nuvens e com a passagem bloqueada. Ao abrir, a névoa se dissolve na próxima visita ao mapa
   (marca `seen_<id>`) e aparece o aviso "Novo caminho". A Torre e o Castelo usam 3 camadas de nuvens por serem altos.
@@ -124,21 +125,6 @@ textos de exemplo marcados com `[EXEMPLO]`.
 - **Memórias:** `content.memories` (textos `[EXEMPLO]`) e fotos em `public/photos/<arquivo>` (ver LEIA-ME.txt lá). Sem a foto aparece uma moldura vazia.
 - **Depuração:** `?area=ruinas` (ou `?area=ruins`); com `?debug`, `__dev.area.debug.solveAll()` marca os três altares.
 - **Atenção:** o mapa-maquete (`worldMap.ts`) citado na arquitetura acima foi substituído pelo pergaminho `ui/kingdomMap.ts`.
-
-## Etapa 6 — Torre do Saber (`scenes/tower.ts`)
-
-- **Andares:** cinco salas quadradas de 16 m, uma ao lado da outra (50 m entre os centros, todas com chão em y = 0). Só a do andar
-  atual fica visível. Subir/descer escurece a tela (`ui.fade`), troca a sala e move o jogador com `AreaContext.teleport`
-  (novo: move o jogador dentro da área e encaixa a câmera). Câmera isométrica; as paredes esmaecem quando tapam o Matheus.
-- **Guardiões:** um `Npc` por andar, com uma pergunta (`ui/quiz.ts`, `askQuiz`). Errar dá a dica e repete; acertar grava `tower_floor_<n>`
-  e desfaz o selo vermelho da porta norte.
-- **Biscoito da sorte:** com ele na mochila aparece uma opção extra na pergunta que o gasta e elimina uma resposta errada
-  (sempre sobra ao menos uma errada). `askQuiz` serve também para os guardiões do Castelo.
-- **Temas:** Biblioteca, Sala dos Relógios, Laboratório, Salão dos Espelhos e Observatório (props em código + peças KayKit).
-- **Topo:** o baú do 5º andar dá a `chave_estrela` (2ª das 3 chaves do Castelo), a memória `torre_topo` e grava `done_tower`.
-- **Save/continuar:** a cada troca de andar `game.setArea('tower', 'f<n>')`; `AreaContext.entry` informa o andar à `createTower`,
-  então "Continuar" volta à sala certa. Vindo do mapa (`start`) começa no 1º andar.
-- **Depuração:** `?area=torre` (e `&entry=f3` para um andar); com `?debug`, `__dev.area.debug.goFloor(n)` e `solveAll()`.
 
 ## Etapa 6 — Taverna do Zé (`scenes/tavern.ts`)
 
@@ -191,3 +177,28 @@ textos de exemplo marcados com `[EXEMPLO]`.
   `castle_toast`, `mem_castelo_brinde`, `done_castle`) e os itens. O formato do save não mudou.
 - **Textos:** `content.castle` (todos `[EXEMPLO]`). Foto da memória final: `public/photos/castelo_brinde.jpg`.
 - **Depuração:** `?area=castelo` (`&entry=maze|hall`); com `?debug`, `__dev.area.debug.giveAll()` (itens e memórias), `goZone(n)` e `solveAll()`.
+
+## Nova narrativa e combate (acordar na floresta)
+
+**Ordem:** Floresta → Vila → Mapa → Ruínas / Taverna / Vinhedo → Castelo. A Torre do Saber foi removida (`tower.ts` e `quiz.ts` apagados;
+o biscoito da sorte também). A chave de estrela agora vem das Ruínas, junto do cristal.
+
+- **Abertura (`scenes/forest.ts`):** tela preta com `ui.narrate` (um parágrafo por toque). A Floresta começa na noite fria e amanhece perto do portal
+  (`NIGHT_FOREST → SUNSET → GOLDEN_MORNING`). Marcas: `forest_woke`, `forest_ribbon`, `forest_tracks`, `foe_forest_1..3`, `done_forest`.
+  - Fita da Helena (item `fita`) → Fragmento de Memória 01. Pegadas do cavalo (somem na mata). Galho firme (item `galho`) = 1ª arma.
+  - Portal → Fragmento 02 (revela o objetivo) → `goTo('village')`. Quem volta pelo mapa chega pelo lado do portal (`entry: portal`, já de dia).
+- **Vila:** chegada ("Finalmente… a vila!"), bilhete da Helena na sela do cavalo (item `bilhete`), Seu Alvim dá chave de trigo + **farinha** + mochila e
+  dispara o Fragmento 03. Dona Pimenta: quest **A encomenda esquecida** (`playSorting`, em ui/minigames.ts: arrastar itens para 3 cestos) que entrega o mapa
+  e um pão (o mapa não é mais comprado). Dona Clotilde só paga moedas.
+- **Galinha companheira (`entities/henCompanion.ts`):** encontrada atrás do mercado (`henMet`), depois acompanha o Matheus em todas as áreas
+  (`SceneManager.hen`). Os ovos são controlados: seis marcos (moinho, encomenda, Ruínas, Taverna, Vinhedo, Castelo), uma vez cada (`egg_*`), com o ovo
+  voando até a mochila. Os ovos e a farinha preparam a revelação do workshop.
+- **Combate (`core/combat.ts`, `entities/mistSpirit.ts`, `fx/mistPuff.ts`):** golpe com J/F (ou ⚔️) e esquiva com K/Shift (ou 💨); 3 corações; derrota gentil
+  (a tela escurece e ele acorda no último ponto seguro com a vida cheia, sem perder nada; depois de 3 derrotas no mesmo encontro, os inimigos ficam
+  um ponto mais fracos). Espíritos da névoa: **fiapo** (investida), **sombra** (pancada em área com aviso no chão) e **corvo** (mergulha; só leva golpe
+  quando está baixo). Galho = 1 de dano, espada = 2. Cada encontro vencido grava `foe_<id>`; muralhas de névoa fecham o caminho até o fim da luta.
+  - Encontros: Floresta (3), Ruínas (emboscada ao acender os 3 altares; o cristal só aparece depois), Vinhedo (corvos guardam cada cacho) e
+    labirinto do Castelo (3 emboscadas; a Poção de Coragem também enche os corações).
+- **Depuração:** `?debug` → `__dev.area.combat` (`killAll()`, `god = true`, `heal()`), `__dev.area.debug.setProgress(f)` na Floresta;
+  `?area=floresta&entry=portal`.
+- **Pendências:** áudio (ainda sem som de cacarejo/golpe), textos `[EXEMPLO]` (nomes da galinha, Pimenta etc.), Sala do Tesouro (etapa 4).
