@@ -9,6 +9,12 @@ import type { QualitySettings } from './quality';
 import { DARK_ENV, type AreaEnv } from '../scenes/types';
 import { pointScale } from '../fx/particles';
 import { GodRaysPass } from '../fx/godRays';
+import { urlParams } from './quality';
+
+/** ?estilo=pixel: desenha em baixa resolução com pixels grandes, paleta reduzida, contorno e tela de tubo (CRT). */
+export const PIXEL_STYLE = urlParams.get('estilo') === 'pixel';
+/** Altura aproximada (em pixels do jogo) da imagem no estilo pixel; os pixels crescem com a janela. */
+const PIXEL_ROWS = 270;
 
 /** Vinheta escura + granulado leve, aplicados depois do tone mapping. */
 const VignetteGrainShader = {
@@ -22,6 +28,8 @@ const VignetteGrainShader = {
     uHighlight: { value: new THREE.Color(1, 1, 1) },
     uSaturation: { value: 1 },
     uContrast: { value: 1 },
+    uPixel: { value: 0 },
+    uRes: { value: new THREE.Vector2(320, 180) },
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -40,6 +48,8 @@ const VignetteGrainShader = {
     uniform vec3 uHighlight;
     uniform float uSaturation;
     uniform float uContrast;
+    uniform float uPixel;
+    uniform vec2 uRes;
     varying vec2 vUv;
 
     float hash(vec2 p) {
@@ -48,13 +58,63 @@ const VignetteGrainShader = {
       return fract(p.x * p.y);
     }
 
+    float lum(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
+
+    // matriz de Bayer 4x4 (valores 0..1) para o pontilhado da paleta reduzida
+    float bayer(vec2 p) {
+      ivec2 i = ivec2(mod(p, 4.0));
+      int idx = i.x + i.y * 4;
+      float m[16] = float[16](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
+      return (m[idx] + 0.5) / 16.0;
+    }
+
+    vec3 grade(vec3 rgb) {
+      float luma = lum(rgb);
+      rgb = mix(vec3(luma), rgb, uSaturation);
+      rgb = (rgb - 0.5) * uContrast + 0.5;
+      return rgb * mix(uShadow, uHighlight, smoothstep(0.08, 0.75, luma));
+    }
+
     void main() {
+      if (uPixel > 0.5) {
+        // tela de tubo: leve curvatura; fora dela fica o preto da moldura
+        vec2 cc = vUv * 2.0 - 1.0;
+        cc *= 1.0 + dot(cc, cc) * 0.028;
+        vec2 uv = cc * 0.5 + 0.5;
+        if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
+          gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+          return;
+        }
+        vec2 px = floor(uv * uRes);
+        vec2 t = 1.0 / uRes;
+        vec2 base = (px + 0.5) * t;
+        vec3 c = texture2D(tDiffuse, base).rgb;
+        // contorno: o pixel escuro ao lado de um bem mais claro ganha a borda
+        float lc = lum(c);
+        float edge = 0.0;
+        edge = max(edge, lum(texture2D(tDiffuse, base + vec2(t.x, 0.0)).rgb) - lc);
+        edge = max(edge, lum(texture2D(tDiffuse, base - vec2(t.x, 0.0)).rgb) - lc);
+        edge = max(edge, lum(texture2D(tDiffuse, base + vec2(0.0, t.y)).rgb) - lc);
+        edge = max(edge, lum(texture2D(tDiffuse, base - vec2(0.0, t.y)).rgb) - lc);
+        c *= 1.0 - 0.5 * smoothstep(0.07, 0.2, edge);
+        c = grade(c);
+        // paleta reduzida com pontilhado
+        float levels = 9.0;
+        c = floor(c * (levels - 1.0) + bayer(px) * 0.55 + 0.2) / (levels - 1.0);
+        // linhas de varredura e leve brilho de fósforo
+        float row = fract(uv.y * uRes.y);
+        c *= mix(0.78, 1.04, sin(row * 3.14159));
+        float colMask = 0.96 + 0.04 * sin(vUv.x * uRes.x * 6.28318);
+        c *= colMask;
+        vec2 vc = vUv - 0.5;
+        vc.x *= mix(1.0, uAspect, 0.5);
+        c *= smoothstep(0.95, 0.25, length(vc) * uVignette);
+        c += (hash(vUv * 1000.0 + fract(uTime) * 100.0) - 0.5) * uGrain * 0.6;
+        gl_FragColor = vec4(c, 1.0);
+        return;
+      }
       vec4 color = texture2D(tDiffuse, vUv);
-      // gradação de cor: saturação, contraste e tom frio nas sombras / quente nas luzes
-      float luma = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-      color.rgb = mix(vec3(luma), color.rgb, uSaturation);
-      color.rgb = (color.rgb - 0.5) * uContrast + 0.5;
-      color.rgb *= mix(uShadow, uHighlight, smoothstep(0.08, 0.75, luma));
+      color.rgb = grade(color.rgb);
       vec2 c = vUv - 0.5;
       c.x *= mix(1.0, uAspect, 0.5);
       float v = smoothstep(0.85, 0.2, length(c) * uVignette);
@@ -74,7 +134,10 @@ export class GameRenderer {
   private readonly bloomPass: UnrealBloomPass;
   private readonly finalPass: ShaderPass;
   readonly godRays: GodRaysPass;
+  private quality: QualitySettings;
   private bloomAllowed = true;
+  /** Tamanho (em pixels do jogo) da imagem no estilo pixel. */
+  private pixelSize = new THREE.Vector2(320, 180);
   private readonly sunColor = new THREE.Color();
   private readonly sunDir = new THREE.Vector3();
 
@@ -82,9 +145,11 @@ export class GameRenderer {
     container: HTMLElement,
     scene: THREE.Scene,
     private readonly camera: THREE.PerspectiveCamera,
-    private quality: QualitySettings,
+    quality: QualitySettings,
   ) {
     const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+    if (PIXEL_STYLE) quality = { ...quality, pixelRatio: 1, msaaSamples: 0, ambientOcclusion: false, bloom: false, godRaySamples: 0 };
+    this.quality = quality;
     renderer.setPixelRatio(quality.pixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -101,6 +166,10 @@ export class GameRenderer {
     });
     const composer = new EffectComposer(renderer, target);
     this.composer = composer;
+    if (PIXEL_STYLE) {
+      // pixels nítidos: sem suavização ao ampliar o quadro pequeno para a tela
+      for (const rt of [composer.renderTarget1, composer.renderTarget2]) rt.texture.minFilter = rt.texture.magFilter = THREE.NearestFilter;
+    }
 
     this.renderPass = new RenderPass(scene, camera);
     composer.addPass(this.renderPass);
@@ -122,6 +191,7 @@ export class GameRenderer {
 
     this.finalPass = new ShaderPass(VignetteGrainShader);
     composer.addPass(this.finalPass);
+    this.finalPass.uniforms.uPixel.value = PIXEL_STYLE ? 1 : 0;
 
     window.addEventListener('resize', () => this.resize());
     this.resize();
@@ -192,9 +262,19 @@ export class GameRenderer {
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
+    this.finalPass.uniforms.uAspect.value = w / h;
+    if (PIXEL_STYLE) {
+      // quadro pequeno (pixels grandes): a tela amplia sem suavizar
+      const scale = Math.max(2, Math.round(h / PIXEL_ROWS));
+      this.pixelSize.set(Math.ceil(w / scale), Math.ceil(h / scale));
+      this.composer.setPixelRatio(1);
+      this.composer.setSize(this.pixelSize.x, this.pixelSize.y);
+      this.finalPass.uniforms.uRes.value.copy(this.pixelSize);
+      pointScale.value = this.pixelSize.y / 2;
+      return;
+    }
     this.composer.setPixelRatio(this.quality.pixelRatio);
     this.composer.setSize(w, h);
-    this.finalPass.uniforms.uAspect.value = w / h;
     pointScale.value = (h * this.quality.pixelRatio) / 2;
   }
 

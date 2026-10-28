@@ -92,7 +92,7 @@ export const content = {
     defeat: 'Tudo fica escuro de novo…',
     wake: 'Você acorda tonto, mas inteiro. Respire fundo e tente outra vez.',
     rest: 'Você respira fundo. Os corações se enchem de novo.',
-    tutorialDesktop: 'J ou F para golpear · K ou Shift para esquivar',
+    tutorialDesktop: 'J ou F para golpear · K para esquivar · Shift para correr',
     tutorialTouch: 'Toque em ⚔️ para golpear e em 💨 para esquivar',
     foesNear: 'Algo se mexe na névoa à sua frente…',
   },

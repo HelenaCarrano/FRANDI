@@ -193,7 +193,7 @@ o biscoito da sorte também). A chave de estrela agora vem das Ruínas, junto do
 - **Galinha companheira (`entities/henCompanion.ts`):** encontrada atrás do mercado (`henMet`), depois acompanha o Matheus em todas as áreas
   (`SceneManager.hen`). Os ovos são controlados: seis marcos (moinho, encomenda, Ruínas, Taverna, Vinhedo, Castelo), uma vez cada (`egg_*`), com o ovo
   voando até a mochila. Os ovos e a farinha preparam a revelação do workshop.
-- **Combate (`core/combat.ts`, `entities/mistSpirit.ts`, `fx/mistPuff.ts`):** golpe com J/F (ou ⚔️) e esquiva com K/Shift (ou 💨); 3 corações; derrota gentil
+- **Combate (`core/combat.ts`, `entities/mistSpirit.ts`, `fx/mistPuff.ts`):** golpe com J/F (ou ⚔️) e esquiva com K (ou 💨); Shift segurado = correr (sem Shift o teclado anda); 3 corações; derrota gentil
   (a tela escurece e ele acorda no último ponto seguro com a vida cheia, sem perder nada; depois de 3 derrotas no mesmo encontro, os inimigos ficam
   um ponto mais fracos). Espíritos da névoa: **fiapo** (investida), **sombra** (pancada em área com aviso no chão) e **corvo** (mergulha; só leva golpe
   quando está baixo). Galho = 1 de dano, espada = 2. Cada encontro vencido grava `foe_<id>`; muralhas de névoa fecham o caminho até o fim da luta.

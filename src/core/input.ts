@@ -16,12 +16,16 @@ const KEY_MAP: Record<string, 'up' | 'down' | 'left' | 'right'> = {
 
 const ACTION_KEYS = new Set(['KeyE', 'Space', 'Enter']);
 const ATTACK_KEYS = new Set(['KeyJ', 'KeyF']);
-const DODGE_KEYS = new Set(['KeyK', 'ShiftLeft', 'ShiftRight']);
+const DODGE_KEYS = new Set(['KeyK']);
+const RUN_KEYS = new Set(['ShiftLeft', 'ShiftRight']);
 const JOYSTICK_RADIUS = 55;
+/** Intensidade do teclado sem Shift: o jogador interpreta como andar (0.75 = limite entre andar e correr). */
+const KEY_WALK_MAG = 0.75;
 
 export class Input {
   readonly move = { x: 0, y: 0 };
   private keys = { up: false, down: false, left: false, right: false };
+  private runHeld = false;
   private actionQueued = false;
   private attackQueued = false;
   private dodgeQueued = false;
@@ -54,14 +58,17 @@ export class Input {
       }
       if (ATTACK_KEYS.has(e.code) && !e.repeat) this.attackQueued = true;
       if (DODGE_KEYS.has(e.code) && !e.repeat) this.dodgeQueued = true;
+      if (RUN_KEYS.has(e.code)) this.runHeld = true;
       this.anyKeyListeners.forEach((fn) => fn());
     });
     window.addEventListener('keyup', (e) => {
       const dir = KEY_MAP[e.code];
       if (dir) this.keys[dir] = false;
+      if (RUN_KEYS.has(e.code)) this.runHeld = false;
     });
     window.addEventListener('blur', () => {
       this.keys = { up: false, down: false, left: false, right: false };
+      this.runHeld = false;
       this.releaseJoystick();
     });
 
@@ -165,8 +172,9 @@ export class Input {
     if (this.keys.down) y -= 1;
     if (x !== 0 || y !== 0) {
       const len = Math.hypot(x, y);
-      x /= len;
-      y /= len;
+      const mag = this.runHeld ? 1 : KEY_WALK_MAG;
+      x = (x / len) * mag;
+      y = (y / len) * mag;
     } else if (this.joyPointer !== null) {
       x = this.joyVec.x;
       y = this.joyVec.y;

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Floresta 2D (teste de estilo)</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #050403; overflow: hidden; }
+      canvas { display: block; position: absolute; image-rendering: pixelated; }
+      #help { position: fixed; left: 12px; bottom: 10px; color: #c9b88a; font: 12px/1.4 monospace; opacity: 0.8; pointer-events: none; text-shadow: 0 1px 2px #000; }
+    </style>
+  </head>
+  <body>
+    <canvas id="screen"></canvas>
+    <div id="help">WASD/setas andam · Shift corre · T muda a hora</div>
+    <script type="module" src="/src/pixel2d/forest2d.ts"></script>
+  </body>
+</html>
