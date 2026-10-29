@@ -28,6 +28,8 @@ export class Player {
   /** A mochila e a espada nas costas (itens do jogo). */
   backpack = false;
   sword = false;
+  /** Montado no cavalo: mais rápido, sentado em cima dele (sem pulinhos nem pernas). */
+  riding = false;
 
   private attackT = -1;
   private dodgeT = -1;
@@ -38,7 +40,6 @@ export class Player {
   private lastStep = 0;
   private hopH = 0;
   private squash = 0;
-  private airborne = false;
   private time = 0;
 
   constructor(private readonly kit: Kit, private readonly fx: Fx) {}
@@ -130,7 +131,8 @@ export class Player {
     const m = Math.hypot(mx, my);
     const wants = m > 0.12;
     const running = wants && m > 0.9;
-    const target = !wants ? 0 : m < 0.75 ? 50 * (m / 0.75) : 50 + 34 * ((m - 0.75) / 0.25);
+    const base = !wants ? 0 : m < 0.75 ? 50 * (m / 0.75) : 50 + 34 * ((m - 0.75) / 0.25);
+    const target = this.riding ? base * 1.7 : base;
     const slow = this.attackT >= 0 ? 0.4 : 1;
     if (m > 0) {
       mx /= m;
@@ -158,15 +160,15 @@ export class Player {
     this.moving = speed > 9;
     this.run = running && this.moving;
     if (wants && this.attackT < 0 && this.dodgeT < 0) this.dir = Math.abs(mx) > Math.abs(my) ? (mx < 0 ? 'left' : 'right') : my < 0 ? 'up' : 'down';
-    if (this.moving) this.anim += (dt * speed) / 7.2;
+    // andar em 4 quadros, como no Stardew: pé A, passagem, pé B, passagem (o quadro muda a cada 7,5 px andados)
+    if (this.moving) this.anim += (dt * speed) / 7.5;
     else this.anim = 0;
-    const stride = (this.anim + 0.25) % 1;
-    this.airborne = this.moving && stride >= 0.5;
-    this.hopH = this.airborne ? Math.round(Math.sin(Math.PI * ((stride - 0.5) / 0.5)) * (this.run ? 4.2 : 2.8)) : 0;
-    this.squash = this.moving && stride < 0.2 ? 1 : 0;
-    const stepNo = Math.floor(this.anim + 0.25);
-    if (this.moving && stepNo !== this.lastStep && this.dodgeT < 0) {
-      this.fx.dust(this.x, this.y, this.run ? 5 : 3, this.onPath ? '#ecd8a8' : '#9cd064', this.vx);
+    const phase = Math.floor(this.anim) % 4;
+    this.hopH = this.moving && phase % 2 === 1 ? 1 : 0;
+    this.squash = 0;
+    const stepNo = Math.floor(this.anim);
+    if (this.moving && stepNo !== this.lastStep && phase % 2 === 0 && this.dodgeT < 0) {
+      this.fx.dust(this.x, this.y, this.run ? 4 : 2, this.onPath ? '#ecd8a8' : '#9cd064', this.vx);
     }
     this.lastStep = stepNo;
     if (this.dodgeT >= 0 && Math.random() < dt * 40) this.fx.burst(this.x, this.y - 6, 2, 0.4, '#d8e4ff');
@@ -202,7 +204,7 @@ export class Player {
   private spriteKey(blinkNow: boolean) {
     const d = this.dir === 'right' ? 'side' : this.dir;
     let f = 0;
-    if (this.moving) f = this.airborne ? 4 : Math.floor(this.anim + 0.25) % 2 === 0 ? 1 : 2;
+    if (this.moving) f = [1, 4, 2, 4][Math.floor(this.anim) % 4];
     else f = Math.floor(this.time * 1.3) % 2 === 1 ? 3 : 0;
     return `${d}${f}${blinkNow ? 'b' : ''}`;
   }
@@ -211,6 +213,7 @@ export class Player {
     return {
       y: this.y,
       shadow: (v, cx, cy) => {
+        if (this.riding) return;
         v.beginPath();
         v.ellipse(Math.round(this.x - cx), Math.round(this.y - cy), 8 - this.hopH * 0.9, 3 - this.hopH * 0.25, 0, 0, Math.PI * 2);
         v.fill();
@@ -221,13 +224,18 @@ export class Player {
         const pdx = Math.round(this.x - cx - 12);
         const dodging = this.dodgeT >= 0;
         const pdy = Math.round(this.y - cy - 33) + (dodging ? 4 : 0);
-        const lean = this.run ? Math.sign(this.vx) : 0;
+        const lean = 0;
         const hop = this.hopH;
         if (this.hurtT > 0) v.globalAlpha = 0.65;
         if (dodging) v.globalAlpha = 0.7;
-        // as pernas ficam no ar com o corpo; o tronco afunda 1 px ao aterrissar e inclina ao correr
-        v.drawImage(img, 0, 24, 24, 10, pdx, pdy + 24 - hop, 24, 10);
-        v.drawImage(img, 0, 0, 24, 25, pdx + lean, pdy - hop + this.squash, 24, 25);
+        if (this.riding) {
+          // montado: só o tronco, sentado na sela (as pernas ficam atrás do cavalo)
+          v.drawImage(img, 0, 0, 24, 25, pdx, pdy - 12 + (this.moving ? Math.round(Math.sin(this.anim * 6.28) * 0.6) : 0), 24, 25);
+        } else {
+          // as pernas ficam no ar com o corpo; o tronco afunda 1 px ao aterrissar e inclina ao correr
+          v.drawImage(img, 0, 24, 24, 10, pdx, pdy + 24 - hop, 24, 10);
+          v.drawImage(img, 0, 0, 24, 25, pdx + lean, pdy - hop + this.squash, 24, 25);
+        }
         v.globalAlpha = 1;
         this.drawBack(v, pdx, pdy - hop);
         this.drawTorch(v, darkOf());

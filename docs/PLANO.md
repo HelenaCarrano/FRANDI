@@ -225,3 +225,19 @@ o biscoito da sorte também). A chave de estrela agora vem das Ruínas, junto do
 - **Efeitos (`audio.play`):** passos (grama/pedra/cavalo, por distância andada), golpe, acerto, espírito se desfazendo, dano, esquiva, derrota, item, moeda, galinha,
   ovo, baú, lembrança, whoosh de troca de área, forja, montar. Itens e moedas tocam direto do `GameState`.
 - **Silenciar:** botão 🔊/🔇 no canto da tela; a escolha fica salva (`aventura-matheus:mudo`). Depuração: `__dev.audio.play('chest')`.
+
+## Vila em 2D (`g2d/areas/village.ts`) — 28/out/2026
+
+- **Escala:** o plano em metros da vila 3D virou pixels com `K = 7 px/m` (`P(x, z)`), porque os sprites têm a escala do Matheus (18 px/m) e uma vila a 18 px/m seria enorme para andar.
+  Mundo 1800 × 1700; a área andável é uma elipse (`ELL`); a mata fechada em volta é só árvore (sem colisão fora da elipse).
+- **Arte nova (tudo em código):** `people.ts` (moradores a partir de uma receita `PersonSpec`: cabelo, roupa, avental, chapéu, caneca/machado; patrulha, balões, gestos),
+  `buildings.ts` (casas, ferraria com forja acesa, taverna, igreja, celeiro, barraca do mercado, moinho com pás giratórias, poço, muralha e pilares do portão, objetos pequenos),
+  `horse.ts` (Trovão: vaga no cercado, foge de quem corre, segue, é montado), `chickens.ts` (galinhas com cores; fugitivas são tocadas até o galinheiro).
+- **Cavalo montado:** `Player.riding` (1,7× mais rápido, só o tronco desenhado sobre a sela). Botão do cavalo / tecla H montam e desmontam; a marca `riding` reaparece montado ao voltar à Vila.
+- **Missões iguais às da 3D** (mesmos textos, minijogos DOM e marcas de save): cavalo (confiança por aproximação calma com a maçã), ferraduras (forja), moinho (engrenagens + pás giram),
+  galinhas (6 fugitivas), encomenda da Pimenta (mapa + pão), galinha companheira, portão (abre o mapa). A "!" virou a estrelinha `Interactable.mark`.
+- **Novidades de motor:** `Prop.shadowRx/Ry/Dx` (sombra no chão de qualquer prop `custom`), `AreaContext.toScreen` (balões de fala em HTML presos a pontos do mundo).
+- **Entradas:** `start` (estrada do sul, de quem vem da Floresta) e `gate` (logo dentro do portão norte, de quem volta do mapa). Depuração: `?area=vila`, `__dev.area.debug.{horse,wild,mount,dismount}`.
+- **Testado no navegador (28/out):** Tito → maçã → confiança do cavalo → carta → bilhete (+6 moedas), montar, e uma galinha tocada até entrar no galinheiro.
+  **Ainda não testado jogando:** forja, engrenagens, encomenda, loja, portão e o mapa (o código é o da 3D, mas vale um passe completo no celular).
+- **Falta portar para 2D:** Ruínas, Taverna, Vinhedo, Castelo, Sala do Tesouro (e o mapa só abre áreas já construídas).

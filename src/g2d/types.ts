@@ -36,6 +36,10 @@ export interface Prop {
   img?: HTMLCanvasElement;
   phase?: number;
   glow?: boolean;
+  /** Sombra no chão para props `custom` (construções, cercas...): meia largura, meia altura e deslocamento em x. */
+  shadowRx?: number;
+  shadowRy?: number;
+  shadowDx?: number;
   /** Para `custom`: desenha a si mesmo (sx, sy já na tela). */
   draw?: (v: CanvasRenderingContext2D, sx: number, sy: number, t: number) => void;
   /** Para `custom`: luz que ele emite. */

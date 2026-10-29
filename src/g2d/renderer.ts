@@ -266,6 +266,7 @@ export class Renderer {
       else if (p.kind === 'stump') this.shadowOn(v, p.x + 2, p.y, 11, 4, camX, camY);
       else if (p.kind === 'stone') this.shadowOn(v, p.x + 3, p.y + 1, 8, 3, camX, camY);
       else if (p.kind === 'sign') this.shadowOn(v, p.x + 4, p.y + 1, 10, 3, camX, camY);
+      else if (p.shadowRx) this.shadowOn(v, p.x + (p.shadowDx ?? 0), p.y, p.shadowRx, p.shadowRy ?? 4, camX, camY);
     }
     v.fillStyle = 'rgba(52,34,96,0.34)';
     for (const e of f.entities) e.shadow?.(v, camX, camY);

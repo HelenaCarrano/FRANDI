@@ -31,11 +31,14 @@ export interface AreaContext {
   teleport: (x: number, y: number, dir?: Dir4) => void;
   /** A galinha companheira passa a seguir o Matheus a partir de (x, y). */
   summonHen: (x: number, y: number) => void;
+  /** Ponto do mundo (px do jogo) -> pixels da janela, para balões de fala em HTML. */
+  toScreen: (x: number, y: number) => { x: number; y: number };
 }
 
 type AreaModule = { create: (ctx: AreaContext) => Area2D };
 const LOADERS: Partial<Record<AreaId, () => Promise<AreaModule>>> = {
   forest: () => import('./areas/forest'),
+  village: () => import('./areas/village'),
 };
 
 export const isBuilt = (id: string): id is AreaId => id in LOADERS;
@@ -49,6 +52,7 @@ export interface ManagerDeps {
   hen: Hen;
   /** Câmera encaixa de uma vez (sem suavizar). */
   snapCamera: () => void;
+  toScreen: (x: number, y: number) => { x: number; y: number };
 }
 
 export class SceneManager {
@@ -80,6 +84,7 @@ export class SceneManager {
         game.setFlag('henMet');
         hen.enter(this.area.collision, { x, y });
       },
+      toScreen: this.d.toScreen,
     };
   }
 

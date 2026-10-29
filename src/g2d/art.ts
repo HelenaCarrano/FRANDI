@@ -475,29 +475,31 @@ export function drawMatheus(dir: Dir, frame: number, blink = false) {
   };
   const step = frame === 1 ? 1 : frame === 2 ? -1 : 0;
   const bob = frame === 3 ? 1 : 0; // só a respiração sobe o tronco; o pulo é feito no desenho
-  const air = frame === 4;
+  /** Quadro 4 = passagem: os pés se encontram no meio do passo (o corpo sobe 1 px no desenho). */
+  const passing = frame === 4;
 
   // pernas e tênis
   if (dir === 'side') {
     px(PANTS, 9, 25, 7, 4);
     px(PANTS_L, 10, 26, 2, 2);
-    // contato: passo aberto; no ar: pernas recolhidas
-    const lift = air ? -2 : 0;
-    const fa = air ? 10 : step !== 0 ? 6 : 9;
-    const fb = air ? 12 : step !== 0 ? 16 : 13;
-    px(PANTS, fa + 1, 28 + lift, 3, 2);
-    px(PANTS, fb - 1, 28 + lift, 3, 2);
-    px(SHOE, fa, 29 + lift, 6, 3);
-    px(SOLE, fa, 31 + lift, 6, 1);
-    px(SHOE, fb - 2, 29 + lift, 6, 3);
-    px(SOLE, fb - 2, 31 + lift, 6, 1);
+    // perna de longe (mais escura) e de perto: no passo elas abrem e trocam de lugar, como no Stardew
+    const farX = step === 1 ? 6 : step === -1 ? 14 : passing ? 10 : 8;
+    const nearX = step === 1 ? 14 : step === -1 ? 6 : passing ? 10 : 11;
+    const nearUp = passing ? 1 : 0;
+    px('#24242c', farX + 1, 28, 3, 2);
+    px('#16161c', farX, 29, 6, 3);
+    px('#46465a', farX, 31, 6, 1);
+    px(PANTS, nearX + 1, 28 - nearUp, 3, 2);
+    px(PANTS_L, nearX + 1, 28 - nearUp, 1, 2);
+    px(SHOE, nearX, 29 - nearUp, 6, 3);
+    px(SOLE, nearX, 31 - nearUp, 6, 1);
   } else {
     px(PANTS, 8, 25, 8, 4);
     px(PANTS_L, 8, 26, 1, 3);
     px(PANTS_L, 15, 26, 1, 3);
     px(HOOD_D, 11, 27, 2, 2);
-    const lf = air ? -2 : step === 1 ? -2 : 0;
-    const rf = air ? -2 : step === -1 ? -2 : 0;
+    const lf = step === 1 ? -1 : 0;
+    const rf = step === -1 ? -1 : 0;
     px(PANTS, 8, 28 + lf, 3, 1);
     px(PANTS, 13, 28 + rf, 3, 1);
     px(SHOE, 7, 29 + lf, 5, 3);
@@ -514,8 +516,8 @@ export function drawMatheus(dir: Dir, frame: number, blink = false) {
     px(HOOD_D, 14, 17, 3, 8);
     px(HOOD_L, 8, 17, 1, 7);
     px(HOOD_L, 8, 16, 8, 1);
-    const aL = air ? -2 : -step * 2;
-    const aR = air ? -2 : step * 2;
+    const aL = -step;
+    const aR = step;
     px(HOOD, 5, 17 + aL, 2, 8);
     px(HOOD, 17, 17 + aR, 2, 8);
     px(HOOD_L, 5, 17 + aL, 1, 7);
@@ -637,10 +639,10 @@ export function drawMatheus(dir: Dir, frame: number, blink = false) {
     px(HOOD_L, 9, 16, 6, 1);
     px(RED, 8, 19, 1, 3);
     px('#7c7c8c', 8, 22, 1, 2);
-    const sw = air ? 0 : step * 2;
-    px(HOOD, 10 + sw, 17 + (air ? -2 : 0), 4, 8);
-    px(HOOD_L, 10 + sw, 17 + (air ? -2 : 0), 1, 7);
-    px(INK, 10 + sw, 25 + (air ? -2 : 0), 4, 2);
+    const sw = -step * 2;
+    px(HOOD, 10 + sw, 17, 4, 8);
+    px(HOOD_L, 10 + sw, 17, 1, 7);
+    px(INK, 10 + sw, 25, 4, 2);
     px(SKIN_S, 11, 15, 3, 2);
     px(INK, 11, 16, 1, 1);
     px(INK, 13, 16, 1, 1);

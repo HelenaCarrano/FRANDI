@@ -123,7 +123,7 @@ export const content = {
     },
 
     quests: {
-      horse: { title: 'O cavalo desconfiado', coins: 6 },
+      horse: { title: 'O reencontro com o Armin', coins: 6 },
       shoes: { title: 'Ferraduras novas', coins: 12 },
       mill: { title: 'O moinho emperrado', coins: 10 },
       order: { title: 'A encomenda esquecida', coins: 12 },
@@ -131,7 +131,7 @@ export const content = {
     },
 
     /** Nome do cavalo. [EXEMPLO] */
-    horseName: 'Trovão',
+    horseName: 'Armin',
     /** Nome da galinha companheira. [EXEMPLO] */
     henName: 'Pipoca',
 
@@ -148,34 +148,40 @@ export const content = {
       first: [
         'Ah, graças a Deus, alguém! O senhor é o Matheus? Esse cavalo chegou sozinho ao amanhecer, trotando pela estrada como quem tem hora marcada.',
         '(É o meu cavalo! Mas como ele chegou antes de mim?)',
-        'Na sela, uma bolsa com o seu nome. Só que ele morde quem chega perto. Perdi um chapéu e metade da paciência.',
-        'Mas ele me parece um cavalo que quer ser ganho, não pego. Leve esta maçã e vá DEVAGAR. Cavalo sente pressa de longe.',
+        'Na sela, uma bolsa com o seu nome. Ele não deixou mais ninguém chegar perto: ficou ali no cercado, olhando para a estrada, esperando alguém.',
+        'Acho que esse alguém é você. Vá lá cumprimentá-lo, ele já sabe quem você é.',
       ],
       offer: 'Ele só vai deixar chegar quem se aproxima com calma, segurando a maçã.',
       yes: 'Deixa comigo',
       no: 'Preciso de um minuto',
       decline: ['Sem pressa. Ele também não tem.'],
       accepted: ['Isso! Passo de caracol, voz baixa e a maçã à mostra. Ele vai decidir.'],
-      waiting: ['Chegue perto bem devagar. Se ele sair galopando, é porque você veio com pressa. Respira e tenta de novo.'],
+      waiting: ['Ele está no cercado, de olho na estrada. Vá lá, o Armin já sabe quem você é.'],
       afterTrust: [
-        'Eu NUNCA vi ele deixar alguém encostar. Você tem jeito, hein.',
-        'Só tem um detalhe: ele veio de longe e está sem ferraduras. Assim ele não vai muito além da cerca.',
+        'Eu nunca vi um cavalo tão feliz de ver alguém. Ele é seu mesmo, hein.',
+        'Só tem um detalhe: ele veio de longe e está sem ferraduras. Assim não passa muito da cerca.',
         'Fale com o Brutus, o ferreiro. Se ele estiver de bom humor, faz um jogo novo.',
       ],
       idleBeforeShoes: ['O Brutus fica na ferraria, perto da praça. A que solta fumaça e barulho.'],
       shoeFit: [
         'Ferraduras forjadas pelo Brutus! Deixa eu ver...',
         '*tuc* *tuc* *tuc*',
-        'Pronto. Olha só como ele pisa firme. Agora ele é seu, Matheus.',
+        'Pronto. Olha só como ele pisa firme. Agora vocês dois vão para onde quiserem, Matheus.',
         'Chegue perto dele e use o botão do cavalo para montar. Segure firme: ele é mais rápido do que parece.',
       ],
       done: ['Se for ao galope, cuidado com as galinhas da Clotilde. Elas não perdoam.'],
     },
 
     horse: {
+      greet: 'Cumprimentar {name}',
       approachHint: 'Aproxime-se devagar, com a maçã',
       tooFast: 'Ele se assustou: vá mais devagar',
       trustLabel: 'Confiança de {name}',
+      reunion: [
+        '{name} levanta a cabeça assim que te vê e vem trotando até a cerca, bufando como quem reclama da demora.',
+        '"Eu sei, eu sei. Cheguei atrasado. Mas você também não facilitou, hein?"',
+        'Ele encosta o focinho no seu ombro. Na sela, a bolsa com o seu nome se abre com um clique. Dentro, um bilhete dobrado com a letra de alguém que você conhece bem.',
+      ],
       trusted: [
         '{name} abaixa a cabeça e cheira a maçã. Depois cheira você. Respira fundo.',
         '"Aí está você, cabeça-dura. Eu sabia que a gente se encontrava."',
@@ -193,7 +199,7 @@ export const content = {
       ],
       notYet: ['Ainda não tenho o que fazer por você. Resolva o negócio do cavalo primeiro.'],
       offer: [
-        'Então é você que o Tito não para de falar. Dizem que o cavalo deixou você chegar perto.',
+        'Então é você o dono do cavalo que o Tito não para de falar. Ele só chegou perto de você, dizem.',
         'Cavalo sem ferradura é pé sem sapato. Eu faço quatro novas, mas a forja precisa de braço.',
         'Você bate o ferro quando o brilho passar pela faixa verde. Três marteladas boas e a ferradura nasce. Topa?',
       ],
@@ -308,7 +314,7 @@ export const content = {
       menuBye: 'Até logo',
       bye: ['Volte sempre! Ou nunca mais, mas deixando uma gorjeta.'],
       chat: [
-        'Aquele cavalo preto? Passou aqui antes de o sol nascer, parou na frente da minha barraca e ficou me olhando.',
+        'Aquele cavalo? Passou aqui antes de o sol nascer, parou na frente da minha barraca e ficou me olhando.',
         'Cavalo que sabe o que quer é raro. Cavalo que sabe o que você quer... é de outro mundo.',
       ],
       chatDone: ['Agora a vila toda fala de você e do {name}. Você é o novo assunto preferido. Parabéns?'],
@@ -385,14 +391,14 @@ export const content = {
     },
 
     mutters: {
-      villagerA: ['Bom dia! O cavalo preto é seu?', 'Que manhã bonita para procurar presente.'],
+      villagerA: ['Bom dia! O Armin é seu, não é? Ele não parava de olhar a estrada.', 'Que manhã bonita para procurar presente.'],
       villagerB: ['Dizem que o Brutus chora quando termina uma ferradura.', 'Eu não falei nada...'],
       kid: ['Posso fazer carinho no cavalo?', 'A Beyoncé é a galinha mais fofoqueira da vila!'],
     },
 
     objective: {
       talkStable: 'Fale com o Tito, perto do cercado do cavalo',
-      approachHorse: 'Aproxime-se do cavalo devagar, com a maçã',
+      approachHorse: 'Vá ao cercado e cumprimente o Armin',
       talkSmith: 'Fale com o Ferreiro, na ferraria',
       forgeShoes: 'Forje as ferraduras com o Brutus',
       bringShoes: 'Leve as ferraduras ao Tito',

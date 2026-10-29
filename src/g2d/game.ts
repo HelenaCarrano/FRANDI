@@ -71,7 +71,11 @@ export async function boot() {
     };
     let snapNext = true;
 
-    const manager = new SceneManager({ ui, game, player, kit, fx, hen, snapCamera: () => (snapNext = true) });
+    const toScreen = (x: number, y: number) => {
+      const r = screen.getBoundingClientRect();
+      return { x: r.left + (x - Math.round(cam.x)) * renderer.scale, y: r.top + (y - Math.round(cam.y)) * renderer.scale };
+    };
+    const manager = new SceneManager({ ui, game, player, kit, fx, hen, snapCamera: () => (snapNext = true), toScreen });
 
     const asked = urlParams.get('area');
     const wanted = asked && (AREA_ALIASES[asked] ?? asked);
