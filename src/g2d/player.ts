@@ -1,4 +1,4 @@
-import { OUTLINE } from './art';
+import { OUTLINE, PANTS, PANTS_L, SHOE, SOLE } from './art';
 import type { Collision } from './collision';
 import type { Fx } from './fx';
 import type { Kit } from './kit';
@@ -24,6 +24,10 @@ export class Player {
   frozen = false;
   readonly radius = 5;
   weapon: 'stick' | 'sword' | null = null;
+  /** Lado para onde o cavalo (e o cavaleiro) olha: só muda quando ele anda para a esquerda ou a direita. */
+  private rideFace: 1 | -1 = 1;
+  /** Chapéu de palha na cabeça. */
+  hat = false;
   /** Arma guardada (tecla 1 ou o inventário): some da mão e não bate. */
   stowed = false;
   torchOn = false;
@@ -93,7 +97,7 @@ export class Player {
   }
 
   attack(): boolean {
-    if (!this.weapon || this.stowed || this.attackT >= 0 || this.dodgeT >= 0 || this.frozen) return false;
+    if (!this.weapon || this.stowed || this.riding || this.attackT >= 0 || this.dodgeT >= 0 || this.frozen) return false;
     this.attackT = 0;
     this.swingId++;
     return true;
@@ -187,8 +191,8 @@ export class Player {
   }
 
   private handPos() {
-    const dx = Math.round(this.x - 12);
-    const dy = Math.round(this.y - 33);
+    const dx = Math.round(this.x - 12 - (this.riding ? this.rideFace : 0));
+    const dy = Math.round(this.y - 33) - (this.riding ? 17 : 0);
     const hx = this.dir === 'right' ? dx + 17 : this.dir === 'left' ? dx + 4 : dx + 3;
     return { x: hx, y: dy + 25 - this.hopH + this.squash };
   }
@@ -251,19 +255,87 @@ export class Player {
         if (this.hurtT > 0) v.globalAlpha = 0.65;
         if (dodging) v.globalAlpha = 0.7;
         if (this.riding) {
-          // montado: só o tronco, sentado na sela (as pernas ficam atrás do cavalo)
-          v.drawImage(img, 0, 0, 24, 25, pdx, pdy - 12 + (this.moving ? Math.round(Math.sin(this.anim * 6.28) * 0.6) : 0), 24, 25);
+          this.drawRider(v, cx, cy, darkOf());
+          return;
         } else {
           // as pernas ficam no ar com o corpo; o tronco afunda 1 px ao aterrissar e inclina ao correr
           v.drawImage(img, 0, 24, 24, 10, pdx, pdy + 24 - hop, 24, 10);
           v.drawImage(img, 0, 0, 24, 25, pdx + lean, pdy - hop + this.squash, 24, 25);
         }
         v.globalAlpha = 1;
+        this.drawHat(v, pdx, pdy - hop + this.squash);
         this.drawBack(v, pdx, pdy - hop);
         this.drawTorch(v, darkOf());
         this.drawWeapon(v, pdx, pdy - hop);
       },
     };
+  }
+
+  /**
+   * Montado: o Matheus sempre de perfil (como o cavalo), sentado na sela, com a perna de perto caída pelo flanco.
+   * É desenhado depois do cavalo (que fica atrás na ordem de camadas).
+   */
+  private drawRider(v: CanvasRenderingContext2D, cx: number, cy: number, dark: number) {
+    if (this.dir === 'left') this.rideFace = -1;
+    else if (this.dir === 'right') this.rideFace = 1;
+    const f = this.rideFace;
+    // o trote do cavalo sobe 1 px a cada passo: o cavaleiro acompanha
+    const bob = this.moving && Math.floor(this.anim * 1.3) % 2 === 1 ? 1 : 0;
+    const sx = Math.round(this.x - cx);
+    const sy = Math.round(this.y - cy) - bob;
+    const img = this.kit.matheus[`${f > 0 ? 'side' : 'left'}0`];
+    const pdx = sx - 12 - f;
+    const pdy = sy - 50;
+    if (this.hurtT > 0) v.globalAlpha = 0.65;
+    // perna de longe: só um pedaço escuro embaixo da barriga
+    const px = (col: string, x: number, y: number, w: number, h: number) => {
+      v.fillStyle = col;
+      v.fillRect(f > 0 ? sx + x : sx - x - w, sy + y, w, h);
+    };
+    px(OUTLINE, -3, -26, 11, 5);
+    // tronco sentado na sela
+    v.drawImage(img, 0, 0, 24, 25, pdx, pdy, 24, 25);
+    // coxa sobre a sela e perna de perto caindo pelo flanco, com o pé no estribo
+    px(OUTLINE, -5, -27, 15, 6);
+    px(PANTS, -4, -26, 13, 4);
+    px(PANTS_L, -4, -26, 13, 1);
+    px(OUTLINE, 1, -23, 7, 11);
+    px(PANTS, 2, -22, 5, 9);
+    px(PANTS_L, 2, -22, 1, 8);
+    px(OUTLINE, 0, -14, 9, 5);
+    px(SHOE, 1, -13, 7, 3);
+    px(SOLE, 1, -11, 7, 1);
+    v.globalAlpha = 1;
+    this.drawHat(v, pdx, pdy);
+    // mochila, espada, tocha e arma acompanham o tronco
+    const dir = this.dir;
+    this.dir = f > 0 ? 'right' : 'left';
+    this.drawBack(v, pdx, pdy);
+    this.drawTorch(v, dark);
+    this.drawWeapon(v, pdx, pdy);
+    this.dir = dir;
+  }
+
+  /** Chapéu de palha sobre o cabelo (aba larga e copa com uma faixa vermelha). */
+  private drawHat(v: CanvasRenderingContext2D, pdx: number, pdy: number) {
+    if (!this.hat) return;
+    const side = this.dir === 'right' || this.dir === 'left';
+    const off = this.dir === 'right' ? 1 : this.dir === 'left' ? -1 : 0;
+    const bx = pdx + (side ? 4 : 3) + off;
+    const bw = side ? 16 : 18;
+    v.fillStyle = OUTLINE;
+    v.fillRect(bx - 1, pdy + 1, bw + 2, 5);
+    v.fillRect(bx + 3, pdy - 5, bw - 6, 7);
+    v.fillStyle = '#d9b45a';
+    v.fillRect(bx, pdy + 2, bw, 3);
+    v.fillRect(bx + 4, pdy - 4, bw - 8, 6);
+    v.fillStyle = '#f0d078';
+    v.fillRect(bx, pdy + 2, bw, 1);
+    v.fillRect(bx + 4, pdy - 4, bw - 8, 1);
+    v.fillStyle = '#b8442c';
+    v.fillRect(bx + 4, pdy, bw - 8, 2);
+    v.fillStyle = '#a8802a';
+    v.fillRect(bx + 2, pdy + 4, bw - 4, 1);
   }
 
   /** Mochila e cabo da espada aparecendo atrás dos ombros. */

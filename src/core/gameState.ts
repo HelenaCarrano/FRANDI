@@ -18,7 +18,7 @@ export interface SaveData {
   /** Marcas de diálogo/progresso (ex.: carta lida, material já encontrado). */
   flags: Record<string, boolean>;
   /** Equipamentos visíveis no Matheus. */
-  equipped: { sword: boolean; backpack: boolean };
+  equipped: { sword: boolean; backpack: boolean; hat: boolean };
 }
 
 import { audio } from './audio';
@@ -26,7 +26,7 @@ import { audio } from './audio';
 const KEY = 'aventura-matheus:v1';
 
 function fresh(): SaveData {
-  return { v: 1, area: 'forest', coins: 0, items: {}, quests: {}, flags: {}, equipped: { sword: false, backpack: false } };
+  return { v: 1, area: 'forest', coins: 0, items: {}, quests: {}, flags: {}, equipped: { sword: false, backpack: false, hat: false } };
 }
 
 function readStorage(): SaveData | null {

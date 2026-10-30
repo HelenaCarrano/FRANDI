@@ -96,6 +96,8 @@ export interface Area2D {
   interactables: Interactable[];
   env: Env;
   combat?: CombatSystem;
+  /** Ataque sem combate completo (ex.: testar a espada no espantalho da vila). */
+  melee?: { attack(): void; update(dt: number, t: number): void };
   /** A tocha do jogador está acesa nesta área agora? */
   torchLit?: () => boolean;
   /** O ponto (x, y) é trilha? (poeira clara dos passos) */

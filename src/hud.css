@@ -1636,3 +1636,135 @@
   stroke-width: 4;
   paint-order: stroke;
 }
+
+/* ---------- forja redesenhada e ícones do inventário em pixel art ---------- */
+.slot-art {
+  width: 1.9rem;
+  height: 1.9rem;
+  image-rendering: pixelated;
+  vertical-align: middle;
+}
+.slot-art.small {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+.forge-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 220 / 112;
+  flex: none;
+  max-width: 26rem;
+  margin: 0.4rem auto 0.6rem;
+  image-rendering: pixelated;
+  border: 3px solid #3a2410;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55), inset 0 0 18px rgba(255, 110, 30, 0.2);
+}
+.forge-bar {
+  background: linear-gradient(90deg, #4a5468, #8a3a22 30%, #e0561c 60%, #ffcf5a 85%, #fff0b8);
+}
+.forge-zone {
+  background: rgba(255, 215, 90, 0.35);
+  border-left: 2px solid #ffe070;
+  border-right: 2px solid #ffe070;
+  box-shadow: 0 0 10px rgba(255, 215, 90, 0.6);
+  animation: forge-zone-pulse 0.9s ease-in-out infinite alternate;
+}
+@keyframes forge-zone-pulse {
+  from { background: rgba(255, 215, 90, 0.25); }
+  to { background: rgba(255, 215, 90, 0.5); }
+}
+.forge-hits {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  letter-spacing: 0;
+}
+.forge-shoe {
+  width: 2rem;
+  height: 2rem;
+  image-rendering: pixelated;
+  filter: grayscale(1) brightness(0.45);
+  transition: filter 0.3s;
+}
+.forge-shoe.on {
+  filter: drop-shadow(0 0 6px rgba(255, 160, 60, 0.9));
+}
+.forge-lives {
+  margin-left: 0.8rem;
+  font-size: 1.1rem;
+}
+
+/* ---------- engrenagens e moenda do moinho ---------- */
+.gears {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0.6rem 0 0.8rem;
+}
+.gears .gear {
+  width: var(--sz, 6.2rem);
+  height: var(--sz, 6.2rem);
+  margin-left: -0.9rem;
+  transition: transform 0.35s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+.gears .gear:first-child {
+  margin-left: 0;
+}
+.gear.kick {
+  animation: gear-kick 0.3s ease-out;
+}
+@keyframes gear-kick {
+  30% { filter: brightness(1.35); }
+}
+.gear.spin svg {
+  animation: gear-spin 0.9s linear infinite;
+}
+.gear.spin:nth-child(even) svg {
+  animation-direction: reverse;
+}
+@keyframes gear-spin {
+  to { transform: rotate(360deg); }
+}
+.gears-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+}
+.gears-reset {
+  padding: 0.3rem 0.8rem;
+  font-size: 0.8rem;
+}
+.mill-canvas {
+  display: block;
+  width: 100%;
+  max-width: 26rem;
+  height: auto;
+  aspect-ratio: 220 / 150;
+  flex: none;
+  margin: 0.4rem auto 0.6rem;
+  image-rendering: pixelated;
+  border: 3px solid #3a2410;
+  border-radius: 8px;
+  cursor: grab;
+  touch-action: none;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+}
+.mill-meter {
+  height: 0.9rem;
+  border: 2px solid #5b3c18;
+  border-radius: 8px;
+  background: #2a1a0c;
+  overflow: hidden;
+}
+.mill-fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #e8ddc0, #fffaf0);
+  transition: width 0.1s linear;
+}

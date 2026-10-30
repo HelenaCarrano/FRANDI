@@ -9,7 +9,8 @@
 
 export type Sfx =
   | 'step' | 'stepStone' | 'hoof' | 'swing' | 'hit' | 'kill' | 'hurt' | 'dodge' | 'pickup' | 'coin' | 'cluck' | 'egg'
-  | 'chest' | 'tick' | 'select' | 'memory' | 'whoosh' | 'clang' | 'defeat' | 'mount' | 'rise' | 'rest';
+  | 'chest' | 'tick' | 'select' | 'memory' | 'whoosh' | 'clang' | 'defeat' | 'mount' | 'rise' | 'rest'
+  | 'hammer' | 'sizzle' | 'gear' | 'gearLock' | 'crank' | 'grind';
 
 type Surface = 'grass' | 'stone';
 type Ambience = 'wind' | 'birds' | 'crickets' | 'owl' | 'murmur' | 'fire';
@@ -507,6 +508,37 @@ class AudioEngine {
       case 'clang':
         [520, 1310, 2140].forEach((f, i) => this.tone('sine', f, f, 0.55 - i * 0.12, 0.09 * v));
         this.burst(0.05, 'highpass', 3000, 3000, 0.15 * v);
+        break;
+      case 'hammer':
+        // martelada: pancada grave e seca antes do tinido
+        this.tone('triangle', 180, 60, 0.14, 0.2 * v, 0.002);
+        this.burst(0.06, 'lowpass', 900, 300, 0.2 * v, 0.8);
+        break;
+      case 'sizzle':
+        // ferro entrando na água: chiado longo
+        this.burst(0.9, 'highpass', 4200, 2200, 0.09 * v, 0.6);
+        this.burst(0.5, 'bandpass', 2400, 1200, 0.05 * v, 2);
+        break;
+      case 'gear':
+        // clique mecânico de engrenagem; cada toque soa um pouco diferente
+        this.burst(0.035, 'bandpass', rnd(1800, 2600), 1100, 0.14 * v, 4);
+        this.tone('square', rnd(260, 380), 160, 0.05, 0.05 * v);
+        break;
+      case 'gearLock':
+        // encaixou: duas batidas graves e um tinido baixo
+        this.tone('triangle', 140, 70, 0.12, 0.16 * v);
+        this.tone('triangle', 190, 90, 0.14, 0.14 * v, 0.003, 0.11);
+        [420, 840].forEach((f, i) => this.tone('sine', f, f, 0.4 - i * 0.1, 0.05 * v, 0.003, 0.2));
+        break;
+      case 'crank':
+        // catraca da manivela
+        this.burst(0.03, 'highpass', 2800, 2800, 0.1 * v, 2);
+        this.tone('triangle', 150, 110, 0.05, 0.06 * v);
+        break;
+      case 'grind':
+        // a mó moendo: ruído grave e áspero
+        this.burst(0.22, 'lowpass', 700, 380, 0.14 * v, 1.2);
+        this.tone('sawtooth', 70, 60, 0.2, 0.025 * v);
         break;
       case 'defeat':
         this.tone('sine', 220, 50, 1.1, 0.2 * v, 0.02, 0, 0.5);

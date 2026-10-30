@@ -94,7 +94,8 @@ export async function boot() {
           const it = content.items[id as ItemId];
           const weaponId = game.has('espada') ? 'espada' : 'galho';
           const isWeapon = id === weaponId;
-          return { id, icon: it.icon, name: it.name, desc: it.desc, usedIn: it.usedIn, count, hotkey: isWeapon ? '1' : undefined, active: isWeapon && !player.stowed, onUse: isWeapon ? toggleWeapon : undefined };
+          const isHat = id === 'chapeu_palha';
+          return { id, icon: it.icon, name: it.name, desc: it.desc, usedIn: it.usedIn, count, hotkey: isWeapon ? '1' : isHat ? '2' : undefined, active: isWeapon ? !player.stowed : isHat ? game.data.equipped.hat : undefined, onUse: isWeapon ? toggleWeapon : isHat ? toggleHat : undefined };
         });
       ui.setInventory(entries, game.coins);
     };
@@ -106,7 +107,14 @@ export async function boot() {
       ui.toast(player.stowed ? `${name} guardado` : `${name} na mão`);
       syncInventory();
     };
+    /** Tecla 2 / clique no slot: coloca ou tira o chapéu de palha. */
+    const toggleHat = () => {
+      if (!game.has('chapeu_palha')) return;
+      game.setEquipped({ hat: !game.data.equipped.hat });
+      ui.toast(game.data.equipped.hat ? content.village.scarecrow.hatOn : content.village.scarecrow.hatOff);
+    };
     window.addEventListener('keydown', (e) => {
+      if (e.code === 'Digit2' && !e.repeat && !ui.inDialog && !manager.busy) toggleHat();
       if (e.code === 'Digit1' && !e.repeat && !ui.inDialog && !manager.busy) toggleWeapon();
     });
     syncInventory();
@@ -115,12 +123,14 @@ export async function boot() {
       syncMapButton();
       player.backpack = game.has('mochila');
       player.sword = game.has('espada');
+      player.hat = game.has('chapeu_palha') && game.data.equipped.hat;
     });
     const syncMapButton = () => ui.setMapButton(game.has('mapa') && !manager.busy);
     ui.setMapButton(false, () => void manager.openMap());
     syncMapButton();
     player.backpack = game.has('mochila');
     player.sword = game.has('espada');
+    player.hat = game.has('chapeu_palha') && game.data.equipped.hat;
 
     await manager.start(startId, startEntry);
     if (debug) {
@@ -175,6 +185,10 @@ export async function boot() {
         if (canMove && input.consumeAttack()) area.combat.attack();
         if (canMove && input.consumeDodge()) area.combat.dodge(move.x, -move.y);
         area.combat.update(dt, time);
+      } else if (area.melee) {
+        if (canMove && input.consumeAttack()) area.melee.attack();
+        input.consumeDodge();
+        area.melee.update(dt, time);
       } else {
         input.consumeAttack();
         input.consumeDodge();

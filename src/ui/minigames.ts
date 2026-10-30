@@ -26,15 +26,42 @@ export interface ForgeText {
   button: string;
   /** Falas ao errar (sorteadas). */
   misses: readonly string[];
-  /** Falas ao acertar (1ª, 2ª e 3ª martelada). */
-  hits: readonly [string, string, string];
+  /** Falas ao acertar, na ordem das marteladas (a última se repete se faltar). */
+  hits: readonly string[];
+  /** Quando o ferro esfria por erros demais. */
+  cold?: string;
 }
 
-/** Forja: resolve quando as 3 marteladas acertarem. */
+const FORGE_HITS = 5;
+const FORGE_LIVES = 3;
+/** Como o brilho se move em cada martelada: constante, ondulando, aos pulos, com a faixa andando, e rápido. */
+const FORGE_PATTERNS = ['steady', 'wave', 'steady', 'drift', 'jump'] as const;
+
+/** Cor do ferro conforme o calor (0 = frio, 1 = branco de quente). */
+function ironColor(heat: number) {
+  const k = Math.max(0, Math.min(1, heat));
+  const stops: [number, number, number][] = [[86, 92, 108], [150, 70, 50], [220, 70, 30], [255, 150, 40], [255, 236, 170]];
+  const f = k * (stops.length - 1);
+  const i = Math.min(stops.length - 2, Math.floor(f));
+  const t = f - i;
+  const a = stops[i];
+  const b = stops[i + 1];
+  return `rgb(${Math.round(a[0] + (b[0] - a[0]) * t)},${Math.round(a[1] + (b[1] - a[1]) * t)},${Math.round(a[2] + (b[2] - a[2]) * t)})`;
+}
+
+/**
+ * Forja: cinco marteladas. Um brilho vai e volta na barra de calor e é preciso bater quando ele passa pela faixa dourada.
+ * A faixa encolhe e o brilho acelera a cada acerto, com um jeito diferente de se mover em cada martelada.
+ * Errar esfria o ferro (perde uma martelada); com três erros o ferro esfria de vez e recomeça.
+ */
 export function playForge(ui: UI, text: ForgeText): Promise<void> {
   return ui.modal<void>('forge', (box, close) => {
     h('h3', 'mg-title', box, text.title);
     h('p', 'mg-hint', box, text.hint);
+    const scene = h('canvas', 'forge-canvas', box);
+    scene.width = 220;
+    scene.height = 112;
+    const g = scene.getContext('2d')!;
     const bar = h('div', 'forge-bar', box);
     const zone = h('div', 'forge-zone', bar);
     const spark = h('div', 'forge-spark', bar);
@@ -43,29 +70,133 @@ export function playForge(ui: UI, text: ForgeText): Promise<void> {
     const btn = h('button', 'btn primary forge-btn', box, text.button);
 
     let hits = 0;
+    let lives = FORGE_LIVES;
     let pos = 0;
     let dir = 1;
-    let speed = 0.85;
     let zoneAt = 0.5;
-    const width = 0.2;
+    let zoneVel = 0;
+    let width = 0.16;
     let alive = true;
     let last = performance.now();
     let lock = 0;
+    let swing = -1; // 0..1: o martelo descendo
+    let shake = 0;
+    let heat = 0;
+    let t = 0;
+    const sparks: { x: number; y: number; vx: number; vy: number; life: number }[] = [];
 
+    const speedNow = () => 0.9 + hits * 0.32;
     const newZone = () => {
+      width = Math.max(0.07, 0.16 - hits * 0.022);
       zoneAt = 0.2 + Math.random() * 0.6;
+      zoneVel = FORGE_PATTERNS[Math.min(hits, FORGE_HITS - 1)] === 'drift' ? (Math.random() < 0.5 ? -1 : 1) * 0.12 : 0;
+      placeZone();
+    };
+    const placeZone = () => {
       zone.style.left = `${(zoneAt - width / 2) * 100}%`;
       zone.style.width = `${width * 100}%`;
     };
-    const drawHits = () => (hitsEl.textContent = '🔨'.repeat(hits) + '▫️'.repeat(3 - hits));
+    const shoeArt = itemArt('ferradura');
+    const drawHits = () => {
+      hitsEl.replaceChildren();
+      for (let i = 0; i < FORGE_HITS; i++) {
+        const el = h('img', i < hits ? 'forge-shoe on' : 'forge-shoe', hitsEl);
+        if (shoeArt) el.src = shoeArt;
+        el.alt = '';
+      }
+      const lv = h('span', 'forge-lives', hitsEl, '🔥'.repeat(lives) + '▫️'.repeat(FORGE_LIVES - lives));
+      lv.title = 'Chances antes do ferro esfriar';
+    };
     newZone();
     drawHits();
+
+    const burstSparks = (n: number) => {
+      for (let i = 0; i < n; i++) {
+        const a = -Math.PI * (0.15 + Math.random() * 0.7);
+        const s = 40 + Math.random() * 90;
+        sparks.push({ x: 110, y: 66, vx: Math.cos(a) * s * (Math.random() < 0.5 ? -1 : 1), vy: Math.sin(a) * s, life: 0.5 + Math.random() * 0.5 });
+      }
+    };
+
+    const drawScene = (dt: number) => {
+      t += dt;
+      g.clearRect(0, 0, 220, 112);
+      const sx = shake > 0 ? Math.round((Math.random() - 0.5) * 4 * shake) : 0;
+      g.save();
+      g.translate(sx, 0);
+      // fundo: parede de pedra e o brilho do fogo
+      g.fillStyle = '#1c120e';
+      g.fillRect(0, 0, 220, 112);
+      const glow = g.createRadialGradient(110, 74, 6, 110, 74, 90);
+      glow.addColorStop(0, `rgba(255,130,40,${0.25 + heat * 0.35})`);
+      glow.addColorStop(1, 'rgba(255,130,40,0)');
+      g.fillStyle = glow;
+      g.fillRect(0, 0, 220, 112);
+      g.fillStyle = '#2a1c16';
+      for (let y = 0; y < 112; y += 14) for (let x = (y / 14) % 2 ? 0 : 11; x < 220; x += 22) g.fillRect(x, y, 20, 12);
+      // bigorna
+      g.fillStyle = '#10101a';
+      g.fillRect(70, 80, 80, 8);
+      g.fillRect(86, 88, 48, 16);
+      g.fillRect(78, 104, 64, 6);
+      g.fillStyle = '#5a6478';
+      g.fillRect(72, 78, 76, 6);
+      g.fillRect(62, 74, 22, 5);
+      g.fillStyle = '#8a94a8';
+      g.fillRect(72, 78, 76, 2);
+      g.fillRect(62, 74, 22, 2);
+      // ferradura em cima da bigorna (cor pelo calor)
+      g.fillStyle = ironColor(heat);
+      g.fillRect(94, 70, 32, 6);
+      g.fillRect(94, 64, 7, 8);
+      g.fillRect(119, 64, 7, 8);
+      g.fillRect(98, 58, 6, 8);
+      g.fillRect(116, 58, 6, 8);
+      g.fillStyle = '#10101a';
+      g.fillRect(100, 66, 2, 2);
+      g.fillRect(118, 66, 2, 2);
+      g.fillRect(104, 71, 12, 3);
+      // martelo: sobe parado, desce no golpe
+      const k = swing >= 0 ? swing : 0;
+      const ang = -1.1 + (swing >= 0 ? Math.sin(Math.min(1, k) * Math.PI * 0.5) * 1.1 : 0) + Math.sin(t * 2) * 0.03;
+      g.save();
+      g.translate(150, 54);
+      g.rotate(ang);
+      g.fillStyle = '#6a4424';
+      g.fillRect(-2, -4, 4, 34);
+      g.fillStyle = '#9a6a3c';
+      g.fillRect(-2, -4, 1, 34);
+      g.fillStyle = '#3a4254';
+      g.fillRect(-12, -10, 24, 10);
+      g.fillStyle = '#8a94a8';
+      g.fillRect(-12, -10, 24, 3);
+      g.restore();
+      // faíscas
+      for (let i = sparks.length - 1; i >= 0; i--) {
+        const s = sparks[i];
+        s.life -= dt;
+        if (s.life <= 0) {
+          sparks.splice(i, 1);
+          continue;
+        }
+        s.vy += 220 * dt;
+        s.x += s.vx * dt;
+        s.y += s.vy * dt;
+        g.fillStyle = s.life > 0.3 ? '#ffe070' : '#ff7a2a';
+        g.fillRect(Math.round(s.x), Math.round(s.y), 2, 2);
+      }
+      g.restore();
+    };
 
     const frame = (now: number) => {
       if (!alive) return;
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
-      pos += dir * speed * dt;
+      const pattern = FORGE_PATTERNS[Math.min(hits, FORGE_HITS - 1)];
+      let sp = speedNow();
+      if (pattern === 'wave') sp *= 0.55 + 0.9 * (0.5 + 0.5 * Math.sin(t * 3.2));
+      if (pattern === 'jump' && Math.random() < dt * 1.4) dir = -dir;
+      pos += dir * sp * dt;
       if (pos > 1) {
         pos = 1;
         dir = -1;
@@ -73,30 +204,62 @@ export function playForge(ui: UI, text: ForgeText): Promise<void> {
         pos = 0;
         dir = 1;
       }
+      if (zoneVel !== 0) {
+        zoneAt += zoneVel * dt;
+        if (zoneAt < 0.2 || zoneAt > 0.8) zoneVel = -zoneVel;
+        placeZone();
+      }
       spark.style.left = `${pos * 100}%`;
+      heat += ((hits / FORGE_HITS) * 0.7 + 0.25 - heat) * Math.min(1, dt * 3);
+      if (swing >= 0) swing += dt * 5;
+      if (swing > 1.4) swing = -1;
+      if (shake > 0) shake = Math.max(0, shake - dt * 4);
+      drawScene(dt);
       requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
 
+    const finish = () => {
+      alive = false;
+      window.removeEventListener('keydown', onKey);
+    };
     const strike = () => {
       if (!alive || performance.now() < lock) return;
-      lock = performance.now() + 380;
+      lock = performance.now() + 340;
+      swing = 0;
       if (Math.abs(pos - zoneAt) <= width / 2) {
-        status.textContent = text.hits[Math.min(hits, 2)];
+        status.textContent = text.hits[Math.min(hits, text.hits.length - 1)];
+        audio.play('hammer');
         audio.play('clang');
+        burstSparks(14);
+        shake = 1;
         hits++;
-        speed += 0.18;
+        heat = Math.min(1, heat + 0.2);
         drawHits();
-        if (hits >= 3) {
-          alive = false;
-          window.removeEventListener('keydown', onKey);
-          setTimeout(() => close(), 900);
+        if (hits >= FORGE_HITS) {
+          finish();
+          audio.play('sizzle');
+          setTimeout(() => close(), 1200);
           return;
         }
         newZone();
       } else {
-        status.textContent = text.misses[Math.floor(Math.random() * text.misses.length)];
         audio.play('whoosh', 0.5);
+        burstSparks(4);
+        lives--;
+        if (lives <= 0) {
+          // o ferro esfriou de vez: recomeça do zero
+          status.textContent = text.cold ?? 'O ferro esfriou! Vamos reaquecer e recomeçar.';
+          audio.play('sizzle');
+          hits = 0;
+          lives = FORGE_LIVES;
+          heat = 0;
+        } else {
+          status.textContent = text.misses[Math.floor(Math.random() * text.misses.length)];
+          hits = Math.max(0, hits - 1);
+        }
+        drawHits();
+        newZone();
       }
     };
     const onKey = (e: KeyboardEvent) => {
@@ -117,13 +280,40 @@ export interface GearsText {
   solved: string;
 }
 
-const GEAR_SVG = `<svg viewBox="-50 -50 100 100"><g class="rot">
-  <path class="body" fill="#8d6a2e" stroke="#3a2610" stroke-width="2.5" d="M-8 -46 h16 l4 9 a38 38 0 0 1 10 4 l9 -4 l11 11 l-4 9 a38 38 0 0 1 4 10 l9 4 v16 l-9 4 a38 38 0 0 1 -4 10 l4 9 l-11 11 l-9 -4 a38 38 0 0 1 -10 4 l-4 9 h-16 l-4 -9 a38 38 0 0 1 -10 -4 l-9 4 l-11 -11 l4 -9 a38 38 0 0 1 -4 -10 l-9 -4 v-16 l9 -4 a38 38 0 0 1 4 -10 l-4 -9 l11 -11 l9 4 a38 38 0 0 1 10 -4z"/>
-  <circle r="14" fill="#2a1c0e" stroke="#3a2610" stroke-width="2.5"/>
-  <path d="M0 -36 l7 14 h-14z" fill="#ffe08a" stroke="#3a2610" stroke-width="1.5"/>
+/** Roda dentada em SVG: dentes trapezoidais, aro, raios vazados, cubo e uma marca amarela no alto. */
+function gearSvg(teeth: number, tone: [string, string, string]) {
+  const ro = 46;
+  const ri = 38;
+  const pitch = (Math.PI * 2) / teeth;
+  const pts: string[] = [];
+  for (let i = 0; i < teeth; i++) {
+    const a = i * pitch - Math.PI / 2;
+    for (const [da, r] of [[-0.34, ri], [-0.2, ro], [0.2, ro], [0.34, ri]] as const) {
+      pts.push(`${(Math.cos(a + da * pitch * 1.4) * r).toFixed(1)},${(Math.sin(a + da * pitch * 1.4) * r).toFixed(1)}`);
+    }
+  }
+  let holes = '';
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2 + 0.3;
+    holes += `<circle cx="${(Math.cos(a) * 22).toFixed(1)}" cy="${(Math.sin(a) * 22).toFixed(1)}" r="6.5" fill="#1c1208" stroke="${tone[2]}" stroke-width="1.5"/>`;
+  }
+  return `<svg viewBox="-50 -50 100 100"><g class="rot">
+  <polygon class="body" points="${pts.join(' ')}" fill="${tone[0]}" stroke="#2a1a0a" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle r="31" fill="none" stroke="${tone[1]}" stroke-width="3" opacity="0.8"/>
+  ${holes}
+  <circle r="11" fill="${tone[1]}" stroke="#2a1a0a" stroke-width="2.5"/>
+  <circle r="4.5" fill="#2a1c0e"/>
+  <path d="M0 -44 l6 12 h-12z" fill="#ffe08a" stroke="#3a2610" stroke-width="1.5"/>
 </g></svg>`;
+}
 
-/** Engrenagens do moinho: resolve quando as três marcas apontam para cima. */
+const GEAR_TONES: [string, string, string][] = [
+  ['#9a7230', '#c8a050', '#5a3e14'],
+  ['#8a6a3c', '#b89060', '#4a3418'],
+  ['#a47a34', '#d4aa5c', '#5e4216'],
+];
+
+/** Engrenagens do moinho: resolve quando as três marcas apontam para cima. Cada toque estala e arrasta a vizinha. */
 export function playGears(ui: UI, text: GearsText): Promise<void> {
   return ui.modal<void>('gears-box', (box, close) => {
     h('h3', 'mg-title', box, text.title);
@@ -131,6 +321,9 @@ export function playGears(ui: UI, text: GearsText): Promise<void> {
     const row = h('div', 'gears', box);
     h('p', 'gears-goal', box, text.goal);
     const status = h('p', 'mg-status', box);
+    const foot = h('div', 'gears-foot', box);
+    const counter = h('span', 'gears-count', foot, 'Giros: 0');
+    const reset = h('button', 'btn gears-reset', foot, 'Embaralhar de novo');
 
     const N = 3;
     const state = [0, 0, 0];
@@ -139,20 +332,26 @@ export function playGears(ui: UI, text: GearsText): Promise<void> {
       const n = (k + 1) % N;
       s[n] = (s[n] + 3) % 4;
     };
-    // embaralha a partir do estado resolvido: sempre tem solução
-    do {
-      for (let i = 0; i < 6 + Math.floor(Math.random() * 4); i++) tap(Math.floor(Math.random() * N));
-    } while (state.every((v) => v === 0));
-
     const turns = [0, 0, 0]; // giros acumulados (para a animação nunca voltar para trás)
-    const gears = state.map((v, i) => {
+    let moves = 0;
+    const gears = [0, 1, 2].map((i) => {
       const b = h('button', 'gear', row);
-      b.innerHTML = GEAR_SVG;
-      turns[i] = v;
+      b.innerHTML = gearSvg([14, 12, 14][i], GEAR_TONES[i]);
+      b.style.setProperty('--sz', ['6.4rem', '5.6rem', '6.4rem'][i]);
       return b;
     });
     const draw = () => gears.forEach((g, i) => (g.style.transform = `rotate(${turns[i] * 90}deg)`));
-    draw();
+    const shuffle = () => {
+      state.fill(0);
+      do {
+        for (let i = 0; i < 7 + Math.floor(Math.random() * 5); i++) tap(Math.floor(Math.random() * N));
+      } while (state.every((v) => v === 0));
+      state.forEach((v, i) => (turns[i] = v));
+      moves = 0;
+      counter.textContent = 'Giros: 0';
+      draw();
+    };
+    shuffle();
 
     let done = false;
     gears.forEach((g, i) => {
@@ -162,16 +361,222 @@ export function playGears(ui: UI, text: GearsText): Promise<void> {
         tap(i);
         turns[i] += 1;
         turns[(i + 1) % N] -= 1;
+        moves++;
+        counter.textContent = `Giros: ${moves}`;
+        audio.play('gear');
+        setTimeout(() => audio.play('gear'), 90);
+        g.classList.remove('kick');
+        void g.offsetWidth;
+        g.classList.add('kick');
         draw();
         const ok = state.every((v) => v === 0);
         gears.forEach((el) => el.classList.toggle('ok', ok));
         if (ok) {
           done = true;
           status.textContent = text.solved;
-          setTimeout(() => close(), 1400);
+          setTimeout(() => {
+            audio.play('gearLock');
+            gears.forEach((el) => el.classList.add('spin'));
+          }, 350);
+          setTimeout(() => close(), 2000);
         }
       });
     });
+    reset.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (!done) {
+        audio.play('gear');
+        shuffle();
+      }
+    });
+  });
+}
+
+export interface MillText {
+  title: string;
+  hint: string;
+  done: string;
+}
+
+const MILL_TURNS = 8;
+
+/**
+ * Moer a farinha: gire a manivela da mó arrastando em círculo (ou aperte E/Espaço várias vezes).
+ * `onSpeed` recebe 0..1 conforme a rapidez do giro, para o moinho lá fora acompanhar.
+ */
+export function playMilling(ui: UI, text: MillText, onSpeed: (v: number) => void): Promise<void> {
+  return ui.modal<void>('mill-box', (box, close) => {
+    h('h3', 'mg-title', box, text.title);
+    h('p', 'mg-hint', box, text.hint);
+    const cv = h('canvas', 'mill-canvas', box);
+    cv.width = 220;
+    cv.height = 150;
+    const g = cv.getContext('2d')!;
+    const meter = h('div', 'mill-meter', box);
+    const fill = h('div', 'mill-fill', meter);
+    const status = h('p', 'mg-status', box);
+
+    const CX = 110;
+    const CY = 92;
+    const RX = 62;
+    const RY = 26;
+    let ang = 0; // ângulo da manivela
+    let total = 0; // giros acumulados (em voltas)
+    let speed = 0; // voltas por segundo, suavizado
+    let alive = true;
+    let last = performance.now();
+    let grabbing: number | null = null;
+    let lastA = 0;
+    let lastBeat = 0;
+    const grains: { x: number; y: number; v: number }[] = [];
+    const dust: { x: number; y: number; vx: number; vy: number; life: number }[] = [];
+
+    const addTurn = (da: number) => {
+      const turn = Math.abs(da) / (Math.PI * 2);
+      total += turn;
+      ang += da;
+      speed = speed * 0.8 + (turn / 0.016) * 0.2;
+      while (Math.floor(total * 2) > lastBeat) {
+        lastBeat++;
+        audio.play('crank');
+        audio.play('grind', 0.8);
+        for (let i = 0; i < 3; i++) dust.push({ x: CX + (Math.random() - 0.5) * 80, y: CY + 8, vx: (Math.random() - 0.5) * 30, vy: -10 - Math.random() * 20, life: 0.8 });
+      }
+    };
+    const pointerAngle = (e: PointerEvent) => {
+      const r = cv.getBoundingClientRect();
+      const x = ((e.clientX - r.left) / r.width) * 220 - CX;
+      const y = ((e.clientY - r.top) / r.height) * 150 - CY;
+      return Math.atan2(y / (RY / RX), x);
+    };
+    cv.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      grabbing = e.pointerId;
+      lastA = pointerAngle(e);
+      cv.setPointerCapture(e.pointerId);
+    });
+    cv.addEventListener('pointermove', (e) => {
+      if (grabbing !== e.pointerId || !alive) return;
+      const a = pointerAngle(e);
+      let d = a - lastA;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      lastA = a;
+      if (Math.abs(d) > 0.01 && Math.abs(d) < 1.2) addTurn(d);
+    });
+    const release = (e: PointerEvent) => {
+      if (grabbing === e.pointerId) grabbing = null;
+    };
+    cv.addEventListener('pointerup', release);
+    cv.addEventListener('pointercancel', release);
+    const onKey = (e: KeyboardEvent) => {
+      if (ACTION_KEYS.has(e.code) && !e.repeat && alive) addTurn(Math.PI / 2);
+    };
+    window.addEventListener('keydown', onKey);
+
+    const frame = (now: number) => {
+      if (!alive) return;
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      speed *= Math.exp(-2.2 * dt);
+      onSpeed(Math.min(1, speed / 1.6));
+      if (speed > 0.15 && Math.random() < dt * 20) grains.push({ x: CX + (Math.random() - 0.5) * 16, y: 18, v: 0 });
+      g.clearRect(0, 0, 220, 150);
+      // fundo: tábuas do moinho
+      g.fillStyle = '#2a1c12';
+      g.fillRect(0, 0, 220, 150);
+      g.fillStyle = '#34241a';
+      for (let x = 0; x < 220; x += 22) g.fillRect(x, 0, 20, 150);
+      // funil de trigo
+      g.fillStyle = '#6a4424';
+      g.beginPath();
+      g.moveTo(CX - 26, 4);
+      g.lineTo(CX + 26, 4);
+      g.lineTo(CX + 6, 30);
+      g.lineTo(CX - 6, 30);
+      g.fill();
+      g.fillStyle = '#e2c25a';
+      g.fillRect(CX - 20, 6, 40, 6);
+      // mó de baixo (sombra) e mó de cima girando
+      g.fillStyle = '#4a4650';
+      g.beginPath();
+      g.ellipse(CX, CY + 8, RX + 4, RY + 4, 0, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = '#9a96a4';
+      g.beginPath();
+      g.ellipse(CX, CY, RX, RY, 0, 0, Math.PI * 2);
+      g.fill();
+      g.strokeStyle = '#6a6674';
+      g.lineWidth = 2;
+      for (let i = 0; i < 8; i++) {
+        const a = ang * 0.9 + (i / 8) * Math.PI * 2;
+        g.beginPath();
+        g.moveTo(CX + Math.cos(a) * 12, CY + Math.sin(a) * 12 * (RY / RX));
+        g.lineTo(CX + Math.cos(a) * (RX - 4), CY + Math.sin(a) * (RX - 4) * (RY / RX));
+        g.stroke();
+      }
+      g.fillStyle = '#6a6674';
+      g.beginPath();
+      g.ellipse(CX, CY, 10, 5, 0, 0, Math.PI * 2);
+      g.fill();
+      // farinha caindo pelas bordas e se acumulando
+      g.fillStyle = '#f4eedc';
+      g.beginPath();
+      g.ellipse(CX, CY + 12, RX * (0.5 + 0.5 * Math.min(1, total / MILL_TURNS)), 6 + 4 * Math.min(1, total / MILL_TURNS), 0, 0, Math.PI);
+      g.fill();
+      // manivela
+      const hx = CX + Math.cos(ang) * (RX - 6);
+      const hy = CY + Math.sin(ang) * (RY - 2);
+      g.strokeStyle = '#3a2410';
+      g.lineWidth = 3;
+      g.beginPath();
+      g.moveTo(CX, CY);
+      g.lineTo(hx, hy);
+      g.stroke();
+      g.fillStyle = '#c8903c';
+      g.beginPath();
+      g.arc(hx, hy, 6, 0, Math.PI * 2);
+      g.fill();
+      g.strokeStyle = '#3a2410';
+      g.lineWidth = 2;
+      g.stroke();
+      // grãos caindo e poeira branca
+      for (let i = grains.length - 1; i >= 0; i--) {
+        const gr = grains[i];
+        gr.v += 220 * dt;
+        gr.y += gr.v * dt;
+        if (gr.y > CY - 4) {
+          grains.splice(i, 1);
+          continue;
+        }
+        g.fillStyle = '#e2c25a';
+        g.fillRect(Math.round(gr.x), Math.round(gr.y), 2, 3);
+      }
+      for (let i = dust.length - 1; i >= 0; i--) {
+        const d = dust[i];
+        d.life -= dt;
+        if (d.life <= 0) {
+          dust.splice(i, 1);
+          continue;
+        }
+        d.x += d.vx * dt;
+        d.y += d.vy * dt;
+        g.fillStyle = `rgba(250,246,232,${d.life})`;
+        g.fillRect(Math.round(d.x), Math.round(d.y), 2, 2);
+      }
+      fill.style.width = `${Math.min(100, (total / MILL_TURNS) * 100)}%`;
+      if (total >= MILL_TURNS) {
+        alive = false;
+        window.removeEventListener('keydown', onKey);
+        status.textContent = text.done;
+        audio.play('pickup');
+        onSpeed(0);
+        setTimeout(() => close(), 1500);
+        return;
+      }
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
   });
 }
 

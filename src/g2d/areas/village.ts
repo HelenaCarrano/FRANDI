@@ -1,12 +1,13 @@
 import { audio } from '../../core/audio';
 import { content, fmt, type ItemId } from '../../content';
-import { playForge, playGears, playSorting } from '../../ui/minigames';
+import { playForge, playGears, playMilling, playSorting } from '../../ui/minigames';
+import { itemCanvas } from '../../ui/itemArt';
 import { OUTLINE, mulberry32 } from '../art';
 import {
   buildBarn, buildChurch, buildGatePillar, buildHouse, buildMarket, buildMill, buildSmallProps, buildSmith, buildTavern, buildWallPiece, buildWell,
   drawFan, type Sprite,
 } from '../buildings';
-import { Chick, henSprites, type PenSpec } from '../chickens';
+import { Chick, henSprites, PEN_MOUTH, type PenSpec } from '../chickens';
 import { Collision } from '../collision';
 import { GOLDEN_MORNING, cloneEnv } from '../env';
 import { paintGround } from '../ground';
@@ -52,7 +53,7 @@ const SPEC: Record<'tito' | 'brutus' | 'alvim' | 'clotilde' | 'pimenta' | 'villa
 const HEN_COLORS = ['#f4efe6', '#9a5a2c', '#3a3430', '#e0c890', '#b4472a'];
 
 export function create(ctx: AreaContext): Area2D {
-  const { ui, game, player, kit, fx, openMap, summonHen, toScreen } = ctx;
+  const { ui, game, player, kit, fx, openMap, summonHen } = ctx;
   const rng = mulberry32(1707);
   const sp = buildSmallProps();
 
@@ -79,7 +80,7 @@ export function create(ctx: AreaContext): Area2D {
     [1, P(41, -26)],
   ];
   const COOP: Pt = [494, 1060];
-  const PEN: PenSpec = { x: 564, y: 1088, r: 56, gate: { x: 626, y: 1088 } };
+  const PEN: PenSpec = { x: 564, y: 1088, r: 56, gate: { x: 614, y: 1088 } };
   const PADDOCK = { x: 1243, y: 1128, hx: 77, hy: 70 };
   const WHEAT = { x: 550, y: 673, w: 106, h: 118 };
   const GATE_Y = 428;
@@ -308,7 +309,7 @@ export function create(ctx: AreaContext): Area2D {
     shadowDx: 14,
     draw: (v, sx, sy) => {
       v.drawImage(mill.img, Math.round(sx - mill.w / 2), sy - mill.h);
-      drawFan(v, sx + mill.hub!.x, sy + mill.hub!.y, fanAngle);
+      drawFan(v, sx + mill.hub!.x, sy + mill.hub!.y, fanAngle, !millRunning());
     },
   });
   col.addRect(MILL[0] - mill.wallW / 2, MILL[1] - 20, MILL[0] + mill.wallW / 2, MILL[1]);
@@ -418,7 +419,7 @@ export function create(ctx: AreaContext): Area2D {
   ]);
   const ring: Pt[] = [];
   for (let i = 0; i <= 15; i++) {
-    const a = 0.55 + (i / 15) * (Math.PI * 2 - 1.1);
+    const a = PEN_MOUTH + (i / 15) * (Math.PI * 2 - 2 * PEN_MOUTH);
     ring.push([PEN.x + Math.cos(a) * PEN.r, PEN.y + Math.sin(a) * PEN.r]);
   }
   fence(ring);
@@ -453,7 +454,41 @@ export function create(ctx: AreaContext): Area2D {
   small(sp.sack, MILL[0] + 44, MILL[1] + 8, 6);
   small(sp.sack, MILL[0] + 52, MILL[1] + 14, 6);
   small(sp.barrow, MILL[0] + 70, MILL[1] + 26, 9);
-  props.push({ kind: 'custom', x: WHEAT.x, y: WHEAT.y + 8, shadowRx: 8, shadowRy: 3, draw: (v, sx, sy) => v.drawImage(sp.scarecrow, sx - 14, sy - 38) });
+  // espantalho: leva golpes (balança e solta palha); com a espada, uns 9 golpes derrubam o chapéu de palha
+  const SC = { x: WHEAT.x, y: WHEAT.y + 8 };
+  const scare = { hits: 0, sway: 0, swayV: 0, lastSwing: -1, stickMsg: false, hatFall: game.flag('scarecrowHat') ? 2 : -1 };
+  const hatOnGround = () => scare.hatFall >= 1 && !game.has('chapeu_palha');
+  props.push({
+    kind: 'custom',
+    x: SC.x,
+    y: SC.y,
+    shadowRx: 8,
+    shadowRy: 3,
+    draw: (v, sx, sy) => {
+      v.save();
+      v.translate(sx, sy);
+      v.rotate(scare.sway * 0.18);
+      v.drawImage(scare.hatFall < 0 ? sp.scarecrow : sp.scarecrowBare, -14, -38);
+      v.restore();
+    },
+  });
+  // o chapéu caindo e, depois, no chão
+  props.push({
+    kind: 'custom',
+    x: SC.x + 14,
+    y: SC.y + 12,
+    draw: (v, sx, sy) => {
+      const img = itemCanvas('chapeu_palha');
+      if (!img || scare.hatFall < 0 || game.has('chapeu_palha')) return;
+      const k = Math.min(1, scare.hatFall);
+      const up = (1 - k * k) * 38;
+      v.save();
+      v.translate(sx, sy - 6 - up);
+      v.rotate((1 - k) * 7);
+      v.drawImage(img, -8, -8);
+      v.restore();
+    },
+  });
   // casas
   HOMES.forEach(([, [hx, hy]], i) => {
     small(i % 2 ? sp.lumber : sp.barrel, hx + (i % 2 ? 54 : -50), hy + 2, i % 2 ? 11 : 6);
@@ -507,7 +542,7 @@ export function create(ctx: AreaContext): Area2D {
     props.push({ kind: 'tree', x, y, tree: kit.trees[Math.floor(rng() * kit.trees.length)] });
     mark(x, y, inside ? 70 : 48);
     treeCount++;
-    if (inside) col.addCircle(x, y, 7);
+    if (inside) col.addCircle(x, y, 4);
   }
   const scatter = (kind: Prop['kind'], n: number, make: () => Partial<Prop>, spacing: number, blocks = 0) => {
     let c = 0;
@@ -536,14 +571,13 @@ export function create(ctx: AreaContext): Area2D {
   const tito = lookP(SPEC.tito, 1172, 1006, { facing: 'right', watchPlayer: true, work: { every: 11 } });
   const brutus = lookP(SPEC.brutus, SMITH[0] + 46, SMITH[1] + 16, { facing: 'up', watchPlayer: true, work: { every: 9 } });
   const alvim = lookP(SPEC.alvim, MILL[0] + 40, MILL[1] + 28, { facing: 'left', watchPlayer: true, work: { every: 12 } });
-  const clotilde = lookP(SPEC.clotilde, PEN.x + 86, PEN.y + 6, { facing: 'left', watchPlayer: true, work: { every: 14 } });
+  const clotilde = lookP(SPEC.clotilde, PEN.x + 96, PEN.y + 34, { facing: 'left', watchPlayer: true, work: { every: 14 } });
   const pimenta = lookP(SPEC.pimenta, MARKET[0] + 26, MARKET[1] + 18, { facing: 'down', watchPlayer: true });
   const route = (pts: [number, number][]) => pts.map(([x, z]) => P(x, z));
-  const villagerA = lookP(SPEC.villagerA, ...route([[9, 9]])[0], { patrol: route([[9, 9], [-9, 11], [-12, -5], [8, -9]]), mutters: T.mutters.villagerA });
-  const villagerB = lookP(SPEC.villagerB, ...route([[4, 26]])[0], { patrol: route([[4, 26], [-4, 44], [2, 54], [6, 38]]), mutters: T.mutters.villagerB });
-  const kid = lookP(SPEC.kid, ...route([[-6, 6]])[0], { patrol: route([[-6, 6], [6, 4], [12, -2], [-4, -8]]), mutters: T.mutters.kid });
+  const villagerA = lookP(SPEC.villagerA, ...route([[9, 9]])[0], { patrol: route([[9, 9], [-9, 11], [-12, -5], [8, -9]]), watchPlayer: true, mutters: T.mutters.villagerA });
+  const kid = lookP(SPEC.kid, ...route([[-6, 6]])[0], { patrol: route([[-6, 6], [6, 4], [12, -2], [-4, -8]]), watchPlayer: true, mutters: T.mutters.kid });
   const talkers = [tito, brutus, alvim, clotilde, pimenta];
-  const folks = [...talkers, villagerA, villagerB, kid];
+  const folks = [...talkers, villagerA, kid];
   for (const n of talkers) col.addCircle(n.x, n.y, 6);
 
   // ---------- o cavalo ----------
@@ -732,7 +766,7 @@ export function create(ctx: AreaContext): Area2D {
     }
     const q = game.quest('shoes');
     const forge = async () => {
-      await playForge(ui, { title: s.forgeTitle, hint: s.forgeHint, button: s.forgeButton, misses: s.forgeMiss, hits: s.forgeHit });
+      await playForge(ui, { title: s.forgeTitle, hint: s.forgeHint, button: s.forgeButton, misses: s.forgeMiss, hits: s.forgeHit, cold: s.forgeCold });
       giveItem('ferradura');
       giveItem('espada');
       brutus.cheer();
@@ -767,6 +801,12 @@ export function create(ctx: AreaContext): Area2D {
     } else if (q === 'active') {
       if (millRunning()) {
         await ui.tell(m.ready.slice(0, 2), who);
+        if (!game.flag('flourMilled')) {
+          await ui.tell(m.millIntro, who);
+          await playMilling(ui, { title: m.millTitle, hint: m.millHint, done: m.millDone }, (v) => (fanBoost = v));
+          fanBoost = 0;
+          game.setFlag('flourMilled');
+        }
         giveItem('chave_trigo');
         giveItem('farinha');
         alvim.cheer();
@@ -862,6 +902,7 @@ export function create(ctx: AreaContext): Area2D {
     else await ui.tell(m.bye, who);
   }
 
+  let gateMapOpen = false;
   async function useGate() {
     const g = T.gate;
     if (game.flag('villageDone')) {
@@ -903,6 +944,26 @@ export function create(ctx: AreaContext): Area2D {
   add(alvim.x, alvim.y, 38, T.npcs.miller.prompt, () => void talkMiller(), () => !riding, alerts.alvim);
   add(clotilde.x, clotilde.y, 38, T.npcs.hens.prompt, () => void talkHens(), () => !riding, alerts.clotilde);
   add(pimenta.x, pimenta.y, 40, T.npcs.merchant.prompt, () => void talkMerchant(), () => !riding, alerts.pimenta);
+  // moradores que passeiam: só falam quando o jogador interage (sem balões soltos)
+  for (const [p, who] of [[villagerA, T.npcs.villagerA], [kid, T.npcs.kid]] as const) {
+    let next = 0;
+    interactables.push({
+      get x() {
+        return p.x;
+      },
+      get y() {
+        return p.y;
+      },
+      radius: 36,
+      prompt: who.prompt,
+      enabled: () => !riding,
+      onInteract: () => {
+        p.faceToward(player.x, player.y);
+        const line = p.mutters[next++ % p.mutters.length];
+        if (line) void ui.tell([line], who.name);
+      },
+    });
+  }
   interactables.push({
     get x() {
       return demoHen.x;
@@ -915,6 +976,32 @@ export function create(ctx: AreaContext): Area2D {
     onInteract: () => void meetHen(),
     enabled: () => horseTrusted() && !henTaken && !game.flag('henMet'),
   });
+  // testar a arma no espantalho e pegar o chapéu que cai
+  const weaponNow = (): 'sword' | 'stick' | null => (player.stowed ? null : game.has('espada') ? 'sword' : game.has('galho') ? 'stick' : null);
+  add(
+    SC.x,
+    SC.y,
+    46,
+    T.scarecrow.prompt,
+    () => {
+      player.face(Math.atan2(SC.y - player.y, SC.x - player.x));
+      meleeAttack();
+    },
+    () => !riding && weaponNow() !== null && !hatOnGround(),
+  );
+  add(
+    SC.x + 14,
+    SC.y + 12,
+    32,
+    T.scarecrow.pick,
+    () => {
+      giveItem('chapeu_palha');
+      game.setEquipped({ hat: true });
+      ui.toast(T.scarecrow.got);
+    },
+    hatOnGround,
+    hatOnGround,
+  );
   const gearsAt: Pt = [MILL[0] - 52, MILL[1] + 22];
   const gearsOn = () => game.quest('mill') === 'active' && !millRunning();
   add(gearsAt[0], gearsAt[1], 40, T.gears.prompt, () => void fixGears(), gearsOn, gearsOn);
@@ -936,6 +1023,8 @@ export function create(ctx: AreaContext): Area2D {
   // ---------- estado inicial ----------
   refresh();
   let fanSpeed = millRunning() ? 0.8 : 0;
+  /** Velocidade extra do moinho enquanto o Matheus mói a farinha na manivela. */
+  let fanBoost = 0;
   let horseBtn = '';
   let lastObjective = '';
   let objTimer = 0;
@@ -967,6 +1056,49 @@ export function create(ctx: AreaContext): Area2D {
     }
   });
 
+  const meleeAttack = () => {
+    player.weapon = weaponNow();
+    if (player.attack()) audio.play('swing');
+  };
+  const melee = {
+    attack: meleeAttack,
+    update(dt: number) {
+      player.weapon = weaponNow();
+      // balanço do espantalho (mola amortecida) e a queda do chapéu
+      scare.swayV += -scare.sway * 60 * dt;
+      scare.swayV *= Math.exp(-3.5 * dt);
+      scare.sway += scare.swayV * dt;
+      if (scare.hatFall >= 0 && scare.hatFall < 1) scare.hatFall = Math.min(1, scare.hatFall + dt * 1.6);
+      if (!player.swinging || player.swingId === scare.lastSwing || !player.weapon) return;
+      const sword = player.weapon === 'sword';
+      const reach = sword ? 49 : 41;
+      const dx = SC.x - player.x;
+      const dy = SC.y - 18 - player.y;
+      const d = Math.hypot(dx, dy);
+      if (d > reach + 12) return;
+      const cos = (dx * Math.cos(player.facing) + dy * Math.sin(player.facing)) / (d || 1);
+      if (cos < Math.cos(1.0) && d > 22) return;
+      scare.lastSwing = player.swingId;
+      audio.play('hit');
+      scare.swayV += (dx >= 0 ? 1 : -1) * (sword ? 9 : 6);
+      fx.burst(SC.x, SC.y - 22, sword ? 7 : 4, 0.45, '#e0b84a');
+      if (scare.hatFall >= 0) return;
+      if (!sword) {
+        if (!scare.stickMsg) {
+          scare.stickMsg = true;
+          ui.toast(T.scarecrow.stick);
+        }
+        return;
+      }
+      scare.hits++;
+      if (scare.hits === 5) ui.toast(T.scarecrow.loosen);
+      if (scare.hits >= 9) {
+        scare.hatFall = 0;
+        game.setFlag('scarecrowHat');
+        ui.toast(T.scarecrow.drop);
+      }
+    },
+  };
   const area: Area2D = {
     id: 'village',
     name: T.areaName,
@@ -991,6 +1123,7 @@ export function create(ctx: AreaContext): Area2D {
     })(),
     torchLit: () => false,
     isPath: (x, y) => ground.isPath(x, y),
+    melee,
     drawables(out) {
       for (const b of butterflies) out.push(b);
       for (const n of folks) out.push(n.drawable());
@@ -1016,13 +1149,20 @@ export function create(ctx: AreaContext): Area2D {
       }
       horse.update(dt, player, col);
 
+      // portão aberto: cruzar a soleira abre o Mapa do Reino (o que há além do portão está no mapa)
+      if (game.flag('villageDone') && Math.abs(pl.x - OX) < GATE_HALF && pl.y < GATE_Y - 14 && !ui.inDialog && !gateMapOpen) {
+        gateMapOpen = true;
+        player.place(OX, GATE_Y + 22, 'down');
+        void openMap().finally(() => (gateMapOpen = false));
+      }
+
       // moinho
-      fanSpeed += ((millRunning() ? 0.8 : 0) - fanSpeed) * (1 - Math.exp(-0.8 * dt));
+      fanSpeed += ((millRunning() ? 0.8 + fanBoost * 2.4 : 0) - fanSpeed) * (1 - Math.exp(-0.8 * dt));
       fanAngle += dt * fanSpeed;
       gateOpen += ((game.flag('villageDone') ? 1 : 0) - gateOpen) * (1 - Math.exp(-3 * dt));
 
       // galinhas: fogem do Matheus (e mais se ele vem a cavalo)
-      const scare = 38 + Math.min(player.speed, 140) * 0.35 + (riding ? 14 : 0);
+      const scare = 36 + Math.min(player.speed, 140) * 0.25 + (riding ? 10 : 0);
       for (const c of hens) c.update(dt, player, scare, col);
       if (!henTaken && !game.flag('henMet') && horseTrusted()) demoHen.update(dt, player, 0, col);
       const n = pennedCount();
@@ -1030,17 +1170,6 @@ export function create(ctx: AreaContext): Area2D {
         lastPenned = n;
         if (game.quest('hens') === 'active') ui.toast(fmt(T.hens.penToast, { n, total: HEN_NAMES }));
         refresh();
-      }
-
-      // balões de fala dos moradores de fundo
-      for (const [i, v] of [villagerA, kid].entries()) {
-        const d = Math.hypot(v.x - pl.x, v.y - pl.y);
-        const text = d < 70 && !ui.inDialog && v.mutters.length ? v.mutters[Math.floor(t / 6 + i * 3) % v.mutters.length] : null;
-        if (!text) ui.bubble('v' + i, null);
-        else {
-          const s = toScreen(v.x, v.y - (v === kid ? 26 : 38));
-          ui.bubble('v' + i, text, s.x, s.y);
-        }
       }
 
       // botão do cavalo
@@ -1076,9 +1205,8 @@ export function create(ctx: AreaContext): Area2D {
       player.riding = false;
       ui.setProgress(null);
       ui.setHorseButton(null);
-      ui.clearBubbles();
     },
-    debug: { horse, hens, wild, tito, brutus, alvim, clotilde, pimenta, mount, dismount },
+    debug: { scare, horse, hens, wild, tito, brutus, alvim, clotilde, pimenta, mount, dismount },
   };
   return area;
 }

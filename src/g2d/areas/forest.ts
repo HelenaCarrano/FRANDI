@@ -130,10 +130,10 @@ export function create(ctx: AreaContext): Area2D {
     const x = 16 + rng() * (W - 32);
     const y = 16 + rng() * (H - 32);
     const d = grid.distance(x, y);
-    if (d < 56 || nearArch(x, y) || taken(x, y, 50)) continue;
+    if (d < 68 || nearArch(x, y) || taken(x, y, 50)) continue;
     props.push({ kind: 'tree', x, y, tree: kit.trees[Math.floor(rng() * kit.trees.length)] });
     mark(x, y, 50);
-    if (d < 130) col.addCircle(x, y, 7);
+    if (d < 130) col.addCircle(x, y, 4);
   }
   const scatter = (kind: Prop['kind'], n: number, make: () => Partial<Prop>, minD: number, maxD: number, spacing: number) => {
     let t = 0;

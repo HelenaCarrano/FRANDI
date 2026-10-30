@@ -381,10 +381,11 @@ export function buildMill(): Sprite {
 }
 
 /** Desenha as 4 pás do moinho girando em torno de (hx, hy). */
-export function drawFan(v: CanvasRenderingContext2D, hx: number, hy: number, angle: number) {
+export function drawFan(v: CanvasRenderingContext2D, hx: number, hy: number, angle: number, broken = false) {
   const L = 42;
   for (let b = 0; b < 4; b++) {
-    const a = angle + (b * Math.PI) / 2;
+    // estragado: uma pá pende torta, outra sem vela, e o conjunto não gira
+    const a = broken ? (b * Math.PI) / 2 + 0.25 + (b === 1 ? 0.55 : b === 3 ? -0.3 : 0) : angle + (b * Math.PI) / 2;
     const dx = Math.cos(a);
     const dy = Math.sin(a);
     for (let i = 3; i < L; i++) {
@@ -394,7 +395,7 @@ export function drawFan(v: CanvasRenderingContext2D, hx: number, hy: number, ang
       v.fillRect(x - 1, y - 1, 3, 3);
       v.fillStyle = '#8c5a38';
       v.fillRect(x, y, 1, 1);
-      if (i > 12) {
+      if (i > 12 && !(broken && (b === 2 || (b === 3 && i > 24)))) {
         // a vela de pano
         const nx = -dy;
         const ny = dx;
@@ -488,6 +489,7 @@ export interface SmallProps {
   flag: HTMLCanvasElement;
   trough: HTMLCanvasElement;
   scarecrow: HTMLCanvasElement;
+  scarecrowBare: HTMLCanvasElement;
   coop: Sprite;
 }
 
@@ -588,7 +590,7 @@ export function buildSmallProps(): SmallProps {
     fill(ctx, '#6a3e26', 3, 9, 3, 3);
     fill(ctx, '#6a3e26', 24, 9, 3, 3);
   });
-  const scarecrow = mk(28, 40, (ctx) => {
+  const scarecrowBody = (ctx: CanvasRenderingContext2D, hat: boolean) => {
     fill(ctx, '#6a3e26', 13, 10, 3, 30);
     fill(ctx, '#6a3e26', 2, 14, 25, 3);
     fill(ctx, '#c8503a', 8, 14, 13, 12);
@@ -596,11 +598,20 @@ export function buildSmallProps(): SmallProps {
     fill(ctx, '#e8c898', 11, 2, 8, 8);
     fill(ctx, '#1c1210', 13, 5, 1, 2);
     fill(ctx, '#1c1210', 17, 5, 1, 2);
-    fill(ctx, '#d9b45a', 7, 0, 16, 3);
-    fill(ctx, '#d9b45a', 11, -1, 8, 2);
+    if (hat) {
+      fill(ctx, '#d9b45a', 7, 0, 16, 3);
+      fill(ctx, '#d9b45a', 11, -1, 8, 2);
+    } else {
+      // sem o chapéu: palha desgrenhada no alto da cabeça
+      fill(ctx, '#e0b84a', 10, 1, 10, 2);
+      fill(ctx, '#e0b84a', 12, 0, 1, 2);
+      fill(ctx, '#e0b84a', 16, 0, 1, 2);
+    }
     for (const x of [1, 24]) fill(ctx, '#e0b84a', x, 16, 3, 5);
-  });
+  };
+  const scarecrow = mk(28, 40, (ctx) => scarecrowBody(ctx, true));
+  const scarecrowBare = mk(28, 40, (ctx) => scarecrowBody(ctx, false));
   // galinheiro: casinha de brinquedo com poleiro
   const coop = buildBuilding({ w: 36, wallH: 22, roofH: 18, over: 3, wall: WOOD, wallKind: 'wood', roof: ROOF_RED, door: { w: 10, h: 12, dark: true }, seed: 51, inset: 6 });
-  return { barrel, crate, crateSmall, sack, hay, lumber, barrow, bucket, rack, flag, trough, scarecrow, coop };
+  return { barrel, crate, crateSmall, sack, hay, lumber, barrow, bucket, rack, flag, trough, scarecrow, scarecrowBare, coop };
 }

@@ -181,6 +181,45 @@ const ART: Record<string, Art> = {
     ],
   },
 
+  ferradura: {
+    pal: { o: O, m: '#aab2c0', h: '#e4e9f2', d: '#6a7488', k: '#3a4254' },
+    rows: [
+      '',
+      '',
+      '...oooooooooo...',
+      '..ohhhhhhhhhho..',
+      '.ohmmmmmmmmmmmo.',
+      '.ohmmmmmmmmmmdo.',
+      'ohmmmoooooommmdo',
+      'ohmmoo....oommdo',
+      'ohmmo......ommdo',
+      'ohokmo....ommkdo',
+      'ohmmmo....ommmdo',
+      'ohmmmo....ommmdo',
+      'ohmmko....okmmdo',
+      '.oddo......oddo.',
+      '..oo........oo..',
+    ],
+  },
+
+  chapeu_palha: {
+    pal: { o: O, s: '#e0b84a', h: '#f6dc84', d: '#a8802a', b: '#b8442c', k: '#7a5a1c' },
+    rows: [
+      '',
+      '',
+      '.....oooooo.....',
+      '....ohhssssoo...',
+      '...ohhsssssddo..',
+      '...osssssssddo..',
+      '...obbbbbbbbbo..',
+      '..oohsssssssdoo.',
+      '.ohhsssskssssddo',
+      'ohsshsssssssksdo',
+      'oddddddddddddddo',
+      '.oooooooooooooo.',
+    ],
+  },
+
   // ----- cestos -----
   provisoes: {
     pal: { o: O, b: '#b8763a', h: '#e0a05c', d: '#80501f', s: '#d8b070', k: '#4a3018' },
@@ -238,6 +277,13 @@ const ART: Record<string, Art> = {
 };
 
 const cache = new Map<string, string>();
+const canvases = new Map<string, HTMLCanvasElement>();
+
+/** Canvas 16x16 do item (para desenhar no mundo), ou `null` se não houver desenho. */
+export function itemCanvas(id: string): HTMLCanvasElement | null {
+  itemArt(id);
+  return canvases.get(id) ?? null;
+}
 
 /** Imagem (data URL) do item ou cesto com esse id, ou `null` se não houver desenho. */
 export function itemArt(id: string): string | null {
@@ -260,6 +306,7 @@ export function itemArt(id: string): string | null {
       ctx.fillRect(x, y + yOff, 1, 1);
     }
   });
+  canvases.set(id, c);
   const url = c.toDataURL();
   cache.set(id, url);
   return url;

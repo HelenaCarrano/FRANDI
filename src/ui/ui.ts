@@ -1,6 +1,7 @@
 import { content } from '../content';
 import { debug } from '../core/quality';
 import { audio } from '../core/audio';
+import { itemArt } from './itemArt';
 
 /**
  * Interface HTML sobre o canvas: tela inicial (continuar/recomeçar), nome da área, dica de
@@ -858,7 +859,9 @@ export class UI {
     this.inventory.querySelectorAll('.slot').forEach((n) => n.remove());
     for (const e of entries) {
       const slot = el('button', 'slot', this.inventory);
-      slot.textContent = e.icon;
+      const art = itemArt(e.id);
+      if (art) slot.innerHTML = `<img class="slot-art" src="${art}" alt="">`;
+      else slot.textContent = e.icon;
       slot.setAttribute('aria-label', e.name);
       if (e.count > 1) el('span', 'slot-count', slot).textContent = String(e.count);
       if (e.hotkey) el('span', 'slot-key', slot).textContent = e.hotkey;
@@ -870,7 +873,10 @@ export class UI {
 
   private showPopover(e: InventoryEntry) {
     this.popover.replaceChildren();
-    el('div', 'pop-title', this.popover).textContent = `${e.icon} ${e.name}`;
+    const popTitle = el('div', 'pop-title', this.popover);
+    const popArt = itemArt(e.id);
+    if (popArt) popTitle.innerHTML = `<img class="slot-art small" src="${popArt}" alt=""> ${e.name}`;
+    else popTitle.textContent = `${e.icon} ${e.name}`;
     el('div', 'pop-desc', this.popover).textContent = e.desc;
     el('div', 'pop-used', this.popover).textContent = content.ui.usedIn.replace('{where}', e.usedIn);
     this.popover.hidden = false;

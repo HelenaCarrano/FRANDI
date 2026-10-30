@@ -185,7 +185,7 @@ export class Horse {
 
   drawable(): Drawable {
     return {
-      y: this.behavior.kind === 'ridden' ? this.y - 0.5 : this.y,
+      y: this.behavior.kind === 'ridden' ? this.y - 1.5 : this.y,
       shadow: (v, cx, cy) => {
         v.beginPath();
         v.ellipse(Math.round(this.x - cx), Math.round(this.y - cy), 17, 4, 0, 0, Math.PI * 2);
