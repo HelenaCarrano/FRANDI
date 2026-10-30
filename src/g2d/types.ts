@@ -74,6 +74,8 @@ export interface Env {
   overhang: boolean;
   /** Vinheta mais forte em lugares fechados. */
   vignette: number;
+  /** 0..1: véu preto sobre a tela toda (transições). */
+  blackout?: number;
 }
 
 export interface Entry {

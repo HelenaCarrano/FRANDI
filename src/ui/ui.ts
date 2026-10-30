@@ -15,6 +15,12 @@ export interface InventoryEntry {
   desc: string;
   usedIn: string;
   count: number;
+  /** Tecla de atalho mostrada no cantinho do slot (ex.: o graveto na tecla 1). */
+  hotkey?: string;
+  /** Realçado quando está em uso (na mão). */
+  active?: boolean;
+  /** Se existir, clicar no slot executa isto em vez de abrir a descrição. */
+  onUse?: () => void;
 }
 
 export interface ShopEntry {
@@ -92,7 +98,7 @@ export interface ShopConfig {
 }
 
 const TYPE_SPEED = 38; // caracteres por segundo
-const FADE_MS = 550; // mesma duração da transição de .fade-overlay em hud.css
+const FADE_MS = 900; // mesma duração da transição de .fade-overlay em hud.css
 
 export class UI {
   private readonly root: HTMLDivElement;
@@ -580,6 +586,9 @@ export class UI {
         p.textContent = t;
         return p;
       });
+      // pontinhos de progresso (só quando há mais de uma fala)
+      const dots = paras.length > 1 ? el('div', 'narrate-dots', box) : null;
+      const dotEls = dots ? paras.map(() => el('i', '', dots)) : [];
       const more = el('div', 'narrate-more', box);
       more.textContent = this.isTouch ? content.controls.dialogContinue : 'E / Espaço ▸';
       let shown = 0;
@@ -590,6 +599,7 @@ export class UI {
           if (shown > 0) audio.play('tick');
           if (shown > 0) paras[shown - 1].classList.remove('show');
           paras[shown++].classList.add('show');
+          dotEls.forEach((d, i) => d.classList.toggle('on', i === shown - 1));
           return;
         }
         leaving = true;
@@ -659,8 +669,8 @@ export class UI {
           if (!this.inDialog) this.onCombat(kind);
         });
       };
-      mk('attack', this.isTouch ? '⚔️' : '⚔️ J', 'attack');
-      mk('dodge', this.isTouch ? '💨' : '💨 K', 'dodge');
+      mk('attack', this.isTouch ? '⚔️' : '⚔️ Clique', 'attack');
+      mk('dodge', this.isTouch ? '💨' : '💨 Ctrl', 'dodge');
     }
     this.heartsEl.hidden = false;
     this.combatEl!.hidden = false;
@@ -851,8 +861,10 @@ export class UI {
       slot.textContent = e.icon;
       slot.setAttribute('aria-label', e.name);
       if (e.count > 1) el('span', 'slot-count', slot).textContent = String(e.count);
+      if (e.hotkey) el('span', 'slot-key', slot).textContent = e.hotkey;
+      if (e.hotkey) slot.classList.toggle('active', !!e.active);
       slot.addEventListener('pointerdown', (ev) => ev.stopPropagation());
-      slot.addEventListener('click', () => this.showPopover(e));
+      slot.addEventListener('click', () => (e.onUse ? e.onUse() : this.showPopover(e)));
     }
   }
 

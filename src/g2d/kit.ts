@@ -12,6 +12,8 @@ import {
   buildTree,
   drawChicken,
   drawMatheus,
+  drawMatheusLying,
+  drawMatheusSitting,
   makeCanvas,
   mulberry32,
   type Dir,
@@ -32,6 +34,8 @@ export interface Kit {
   /** Matheus: chave `${dir}${frame}${b}` com dir = down | up | side | left. */
   matheus: Record<string, HTMLCanvasElement>;
   chicken: HTMLCanvasElement[];
+  /** Poses da abertura: deitado de olhos fechados, deitado de olhos abertos, sentado. */
+  poses: { lying: HTMLCanvasElement; lyingOpen: HTMLCanvasElement; sitting: HTMLCanvasElement };
   overL: HTMLCanvasElement;
   overR: HTMLCanvasElement;
   leafCols: string[];
@@ -85,6 +89,7 @@ export function buildKit(): Kit {
     stones,
     matheus,
     chicken: [drawChicken(0), drawChicken(1)],
+    poses: { lying: drawMatheusLying(false), lyingOpen: drawMatheusLying(true), sitting: drawMatheusSitting() },
     overL: buildOverhang(rng, 104, 56, leafCols),
     overR: buildOverhang(rng, 84, 50, leafCols),
     leafCols,

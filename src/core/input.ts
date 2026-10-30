@@ -16,7 +16,7 @@ const KEY_MAP: Record<string, 'up' | 'down' | 'left' | 'right'> = {
 
 const ACTION_KEYS = new Set(['KeyE', 'Space', 'Enter']);
 const ATTACK_KEYS = new Set(['KeyJ', 'KeyF']);
-const DODGE_KEYS = new Set(['KeyK']);
+const DODGE_KEYS = new Set(['KeyK', 'ControlLeft', 'ControlRight']);
 const RUN_KEYS = new Set(['ShiftLeft', 'ShiftRight']);
 const JOYSTICK_RADIUS = 55;
 /** Intensidade do teclado sem Shift: o jogador interpreta como andar (0.75 = limite entre andar e correr). */
@@ -185,6 +185,8 @@ export class Input {
 
   private onPointerDown = (e: PointerEvent) => {
     if (this.pinchDist > 0) return;
+    // mouse: o clique esquerdo é o golpe (a câmera 2D não gira)
+    if (e.pointerType === 'mouse' && e.button === 0) this.attackQueued = true;
     // mouse: arrastar gira a câmera (andar é pelo teclado). Toque: lado esquerdo anda, lado direito gira.
     const look = e.pointerType === 'mouse' ? true : e.clientX > window.innerWidth * 0.5;
     if (look) {

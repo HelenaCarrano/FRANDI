@@ -66,18 +66,153 @@ const ICON: Record<PlaceId, string> = {
   castle: `<path d="M-60 30 v-60 h20 v-14 h12 v14 h16 v-30 l14 -14 l14 14 v30 h16 v-14 h12 v14 h20 v60z"/><path d="M-12 30 v-26 q12 -16 24 0 v26" class="door"/><path d="M0 -74 v-26 l22 8 l-22 8" class="flag"/>`,
 };
 
-/** Cantinhos rabiscados do pergaminho: montanhas, pinheiros, ondas, uma galinha e um cavalinho. */
-const DOODLES = `
-  <g class="doodle">
-    <path d="M60 140 l40 -70 l30 44 l24 -30 l46 56z"/><path d="M130 114 l12 -16 l9 12" />
-    <path d="M840 150 l42 -76 l32 48 l24 -32 l40 60z"/><path d="M886 76 l-10 18 l12 4"/>
-    <path d="M70 470 l16 -34 l16 34z M96 480 l14 -30 l14 30z M52 496 l12 -26 l12 26z"/>
-    <path d="M880 500 l16 -34 l16 34z M906 512 l14 -30 l14 30z M860 520 l12 -26 l12 26z"/>
-    <path d="M40 660 q16 -14 32 0 t32 0 t32 0 M60 684 q16 -14 32 0 t32 0"/>
-    <path d="M760 668 q14 -12 28 0 t28 0 t28 0"/>
-    <path d="M590 620 q-4 -14 8 -16 q12 -2 14 8 q6 -4 12 2 l-4 8 q-6 12 -22 10 q-10 -2 -8 -12z M610 604 l4 -8 l4 6" />
-    <path d="M388 636 q10 -14 26 -10 q10 -10 22 -4 q8 8 -2 14 l-4 14 m-14 -4 l-2 14 m-14 -8 l0 14 m-14 -10 l-4 12 m52 -34 l8 -4"/>
-  </g>`;
+// ---------- terreno: ilha com costa, rios, lagos, montanhas, bosques e colinas ----------
+function mulberry(seed: number) {
+  let a = seed;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const COAST_C: [number, number] = [500, 372];
+/** Raio da costa na direção `a`: uma elipse com baías e pontas. */
+function coastR(a: number): [number, number] {
+  const k = 1 + 0.07 * Math.sin(3 * a + 1) + 0.05 * Math.sin(5 * a + 2) + 0.03 * Math.sin(9 * a);
+  return [440 * k, 318 * k];
+}
+const inLand = (x: number, y: number, margin = 1) => {
+  const dx = x - COAST_C[0];
+  const dy = y - COAST_C[1];
+  const [rx, ry] = coastR(Math.atan2(dy, dx));
+  return (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) < margin * margin;
+};
+
+function smoothClosed(pts: readonly [number, number][]): string {
+  const n = pts.length;
+  let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < n; i++) {
+    const p0 = pts[(i - 1 + n) % n];
+    const p1 = pts[i];
+    const p2 = pts[(i + 1) % n];
+    const p3 = pts[(i + 2) % n];
+    d += ` C${(p1[0] + (p2[0] - p0[0]) / 6).toFixed(1)} ${(p1[1] + (p2[1] - p0[1]) / 6).toFixed(1)} ${(p2[0] - (p3[0] - p1[0]) / 6).toFixed(1)} ${(p2[1] - (p3[1] - p1[1]) / 6).toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
+  return d + 'z';
+}
+
+function coastPath(): string {
+  const rnd = mulberry(5);
+  const pts: [number, number][] = [];
+  const N = 40;
+  for (let i = 0; i < N; i++) {
+    const a = (i / N) * Math.PI * 2;
+    const [rx, ry] = coastR(a);
+    const j = 1 + (rnd() - 0.5) * 0.07;
+    pts.push([Math.max(52, Math.min(948, COAST_C[0] + Math.cos(a) * rx * j)), Math.max(52, Math.min(668, COAST_C[1] + Math.sin(a) * ry * j))]);
+  }
+  return smoothClosed(pts);
+}
+
+/** Pontos ao longo de todas as estradas, para os enfeites não cobrirem o caminho. */
+function roadSamples(): [number, number][] {
+  const out: [number, number][] = [];
+  for (const id of PLACES) {
+    const pts = ROAD[id];
+    for (let i = 0; i < pts.length - 1; i++) {
+      for (let t = 0; t < 1; t += 0.1) out.push([pts[i][0] + (pts[i + 1][0] - pts[i][0]) * t, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * t]);
+    }
+  }
+  return out;
+}
+
+const RIVER_A: [number, number][] = [[862, 175], [842, 240], [804, 300], [832, 380], [786, 450], [804, 540], [762, 620], [792, 690]];
+const RIVER_B: [number, number][] = [[88, 440], [170, 502], [262, 540], [302, 602], [292, 692]];
+const LAKES: [number, number, number, number][] = [[690, 505, 46, 24], [112, 596, 40, 22]];
+
+function terrainSvg(): string {
+  const rnd = mulberry(11);
+  const roads = roadSamples();
+  const free = (x: number, y: number, r = 26) => {
+    for (const id of PLACES) if (Math.hypot(x - POS[id][0], y - POS[id][1]) < (id === 'castle' ? 112 : 92)) return false;
+    if (Math.hypot(x - HUB[0], y - HUB[1]) < 40) return false;
+    for (const [rx, ry] of roads) if (Math.hypot(x - rx, y - ry) < r) return false;
+    for (const [lx, ly, rx, ry] of LAKES) if (((x - lx) / (rx + 18)) ** 2 + ((y - ly) / (ry + 18)) ** 2 < 1) return false;
+    for (const rv of [RIVER_A, RIVER_B]) for (const [qx, qy] of rv) if (Math.hypot(x - qx, y - qy) < 22) return false;
+    return true;
+  };
+  const coast = coastPath();
+  let out = '';
+  // mar: ondinhas na água em volta da ilha e um barquinho
+  let waves = '';
+  for (let i = 0; i < 90; i++) {
+    const x = 50 + rnd() * 900;
+    const y = 50 + rnd() * 620;
+    if (inLand(x, y, 1.06)) continue;
+    waves += `<path d="M${x.toFixed(0)} ${y.toFixed(0)} q6 -6 12 0 t12 0"/>`;
+  }
+  out += `<g class="sea-waves">${waves}</g>`;
+  out += `<g class="ship" transform="translate(84 650)"><path d="M-16 0 h32 l-8 10 h-16z"/><path d="M0 0 v-30 M0 -28 l16 22 h-16 M-2 -22 l-12 16 h12"/></g>`;
+  // terra com contorno duplo (como costa desenhada)
+  out += `<path class="shore" d="${coast}"/><path class="land" d="${coast}"/>`;
+  // lagos e rios
+  for (const [x, y, rx, ry] of LAKES) out += `<ellipse class="lake" cx="${x}" cy="${y}" rx="${rx}" ry="${ry}"/><path class="water-line" d="M${x - rx * 0.5} ${y} q6 -4 12 0 t12 0"/>`;
+  out += `<path class="river-edge" d="${smooth(RIVER_A)}"/><path class="river" d="${smooth(RIVER_A)}"/>`;
+  out += `<path class="river-edge" d="${smooth(RIVER_B)}"/><path class="river" d="${smooth(RIVER_B)}"/>`;
+  // colinas
+  let hills = '';
+  for (let i = 0; i < 60; i++) {
+    const x = 70 + rnd() * 860;
+    const y = 70 + rnd() * 590;
+    if (!inLand(x, y, 0.93) || !free(x, y, 32)) continue;
+    hills += `<path d="M${(x - 13).toFixed(0)} ${y.toFixed(0)} q13 -15 26 0"/>`;
+  }
+  out += `<g class="hills">${hills}</g>`;
+  // plantações perto do vinhedo
+  const fields = [[790, 275], [832, 258], [826, 305], [770, 318]];
+  out += `<g class="fields">${fields.map(([x, y], i) => `<path d="M${x} ${y} l34 -${6 + i} l8 24 l-34 ${6 + i}z"/><path d="M${x + 6} ${y + 2} l30 -${5 + i} M${x + 9} ${y + 10} l30 -${5 + i} M${x + 12} ${y + 18} l30 -${5 + i}" class="furrow"/>`).join('')}</g>`;
+  // bosques de pinheirinhos
+  const tree = (x: number, y: number, h: number) =>
+    `<path d="M${x.toFixed(0)} ${(y - h).toFixed(0)} l${(h * 0.42).toFixed(1)} ${(h * 0.8).toFixed(1)} h${(-h * 0.84).toFixed(1)}z"/><path d="M${x.toFixed(0)} ${(y - h * 0.5).toFixed(0)} l${(h * 0.5).toFixed(1)} ${(h * 0.7).toFixed(1)} h${(-h).toFixed(1)}z" class="tree2"/><path d="M${x.toFixed(0)} ${(y + h * 0.2).toFixed(0)} v${(h * 0.28).toFixed(1)}" class="trunk"/>`;
+  let trees = '';
+  const groves: [number, number, number, number][] = [[388, 500, 52, 15], [612, 516, 52, 15], [376, 420, 44, 11], [630, 420, 44, 11], [236, 610, 56, 14], [772, 622, 50, 12], [388, 70, 40, 9], [640, 62, 40, 9], [92, 380, 30, 8]];
+  for (const [gx, gy, gr, n] of groves) {
+    let placed = 0;
+    for (let i = 0; i < n * 4 && placed < n; i++) {
+      const x = gx + (rnd() - 0.5) * gr * 2;
+      const y = gy + (rnd() - 0.5) * gr * 1.4;
+      if (!inLand(x, y, 0.95) || !free(x, y, 24)) continue;
+      trees += tree(x, y, 11 + rnd() * 6);
+      placed++;
+    }
+  }
+  out += `<g class="trees">${trees}</g>`;
+  // montanhas com face clara e face escura
+  const peak = (x: number, y: number, w: number, h: number) =>
+    `<path class="m-l" d="M${x.toFixed(0)} ${y.toFixed(0)} L${(x - w / 2).toFixed(0)} ${(y + h).toFixed(0)} L${(x + w * 0.05).toFixed(0)} ${(y + h).toFixed(0)}z"/><path class="m-d" d="M${x.toFixed(0)} ${y.toFixed(0)} L${(x + w * 0.05).toFixed(0)} ${(y + h).toFixed(0)} L${(x + w / 2).toFixed(0)} ${(y + h).toFixed(0)}z"/><path class="m-s" d="M${x.toFixed(0)} ${y.toFixed(0)} l${(-w * 0.12).toFixed(1)} ${(h * 0.26).toFixed(1)} l${(w * 0.1).toFixed(1)} ${(-h * 0.06).toFixed(1)} l${(w * 0.07).toFixed(1)} ${(h * 0.12).toFixed(1)}"/>`;
+  let mts = '';
+  const ranges: [number, number, number][] = [[138, 142, 6], [862, 136, 6], [120, 262, 3], [884, 440, 5], [346, 84, 4], [654, 80, 4]];
+  for (const [mx, my, n] of ranges) {
+    for (let i = 0; i < n; i++) {
+      const x = mx + (rnd() - 0.5) * 100;
+      const y = my + (rnd() - 0.5) * 50;
+      if (!inLand(x, y, 0.95) || !free(x, y, 22)) continue;
+      mts += peak(x, y, 40 + rnd() * 22, 34 + rnd() * 22);
+    }
+  }
+  out += `<g class="mountains">${mts}</g>`;
+  out += `<text class="region" x="138" y="226" text-anchor="middle">Montes Cinzentos</text>`;
+  out += `<text class="region" x="690" y="548" text-anchor="middle">Lago Espelho</text>`;
+  out += `<text class="region" x="410" y="560" text-anchor="middle" transform="rotate(-4 410 560)">Bosque Antigo</text>`;
+  return out;
+}
+
+function scaleBar(x: number, y: number) {
+  return `<g class="doodle" transform="translate(${x} ${y})"><path d="M0 0 h120 M0 -6 v12 M60 -4 v8 M120 -6 v12"/><text class="compass-n" x="60" y="26" text-anchor="middle" style="font-size:16px">1 légua</text></g>`;
+}
 
 function compass(x: number, y: number) {
   return `<g class="doodle" transform="translate(${x} ${y})"><circle r="40" fill="none"/><path d="M0 -52 l8 44 l44 8 l-44 8 l-8 44 l-8 -44 l-44 -8 l44 -8z" class="star"/><text y="-60" text-anchor="middle" class="compass-n">N</text></g>`;
@@ -104,7 +239,9 @@ const doneOf = (id: PlaceId, game: GameState) => (id === 'village' ? game.flag('
 export function openKingdomMap(ui: UI, o: MapOptions): Promise<AreaId | null> {
   return ui.modal<AreaId | null>('kingdom', (box, close) => {
     const { game } = o;
+    let stopZoom = () => {};
     const finish = (v: AreaId | null) => {
+      stopZoom();
       window.removeEventListener('keydown', onKey);
       close(v);
     };
@@ -136,15 +273,17 @@ export function openKingdomMap(ui: UI, o: MapOptions): Promise<AreaId | null> {
     }).join('');
     svg.innerHTML = `
       <defs>
+        <radialGradient id="sea" cx="50%" cy="50%" r="75%"><stop offset="0" stop-color="#bcd2c4"/><stop offset="1" stop-color="#8fb0a8"/></radialGradient>
         <radialGradient id="parch" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="#f1e1b4"/><stop offset="0.7" stop-color="#dcc088"/><stop offset="1" stop-color="#b38b4f"/></radialGradient>
         <filter id="grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0.25  0 0 0 0 0.16  0 0 0 0 0.05  0 0 0 0.35 0"/></filter>
         <filter id="wobble"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="9" result="w"/><feDisplacementMap in="SourceGraphic" in2="w" scale="3"/></filter>
       </defs>
-      <rect width="1000" height="720" rx="26" fill="url(#parch)"/>
-      <rect width="1000" height="720" rx="26" filter="url(#grain)"/>
+      <rect width="1000" height="720" rx="26" fill="url(#sea)"/>
+      <g filter="url(#wobble)">${terrainSvg()}</g>
+      <rect width="1000" height="720" rx="26" filter="url(#grain)" style="pointer-events:none"/>
       <rect x="18" y="18" width="964" height="684" rx="18" fill="none" class="frame"/>
       <rect x="30" y="30" width="940" height="660" rx="12" fill="none" class="frame thin"/>
-      <g filter="url(#wobble)">${DOODLES}${compass(900, 610)}</g>
+      <g filter="url(#wobble)">${compass(900, 620)}${scaleBar(70, 660)}</g>
       <g class="roads" filter="url(#wobble)">${roads}</g>
       <circle class="hub" cx="${HUB[0]}" cy="${HUB[1]}" r="9"/>
       <g class="places" filter="url(#wobble)">${places}</g>
@@ -238,6 +377,122 @@ export function openKingdomMap(ui: UI, o: MapOptions): Promise<AreaId | null> {
       };
       requestAnimationFrame(step);
     };
+
+    // ---------- zoom e arrastar (roda do mouse, pinça, arrastar, botões + e −) ----------
+    const FULL_W = 1000;
+    const FULL_H = 720;
+    const view = { x: 0, y: 0, z: 1 };
+    const applyView = () => {
+      view.z = Math.max(1, Math.min(4.5, view.z));
+      const w = FULL_W / view.z;
+      const h = FULL_H / view.z;
+      view.x = Math.max(0, Math.min(FULL_W - w, view.x));
+      view.y = Math.max(0, Math.min(FULL_H - h, view.y));
+      svg.setAttribute('viewBox', `${view.x.toFixed(1)} ${view.y.toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}`);
+      svg.classList.toggle('zoomed', view.z > 1.05);
+    };
+    const toSvg = (cx: number, cy: number) => {
+      const r = svg.getBoundingClientRect();
+      return { x: view.x + ((cx - r.left) / r.width) * (FULL_W / view.z), y: view.y + ((cy - r.top) / r.height) * (FULL_H / view.z) };
+    };
+    /** Troca o zoom mantendo o ponto (cx, cy) da tela parado. */
+    const zoomAt = (cx: number, cy: number, factor: number) => {
+      const before = toSvg(cx, cy);
+      view.z = Math.max(1, Math.min(4.5, view.z * factor));
+      const r = svg.getBoundingClientRect();
+      view.x = before.x - ((cx - r.left) / r.width) * (FULL_W / view.z);
+      view.y = before.y - ((cy - r.top) / r.height) * (FULL_H / view.z);
+      applyView();
+    };
+    const zoomCenter = (factor: number) => {
+      const r = svg.getBoundingClientRect();
+      zoomAt(r.left + r.width / 2, r.top + r.height / 2, factor);
+    };
+    svg.addEventListener(
+      'wheel',
+      (e) => {
+        e.preventDefault();
+        zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.18 : 1 / 1.18);
+      },
+      { passive: false },
+    );
+    const ptrs = new Map<number, { x: number; y: number }>();
+    let pinchDist = 0;
+    let moved = false;
+    svg.addEventListener('pointerdown', (e) => {
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      moved = false;
+      if (ptrs.size === 2) {
+        const [a, b] = [...ptrs.values()];
+        pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
+      }
+    });
+    const onPtrMove = (e: PointerEvent) => {
+      const prev = ptrs.get(e.pointerId);
+      if (!prev || traveling) return;
+      if (ptrs.size === 2) {
+        ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        const [a, b] = [...ptrs.values()];
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (pinchDist > 0) zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, d / pinchDist);
+        pinchDist = d;
+        moved = true;
+        return;
+      }
+      const dx = e.clientX - prev.x;
+      const dy = e.clientY - prev.y;
+      if (!moved && Math.hypot(dx, dy) < 4) return;
+      moved = true;
+      const r = svg.getBoundingClientRect();
+      view.x -= (dx / r.width) * (FULL_W / view.z);
+      view.y -= (dy / r.height) * (FULL_H / view.z);
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      applyView();
+    };
+    const onPtrEnd = (e: PointerEvent) => {
+      ptrs.delete(e.pointerId);
+      pinchDist = 0;
+    };
+    window.addEventListener('pointermove', onPtrMove);
+    window.addEventListener('pointerup', onPtrEnd);
+    window.addEventListener('pointercancel', onPtrEnd);
+    stopZoom = () => {
+      window.removeEventListener('pointermove', onPtrMove);
+      window.removeEventListener('pointerup', onPtrEnd);
+      window.removeEventListener('pointercancel', onPtrEnd);
+    };
+    // depois de arrastar, o clique não escolhe um lugar sem querer
+    svg.addEventListener(
+      'click',
+      (e) => {
+        if (moved) {
+          e.stopPropagation();
+          moved = false;
+        }
+      },
+      true,
+    );
+    svg.addEventListener('dblclick', (e) => zoomAt(e.clientX, e.clientY, 1.8));
+    const zoomBox = document.createElement('div');
+    zoomBox.className = 'map-zoom';
+    const mkZ = (label: string, title: string, fn: () => void) => {
+      const b = document.createElement('button');
+      b.className = 'btn map-zbtn';
+      b.textContent = label;
+      b.title = title;
+      b.addEventListener('click', fn);
+      zoomBox.appendChild(b);
+    };
+    mkZ('+', 'Aproximar', () => zoomCenter(1.4));
+    mkZ('−', 'Afastar', () => zoomCenter(1 / 1.4));
+    mkZ('⟲', 'Ver tudo', () => {
+      view.z = 1;
+      view.x = 0;
+      view.y = 0;
+      applyView();
+    });
+    head.insertBefore(zoomBox, closeBtn);
+    applyView();
 
     closeBtn.addEventListener('click', () => !traveling && finish(null));
     const onKey = (e: KeyboardEvent) => {

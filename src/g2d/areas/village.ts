@@ -1033,7 +1033,7 @@ export function create(ctx: AreaContext): Area2D {
       }
 
       // balões de fala dos moradores de fundo
-      for (const [i, v] of [villagerA, villagerB, kid].entries()) {
+      for (const [i, v] of [villagerA, kid].entries()) {
         const d = Math.hypot(v.x - pl.x, v.y - pl.y);
         const text = d < 70 && !ui.inDialog && v.mutters.length ? v.mutters[Math.floor(t / 6 + i * 3) % v.mutters.length] : null;
         if (!text) ui.bubble('v' + i, null);

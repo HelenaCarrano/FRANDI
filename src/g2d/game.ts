@@ -37,10 +37,15 @@ export async function boot() {
     ui.setLoadingProgress(1);
   })();
   const startChoice = ui.showStartScreen(loading, hasSave);
+  let restarted = false;
 
   try {
     await loading;
-    if (hasSave && (await startChoice) === 'new') game.reset();
+    // "Recomeçar" vale mais que atalhos do endereço (?area=...): começa mesmo na Floresta
+    if (hasSave && (await startChoice) === 'new') {
+      game.reset();
+      restarted = true;
+    }
     await run(hasSave ? Promise.resolve() : startChoice.then(() => undefined));
   } catch (err) {
     console.error(err);
@@ -77,7 +82,7 @@ export async function boot() {
     };
     const manager = new SceneManager({ ui, game, player, kit, fx, hen, snapCamera: () => (snapNext = true), toScreen });
 
-    const asked = urlParams.get('area');
+    const asked = restarted ? null : urlParams.get('area');
     const wanted = asked && (AREA_ALIASES[asked] ?? asked);
     const startId: AreaId = wanted && isBuilt(wanted) ? wanted : isBuilt(game.area) ? game.area : 'forest';
     const startEntry = wanted && isBuilt(wanted) ? urlParams.get('entry') ?? undefined : isBuilt(game.area) ? game.entry : 'start';
@@ -87,10 +92,23 @@ export async function boot() {
         .filter(([id]) => id in content.items)
         .map(([id, count]) => {
           const it = content.items[id as ItemId];
-          return { id, icon: it.icon, name: it.name, desc: it.desc, usedIn: it.usedIn, count };
+          const weaponId = game.has('espada') ? 'espada' : 'galho';
+          const isWeapon = id === weaponId;
+          return { id, icon: it.icon, name: it.name, desc: it.desc, usedIn: it.usedIn, count, hotkey: isWeapon ? '1' : undefined, active: isWeapon && !player.stowed, onUse: isWeapon ? toggleWeapon : undefined };
         });
       ui.setInventory(entries, game.coins);
     };
+    /** Tecla 1 / clique no slot: guarda a arma (some da mão) ou volta a empunhá-la. */
+    const toggleWeapon = () => {
+      if (!game.has('galho') && !game.has('espada')) return;
+      player.stowed = !player.stowed;
+      const name = content.items[game.has('espada') ? 'espada' : 'galho'].name;
+      ui.toast(player.stowed ? `${name} guardado` : `${name} na mão`);
+      syncInventory();
+    };
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Digit1' && !e.repeat && !ui.inDialog && !manager.busy) toggleWeapon();
+    });
     syncInventory();
     game.onChange(() => {
       syncInventory();
@@ -110,7 +128,7 @@ export async function boot() {
       Object.defineProperty(dev, 'area', { get: () => manager.area });
       Object.assign(window, { __dev: dev });
     }
-    const tp = urlParams.get('tp')?.split(',').map(Number);
+    const tp = restarted ? undefined : urlParams.get('tp')?.split(',').map(Number);
     if (tp && tp.length === 2) player.place(tp[0], tp[1]);
 
     let started = false;

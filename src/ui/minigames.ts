@@ -1,5 +1,6 @@
 import type { UI } from './ui';
 import { audio } from '../core/audio';
+import { itemArt } from './itemArt';
 
 /**
  * Minijogos em janelas HTML sobre o jogo. Nenhum trava o progresso: errar só gera uma fala e outra tentativa.
@@ -324,7 +325,7 @@ export function playSorting(ui: UI, text: SortingText, items: readonly SortItem[
   return ui.modal<void>('plating-box sorting-box', (box, close) => {
     h('h3', 'mg-title', box, text.title);
     h('p', 'mg-hint', box, text.hint);
-    const pool = h('div', 'plate-shelf', box);
+    const pool = h('div', 'plate-shelf sort-counter', box);
     const binsEl = h('div', 'sort-bins', box);
     const status = h('p', 'mg-status', box);
     const actions = h('div', 'plate-actions', box);
@@ -335,7 +336,12 @@ export function playSorting(ui: UI, text: SortingText, items: readonly SortItem[
     const binEls = new Map<string, HTMLElement>();
     const byId = new Map(items.map((i) => [i.id, i]));
 
-    const chipHtml = (i: SortItem) => `<span class="ing-icon">${i.icon}</span><span class="ing-name">${i.name}</span>`;
+    // desenho em pixel art quando existe; senão cai no emoji
+    const chipHtml = (i: SortItem) => {
+      const art = itemArt(i.id);
+      const pic = art ? `<img class="ing-art" src="${art}" alt="">` : `<span class="ing-icon">${i.icon}</span>`;
+      return `${pic}<span class="ing-name">${i.name}</span>`;
+    };
 
     const draw = () => {
       pool.replaceChildren();
@@ -344,6 +350,7 @@ export function playSorting(ui: UI, text: SortingText, items: readonly SortItem[
         const bin = placed.get(it.id);
         const parent = bin ? binEls.get(bin)!.querySelector<HTMLElement>('.sort-items')! : pool;
         const chip = h('button', bin ? 'ingredient on-plate' : 'ingredient', parent);
+        chip.classList.add('art');
         chip.innerHTML = chipHtml(it);
         chip.addEventListener('pointerdown', (e) => {
           e.preventDefault();
@@ -354,7 +361,7 @@ export function playSorting(ui: UI, text: SortingText, items: readonly SortItem[
             draw();
             return;
           }
-          const ghost = h('div', 'ingredient dragging', document.body);
+          const ghost = h('div', 'ingredient art dragging', document.body);
           ghost.innerHTML = chipHtml(byId.get(it.id)!);
           const move = (x: number, y: number) => {
             ghost.style.left = `${x}px`;
@@ -386,8 +393,15 @@ export function playSorting(ui: UI, text: SortingText, items: readonly SortItem[
     };
 
     for (const b of bins) {
-      const el = h('div', 'plate sort-bin', binsEl);
-      h('div', 'sort-bin-title', el, `${b.icon} ${b.name}`);
+      const el = h('div', `plate sort-bin bin-${b.id}`, binsEl);
+      const title = h('div', 'sort-bin-title', el);
+      const binArt = itemArt(b.id);
+      if (binArt) {
+        const img = h('img', 'bin-art', title);
+        img.src = binArt;
+        img.alt = '';
+        h('span', '', title, b.name);
+      } else title.textContent = `${b.icon} ${b.name}`;
       h('div', 'sort-items', el);
       binEls.set(b.id, el);
     }

@@ -92,7 +92,7 @@ export const content = {
     defeat: 'Tudo fica escuro de novo…',
     wake: 'Você acorda tonto, mas inteiro. Respire fundo e tente outra vez.',
     rest: 'Você respira fundo. Os corações se enchem de novo.',
-    tutorialDesktop: 'J ou F para golpear · K para esquivar · Shift para correr',
+    tutorialDesktop: 'Clique do mouse para golpear · Ctrl para esquivar · Shift para correr',
     tutorialTouch: 'Toque em ⚔️ para golpear e em 💨 para esquivar',
     foesNear: 'Algo se mexe na névoa à sua frente…',
   },
@@ -113,11 +113,8 @@ export const content = {
     letter: {
       title: 'O bilhete da Helena',
       paragraphs: [
-        'Amor,',
-        'Se você está lendo isto, o cavalo chegou antes de você. Eu sabia que ele sabia o caminho.',
-        'Passe pela vila e resolva a lista: ferraduras novas para ele, farinha fresca do Seu Alvim e a encomenda da Dona Pimenta. Ela te entrega o mapa.',
-        'Depois volte para casa. Tem uma coisa esperando por você. Nada de espiar!',
-        '— H.',
+        'Oi amor, bilhete da lista de coisas para trazer da vila: ferradura nova para o Armin, farinha fresca do Seu Alvim e a encomenda da Dona Pimenta.',
+        'Te amo, não demora muito. Estou esperando por você com uma surpresa.',
       ],
       close: 'Guardar o bilhete',
     },
@@ -146,10 +143,12 @@ export const content = {
     // ----- Tito e o cavalo -----
     stable: {
       first: [
-        'Ah, graças a Deus, alguém! O senhor é o Matheus? Esse cavalo chegou sozinho ao amanhecer, trotando pela estrada como quem tem hora marcada.',
+        'Bom dia, forasteiro! Não conheço o seu rosto por aqui. Está de passagem?',
+        'Que bom que apareceu alguém. Esse cavalo chegou sozinho ao amanhecer, trotando pela estrada como quem tem hora marcada.',
         '(É o meu cavalo! Mas como ele chegou antes de mim?)',
-        'Na sela, uma bolsa com o seu nome. Ele não deixou mais ninguém chegar perto: ficou ali no cercado, olhando para a estrada, esperando alguém.',
-        'Acho que esse alguém é você. Vá lá cumprimentá-lo, ele já sabe quem você é.',
+        '(Digo meu nome a ele: Matheus. E que acho que o cavalo estava me esperando.)',
+        'Matheus, é? Então só pode ser. Desde que chegou, ele ficou no cercado olhando para a estrada, e não deixou ninguém se aproximar.',
+        'Vá lá cumprimentá-lo, mas com jeito. Ele anda tão triste, parece que está com saudade de alguém. Eu cuido do estábulo, me chamam de Tito.',
       ],
       offer: 'Ele só vai deixar chegar quem se aproxima com calma, segurando a maçã.',
       yes: 'Deixa comigo',
@@ -158,7 +157,7 @@ export const content = {
       accepted: ['Isso! Passo de caracol, voz baixa e a maçã à mostra. Ele vai decidir.'],
       waiting: ['Ele está no cercado, de olho na estrada. Vá lá, o Armin já sabe quem você é.'],
       afterTrust: [
-        'Eu nunca vi um cavalo tão feliz de ver alguém. Ele é seu mesmo, hein.',
+        'Nunca vi um cavalo tão feliz de rever alguém. Dá para ver a saudade dele daqui. Ele é seu mesmo, hein.',
         'Só tem um detalhe: ele veio de longe e está sem ferraduras. Assim não passa muito da cerca.',
         'Fale com o Brutus, o ferreiro. Se ele estiver de bom humor, faz um jogo novo.',
       ],
@@ -178,13 +177,13 @@ export const content = {
       tooFast: 'Ele se assustou: vá mais devagar',
       trustLabel: 'Confiança de {name}',
       reunion: [
-        '{name} levanta a cabeça assim que te vê e vem trotando até a cerca, bufando como quem reclama da demora.',
-        '"Eu sei, eu sei. Cheguei atrasado. Mas você também não facilitou, hein?"',
-        'Ele encosta o focinho no seu ombro. Na sela, a bolsa com o seu nome se abre com um clique. Dentro, um bilhete dobrado com a letra de alguém que você conhece bem.',
+        '{name} levanta a cabeça assim que te vê, relincha alto e vem trotando até a cerca, bufando como quem reclama da demora e chora de saudade ao mesmo tempo.',
+        '"Eu sei, eu sei. Também senti a sua falta. Mas você também não facilitou, hein?"',
+        'Ele esfrega o focinho no seu ombro e não quer mais soltar. Na sela, a bolsa com o seu nome se abre com um clique. Dentro, um bilhete dobrado com a letra de alguém que você conhece bem.',
       ],
       trusted: [
-        '{name} abaixa a cabeça e cheira a maçã. Depois cheira você. Respira fundo.',
-        '"Aí está você, cabeça-dura. Eu sabia que a gente se encontrava."',
+        '{name} abaixa a cabeça e cheira a maçã. Depois cheira você, demora, e respira fundo, como quem matava a saudade.',
+        '"Aí está você, cabeça-dura. Senti tanta saudade. Eu sabia que a gente se encontrava."',
         'A bolsa da sela se solta com um clique. Dentro, um bilhete dobrado com a letra de alguém que você conhece bem.',
       ],
       mount: 'Montar em {name}',
@@ -492,6 +491,13 @@ export const content = {
         'Hora de voltar até a bifurcação e escolher o outro lado.',
       ],
     ],
+    shroom: {
+      prompt: 'Cogumelo estranho',
+      ask: '...comer o cogumelo?',
+      options: ['Comer', 'Deixar quieto'],
+      eat: ['Tem gosto de chuva e de moeda velha.', 'O chão parece respirar. Melhor ficar parado um instante...'],
+      after: ['A floresta volta ao lugar, devagar. Você jura ter visto um chapéu vermelho passar correndo.'],
+    },
     portal: {
       prompt: 'Examinar o portal',
       lines: ['No fim da trilha, um arco de pedra muito antigo brilha com símbolos azuis.', 'Ao tocar as pedras antigas, você sente uma pontada na cabeça.'],

@@ -260,6 +260,46 @@ export function create(ctx: AreaContext): Area2D {
   let px = 0;
   let py = 0;
 
+  // ---------- abertura: o Matheus caído no escuro, que acorda e já se levanta ----------
+  let introOn = !game.flag('forest_woke') && entry !== 'portal';
+  let introDark = introOn ? 1 : 0;
+  let introTarget = introOn ? 0.85 : 0;
+  let blink = 0;
+  let blinkTarget = 0;
+  let blinkRate = 3.2;
+  let walkIn = false;
+  if (introOn) {
+    player.pose = 'lying';
+    player.frozen = true;
+  }
+  const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+  async function wakeUp() {
+    try {
+      const L = T.wake.lines;
+      await sleep(1800);
+      await ui.tell([L[0]]);
+      player.pose = 'lyingOpen';
+      introTarget = 0.5;
+      await sleep(900);
+      await ui.tell([L[1]]);
+      await sleep(500);
+      // piscada: a tela fica toda preta, ele aparece de pé e a luz volta suave
+      blinkTarget = 1;
+      await sleep(1300);
+      player.pose = 'stand';
+      introOn = false;
+      introTarget = 0;
+      blinkTarget = 0;
+      await sleep(1400);
+      await ui.tell(L.slice(2));
+    } finally {
+      player.pose = 'stand';
+      player.frozen = false;
+      introOn = false;
+      introTarget = 0;
+    }
+  }
+
   // ---------- combate: três encontros com espíritos da névoa ----------
   const combat = new CombatSystem({
     col,
@@ -269,7 +309,7 @@ export function create(ctx: AreaContext): Area2D {
     fx,
     teleport,
     start: { x: stickSpot.x, y: stickSpot.y, dir: 'up' },
-    torchLit: () => dark > 0.12,
+    torchLit: () => dark > 0.12 && !introOn,
   });
   const armed = () => game.has('galho') || game.has('espada');
   const mistWall = (f: number, span = 44) => {
@@ -313,7 +353,7 @@ export function create(ctx: AreaContext): Area2D {
     interactables.push({ x, y, radius, prompt, onInteract, enabled, mark: markFn });
 
   add(startPos[0], startPos[1], 45, T.back.prompt, () => void openMap(), () => game.has('mapa'));
-  add(ribbonSpot.x, ribbonSpot.y, 38, T.ribbon.prompt, () => void useRibbon(), () => !game.flag('forest_ribbon'), () => !game.flag('forest_ribbon'));
+  add(ribbonSpot.x, ribbonSpot.y, 38, T.ribbon.prompt, () => void useRibbon(), () => !game.flag('forest_ribbon'));
   async function useRibbon() {
     await ui.tell(T.ribbon.lines);
     game.setFlag('forest_ribbon');
@@ -341,8 +381,88 @@ export function create(ctx: AreaContext): Area2D {
       game.setFlag(doneFlag('forest'));
       await ui.tell(T.portal.after);
     } else await ui.tell([T.portal.done]);
+    await enterPortal();
+  }
+  /** Entra no arco andando devagar, com a tela escurecendo aos poucos, e só então troca de área. */
+  async function enterPortal() {
+    player.frozen = true;
+    player.face(-Math.PI / 2);
+    walkIn = true;
+    blinkRate = 1.4;
+    blinkTarget = 1;
+    await sleep(2600);
+    walkIn = false;
     await goTo('village');
   }
+
+  // ---------- cogumelo mágico na primeira clareira sem saída ----------
+  const shroomSpot = { x: deadEnds[0].x + 24, y: deadEnds[0].y + 6 };
+  const shroomAvail = () => !game.flag('forest_shroom');
+  props.push({
+    kind: 'custom',
+    x: shroomSpot.x,
+    y: shroomSpot.y,
+    draw: (v, sx, sy) => {
+      if (!shroomAvail()) return;
+      v.drawImage(kit.mushGlow, sx - Math.round(kit.mushGlow.width / 2), sy - kit.mushGlow.height + 2);
+    },
+    light: (t, dk) => (shroomAvail() ? { x: shroomSpot.x, y: shroomSpot.y - 5, r: 30 + Math.sin(t * 2.1) * 4, col: [150, 130, 255], a: (0.35 + 0.3 * dk) * (0.8 + 0.2 * Math.sin(t * 2.1)), night: true } : null),
+  });
+  add(shroomSpot.x, shroomSpot.y, 34, T.shroom.prompt, () => void eatMushroom(), shroomAvail);
+
+  // efeito: a tela ondula e muda de cor; um gnomo passa correndo enquanto o Matheus está parado
+  let trip = 0;
+  let tripTarget = 0;
+  const gnome = { t: -1, x0: 0, y: 0 };
+  const screenEl = document.getElementById('screen');
+  async function eatMushroom() {
+    const choice = await ui.ask(T.shroom.ask, T.shroom.options);
+    if (choice !== 0) return;
+    game.setFlag('forest_shroom');
+    player.frozen = true;
+    try {
+      tripTarget = 1;
+      await ui.tell(T.shroom.eat);
+      await sleep(2200);
+      gnome.x0 = player.x - 190;
+      gnome.y = player.y + 20;
+      gnome.t = 0;
+      await sleep(3800);
+      tripTarget = 0;
+      await sleep(3000);
+      await ui.tell(T.shroom.after);
+    } finally {
+      tripTarget = 0;
+      player.frozen = false;
+    }
+  }
+  const drawGnome = (v: CanvasRenderingContext2D, sx: number, sy: number, t: number) => {
+    const f = Math.floor(t * 14) % 2;
+    const bob = f ? 1 : 0;
+    const px = (col: string, x: number, y: number, w = 1, h = 1) => {
+      v.fillStyle = col;
+      v.fillRect(sx + x, sy + y - bob, w, h);
+    };
+    // botinhas e perninhas correndo
+    v.fillStyle = '#2a1a14';
+    v.fillRect(sx - 3 + (f ? 2 : 0), sy - 2, 3, 2);
+    v.fillRect(sx + 1 - (f ? 2 : 0), sy - 2, 3, 2);
+    px('#2a1a14', -3, -10, 7, 1);
+    // túnica azul, barba branca, rosto e chapéu vermelho pontudo
+    px('#2a1a14', -3, -9, 7, 8);
+    px('#3a5aa8', -2, -8, 5, 5);
+    px('#f4f0e8', -2, -7, 5, 4);
+    px('#f4f0e8', -1, -3, 3, 1);
+    px('#e8b48c', -1, -9, 3, 2);
+    px('#1c1210', -1, -9, 1, 1);
+    px('#1c1210', 1, -9, 1, 1);
+    px('#2a1a14', -3, -13, 7, 1);
+    px('#c83a3a', -2, -12, 5, 3);
+    px('#2a1a14', -1, -16, 3, 1);
+    px('#c83a3a', -1, -15, 3, 3);
+    px('#2a1a14', 0, -18, 1, 1);
+    px('#e85a5a', 0, -17, 1, 2);
+  };
 
   // ---------- objetivo ----------
   const objective = () => {
@@ -396,9 +516,13 @@ export function create(ctx: AreaContext): Area2D {
     interactables,
     env,
     combat,
-    torchLit: () => dark > 0.12,
+    torchLit: () => dark > 0.12 && !introOn,
     isPath: (x, y) => ground.isPath(x, y),
-    drawables: () => {},
+    drawables(out, _cx, _cy, _t) {
+      if (gnome.t < 0) return;
+      const gx = gnome.x0 + gnome.t * 120;
+      out.push({ y: gnome.y, draw: (v, cx, cy, t) => drawGnome(v, Math.round(gx - cx), Math.round(gnome.y - cy), t) });
+    },
     lights(out, t) {
       // vagalumes do ambiente, só perto do jogador
       const night = Math.max(0, Math.min(1, dark + (1 - smoothstep(0.6, 0.93, progress)) * 0.15));
@@ -407,11 +531,21 @@ export function create(ctx: AreaContext): Area2D {
         if (Math.abs(f.x - px) > 260 || Math.abs(f.y - py) > 160) continue;
         const q = flyPos(f, t);
         const blink = 0.5 + 0.5 * Math.sin(t * 2.2 * f.s + f.p * 3);
-        out.push({ x: q.x, y: q.y, r: 15, col: [210, 255, 120], a: 0.55 * night * blink, night: true } as Light);
+        out.push({ x: q.x, y: q.y, r: 8, col: [210, 255, 120], a: 0.3 * night * blink, night: true } as Light);
       }
-      if (night > 0.1) for (const g of guide(t)) out.push({ x: g.x, y: g.y, r: 20, col: [255, 226, 130], a: 0.5 * night * g.a, night: true });
+      if (night > 0.1) for (const g of guide(t)) out.push({ x: g.x, y: g.y, r: 11, col: [255, 226, 130], a: 0.3 * night * g.a, night: true });
     },
     drawAdditive(g, cx, cy, s, t) {
+      if (shroomAvail() && Math.abs(shroomSpot.x - px) < 260 && Math.abs(shroomSpot.y - py) < 160) {
+        g.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 4; i++) {
+          const a = t * 0.9 + i * 1.57;
+          const mx = shroomSpot.x + Math.cos(a) * (7 + i);
+          const my = shroomSpot.y - 8 - ((t * 5 + i * 5) % 16);
+          g.fillStyle = `rgba(190,170,255,${0.7 - ((t * 5 + i * 5) % 16) / 24})`;
+          g.fillRect(Math.round((mx - cx) * s), Math.round((my - cy) * s), s, s);
+        }
+      }
       const night = Math.max(0, Math.min(1, dark + (1 - smoothstep(0.6, 0.93, progress)) * 0.15));
       if (night < 0.05) return;
       g.globalCompositeOperation = 'lighter';
@@ -426,10 +560,10 @@ export function create(ctx: AreaContext): Area2D {
       }
       if (night > 0.1) {
         for (const q of guide(t)) {
-          g.fillStyle = `rgba(255,228,120,${0.15 * night * q.a})`;
-          g.fillRect(Math.round((q.x - cx - 3) * s), Math.round((q.y - cy - 3) * s), 7 * s, 7 * s);
+          g.fillStyle = `rgba(255,228,120,${0.12 * night * q.a})`;
+          g.fillRect(Math.round((q.x - cx - 1) * s), Math.round((q.y - cy - 1) * s), 3 * s, 3 * s);
           g.fillStyle = `rgba(255,244,170,${Math.min(1, 0.9 * night * q.a)})`;
-          g.fillRect(Math.round((q.x - cx) * s), Math.round((q.y - cy) * s), s * 2, s * 2);
+          g.fillRect(Math.round((q.x - cx) * s), Math.round((q.y - cy) * s), s, s);
         }
       }
     },
@@ -443,6 +577,36 @@ export function create(ctx: AreaContext): Area2D {
       dark = 1 - smoothstep(0.3, 0.9, progress);
       env.dark = dark;
       audio.mood = dark;
+      // na abertura tudo fica bem mais escuro, e a luz volta devagar enquanto ele acorda
+      blink += (blinkTarget - blink) * (1 - Math.exp(-(blinkTarget > blink ? blinkRate : 2) * dt));
+      env.blackout = blink > 0.01 ? blink : 0;
+      introDark += (introTarget - introDark) * (1 - Math.exp(-1.8 * dt));
+      if (introDark > 0.003) {
+        const k = 1 - introDark;
+        env.amb = [env.amb[0] * k, env.amb[1] * k, env.amb[2] * k];
+        env.shaft *= 1 - introDark;
+        env.vignette += 1.4 * introDark;
+        env.gradeA *= 1 - 0.5 * introDark;
+      }
+
+      if (walkIn) player.place(pl.x, pl.y - 26 * dt, 'up');
+      // cogumelo: a tela ondula e as cores giram
+      trip += (tripTarget - trip) * (1 - Math.exp(-(tripTarget > trip ? 1.3 : 0.9) * dt));
+      if (trip < 0.003) trip = 0;
+      if (screenEl) {
+        screenEl.style.setProperty('--trip', trip.toFixed(3));
+        screenEl.classList.toggle('trip', trip > 0);
+      }
+      if (trip > 0) {
+        env.grade = [128 + 127 * Math.sin(t * 1.3), 128 + 127 * Math.sin(t * 1.3 + 2.1), 128 + 127 * Math.sin(t * 1.3 + 4.2)];
+        env.gradeA += 0.06 * trip;
+        env.vignette += 0.5 * trip;
+      }
+      if (gnome.t >= 0) {
+        gnome.t += dt;
+        if (Math.random() < dt * 30) fx.dust(gnome.x0 + gnome.t * 120 - 2, gnome.y, 1, '#a89878', 40);
+        if (gnome.t > 3.2) gnome.t = -1;
+      }
 
       // clareiras sem saída: uma frase gentil, uma vez por visita
       deadEnds.forEach((d, i) => {
@@ -454,7 +618,7 @@ export function create(ctx: AreaContext): Area2D {
       });
 
       objTimer -= dt;
-      if (objTimer <= 0) {
+      if (objTimer <= 0 && !introOn) {
         objTimer = 0.5;
         const o = objective();
         if (o !== lastObjective) {
@@ -467,10 +631,16 @@ export function create(ctx: AreaContext): Area2D {
     onEnter() {
       if (!game.flag('forest_woke')) {
         game.setFlag('forest_woke');
-        void ui.narrate(T.wake.header, T.wake.lines);
+        if (introOn) void wakeUp();
+        else void ui.narrate(T.wake.header, T.wake.lines);
       }
     },
-    debug: { route, trails, combat, setProgress: (f: number) => { const p = route.at(f); player.place(p.x, p.y); } },
+    dispose() {
+      screenEl?.classList.remove('trip');
+      player.pose = 'stand';
+      player.frozen = false;
+    },
+    debug: { gnome, route, trails, combat, setProgress: (f: number) => { const p = route.at(f); player.place(p.x, p.y); } },
   };
   return area;
 }

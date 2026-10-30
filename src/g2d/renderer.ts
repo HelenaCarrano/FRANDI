@@ -518,8 +518,12 @@ export class Renderer {
     g.globalCompositeOperation = 'source-over';
     const vg = g.createRadialGradient(W / 2, H / 2, H * 0.5, W / 2, H / 2, H * 1.05);
     vg.addColorStop(0, 'rgba(0,0,0,0)');
-    vg.addColorStop(1, `rgba(40,18,52,${(0.3 + 0.22 * dark) * env.vignette})`);
+    vg.addColorStop(1, `rgba(4,2,6,${(0.3 + 0.22 * dark) * env.vignette})`);
     g.fillStyle = vg;
     g.fillRect(0, 0, W, H);
+    if (env.blackout) {
+      g.fillStyle = `rgba(0,0,0,${env.blackout})`;
+      g.fillRect(0, 0, W, H);
+    }
   }
 }

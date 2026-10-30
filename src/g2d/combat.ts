@@ -290,33 +290,76 @@ export class Spirit {
   private drawGhost(v: CanvasRenderingContext2D, sx: number, sy: number, k: number, time: number) {
     const hot = this.warn;
     const flash = this.flashT > 0;
-    const body = flash ? '#ffffff' : hot > 0.2 ? '#f0a8a8' : this.kind === 'sombra' ? '#56689a' : '#a9c0ee';
-    const light = flash ? '#ffffff' : hot > 0.2 ? '#ffd0d0' : this.kind === 'sombra' ? '#7a8ec0' : '#d8e6ff';
-    const dark = hot > 0.2 ? '#b06868' : this.kind === 'sombra' ? '#34426e' : '#6f88c0';
-    const outline = '#222f5a';
-    const H = Math.round(18 * k);
-    const Wd = Math.round(8 * k);
+    const big = this.kind === 'sombra';
+    const body = flash ? '#ffffff' : hot > 0.2 ? '#8a4a58' : big ? '#2c2640' : '#6e7a9c';
+    const light = flash ? '#ffffff' : hot > 0.2 ? '#b8707c' : big ? '#463c64' : '#98a4c4';
+    const dark = hot > 0.2 ? '#4a2430' : big ? '#14101e' : '#38405e';
+    const outline = '#0c0814';
+    const H = Math.round(22 * k);
+    const Wd = Math.max(3, Math.round(7 * k));
+    const sway = Math.sin(time * 2.4 + this.phase);
+    // corpo alto e magro, que se alarga em um manto rasgado com tiras de tamanhos diferentes
     for (let i = 0; i < H; i++) {
       const t = i / H;
-      let half = t < 0.4 ? Math.round(Wd * Math.sqrt(1 - ((0.4 - t) / 0.4) ** 2)) : Wd;
-      // bainha rasgada embaixo
-      if (t > 0.78) half = Math.max(1, half - Math.round(((i + Math.floor(time * 6)) % 4 < 2 ? 1 : 3) * k));
+      let half = t < 0.3 ? Math.round(Wd * 0.7 * Math.sqrt(1 - ((0.3 - t) / 0.3) ** 2)) + 1 : t < 0.45 ? Math.round(Wd * 0.62) : Math.round(Wd * (0.62 + (t - 0.45) * 0.75));
+      const x0 = sx + Math.round(sway * t * 2 * k);
       const y = sy - H + i;
+      let l = half;
+      let r = half;
+      if (t > 0.75) {
+        // tiras do manto: cada coluna termina em um ponto diferente
+        l = Math.max(1, half - Math.round(((i * 7 + Math.floor(time * 5)) % 5) * k * 0.7));
+        r = Math.max(1, half - Math.round(((i * 5 + 2 + Math.floor(time * 5)) % 5) * k * 0.7));
+      }
       v.fillStyle = outline;
-      v.fillRect(sx - half - 1, y, half * 2 + 2, 1);
+      v.fillRect(x0 - l - 1, y, l + r + 2, 1);
       v.fillStyle = body;
-      v.fillRect(sx - half, y, half * 2, 1);
+      v.fillRect(x0 - l, y, l + r, 1);
       v.fillStyle = light;
-      v.fillRect(sx - half, y, Math.max(1, Math.round(half * 0.5)), 1);
+      v.fillRect(x0 - l, y, Math.max(1, Math.round(l * 0.4)), 1);
       v.fillStyle = dark;
-      v.fillRect(sx + half - Math.max(1, Math.round(half * 0.4)), y, Math.max(1, Math.round(half * 0.4)), 1);
+      v.fillRect(x0 + r - Math.max(1, Math.round(r * 0.5)), y, Math.max(1, Math.round(r * 0.5)), 1);
     }
-    // olhos (brilham vermelhos ao avisar o ataque)
-    v.fillStyle = hot > 0.2 ? '#ff4040' : this.kind === 'sombra' ? '#ffe070' : '#1a2448';
-    const ey = sy - Math.round(H * 0.68);
-    const ex = Math.max(2, Math.round(3 * k));
-    v.fillRect(sx - ex - 1, ey, Math.max(2, Math.round(2 * k)), Math.max(2, Math.round(3 * k)));
-    v.fillRect(sx + ex - 1, ey, Math.max(2, Math.round(2 * k)), Math.max(2, Math.round(3 * k)));
+    // braços compridos e finos com garras, balançando (erguidos quando vai atacar)
+    const shY = sy - H + Math.round(H * 0.42);
+    const reach = hot > 0.2 ? 1 : 0;
+    for (const side of [-1, 1]) {
+      const sh = Math.round(Wd * 0.62) + 1;
+      let ax = sx + side * sh;
+      let ay = shY;
+      const len = Math.round((big ? 15 : 11) * k);
+      for (let i = 0; i < len; i++) {
+        const droop = reach ? -i * 0.35 : i * 0.9;
+        ax = sx + side * (sh + Math.round(i * 0.55 + Math.sin(time * 3 + i * 0.4 + side) * 1.2));
+        ay = shY + Math.round(droop);
+        v.fillStyle = outline;
+        v.fillRect(ax - 1, ay - 1, 3, 3);
+        v.fillStyle = body;
+        v.fillRect(ax, ay, 1, 1);
+      }
+      v.fillStyle = flash ? '#ffffff' : '#d8dcee';
+      for (let c = -1; c <= 1; c++) v.fillRect(ax + side * 2 + (c === 0 ? side : 0), ay + c * 2, 2, 1);
+    }
+    // cabeça de caveira: órbitas escuras fundas com um brilho pequeno e uma boca rasgada
+    const ey = sy - H + Math.round(H * 0.22);
+    const ex = Math.max(2, Math.round(2.5 * k));
+    const ew = Math.max(2, Math.round(3 * k));
+    const eh = Math.max(3, Math.round(4 * k));
+    v.fillStyle = '#05030a';
+    v.fillRect(sx - ex - ew + 1, ey, ew, eh);
+    v.fillRect(sx + ex - 1, ey, ew, eh);
+    const glow = hot > 0.2 ? '#ff3030' : big ? '#ff7a30' : '#c8f4ff';
+    v.fillStyle = glow;
+    v.fillRect(sx - ex - 1, ey + 1, 1 + (big ? 1 : 0), 2);
+    v.fillRect(sx + ex, ey + 1, 1 + (big ? 1 : 0), 2);
+    // boca: abre mais quando vai atacar
+    const mh = Math.max(3, Math.round((hot > 0.2 ? 7 : 4) * k));
+    const mw = Math.max(3, Math.round(4 * k));
+    v.fillStyle = '#05030a';
+    v.fillRect(sx - (mw >> 1), ey + eh + 1, mw, mh);
+    v.fillStyle = flash ? '#ffffff' : '#c8c8d8';
+    for (let t = 0; t < mw; t += 2) v.fillRect(sx - (mw >> 1) + t, ey + eh + 1, 1, 1);
+    for (let t = 1; t < mw; t += 2) v.fillRect(sx - (mw >> 1) + t, ey + eh + mh, 1, 1);
   }
 
   private drawBird(v: CanvasRenderingContext2D, sx: number, sy: number, time: number, k: number) {
@@ -417,6 +460,7 @@ export class CombatSystem {
 
   private weaponNow(): 'sword' | 'stick' | null {
     const g = this.o.game;
+    if (this.o.player.stowed) return null;
     return g.has('espada') ? 'sword' : g.has('galho') ? 'stick' : null;
   }
 

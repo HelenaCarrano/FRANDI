@@ -172,6 +172,19 @@
   color: var(--gold-soft);
   text-shadow: 0 1px 2px #000;
 }
+.slot.active {
+  border-color: var(--gold);
+  box-shadow: 0 0 8px rgba(232, 182, 90, 0.5);
+}
+.slot-key {
+  position: absolute;
+  left: 3px;
+  top: 1px;
+  font-family: var(--title-font);
+  font-size: 0.62rem;
+  color: var(--gold-soft);
+  text-shadow: 0 1px 2px #000;
+}
 .item-popover {
   position: absolute;
   left: 0.8rem;
@@ -400,7 +413,7 @@
   background: #000;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.55s ease;
+  transition: opacity 0.9s ease;
 }
 .fade-overlay.on {
   opacity: 1;
@@ -1102,29 +1115,66 @@
   opacity: 0;
 }
 .modal-overlay.narrate-overlay.fragment {
-  background: radial-gradient(circle at 50% 45%, rgba(40, 52, 78, 0.94), rgba(6, 8, 16, 0.98));
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 46%, rgba(96, 70, 40, 0.22), transparent 100%),
+    linear-gradient(#0c0a09, #070605);
+  backdrop-filter: blur(6px);
+  animation: frag-in 1.2s ease-out;
+}
+.modal-overlay.narrate-overlay.fragment::before {
+  /* brilho de lembrança que respira devagar */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 46%, rgba(232, 182, 90, 0.07), transparent 60%);
+  animation: frag-breathe 6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes frag-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes frag-breathe {
+  0%, 100% { opacity: 0.4; transform: scale(0.96); }
+  50% { opacity: 1; transform: scale(1.04); }
 }
 .modal-box.narrate-box {
-  width: min(34rem, 100%);
+  width: min(36rem, 100%);
   max-height: 100%;
   overflow: auto;
-  padding: 1.2rem 1rem;
+  padding: 1.2rem 1.2rem;
   border: 0;
   background: none;
   box-shadow: none;
   text-align: center;
+  position: relative;
 }
 .narrate-header {
-  margin: 0 0 1.4rem;
+  margin: 0 0 1.6rem;
   font-family: var(--title-font);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 400;
-  letter-spacing: 0.3em;
+  letter-spacing: 0.34em;
   text-transform: uppercase;
   color: var(--gold);
 }
 .fragment .narrate-header {
-  color: #9fc0ff;
+  color: var(--gold);
+  text-shadow: 0 0 12px rgba(232, 182, 90, 0.35);
+}
+.fragment .narrate-header::before,
+.fragment .narrate-header::after {
+  /* filetes dos dois lados do título */
+  content: '';
+  display: inline-block;
+  width: 2.6rem;
+  height: 1px;
+  margin: 0 0.9rem;
+  vertical-align: middle;
+  background: linear-gradient(90deg, transparent, rgba(232, 182, 90, 0.6));
+}
+.fragment .narrate-header::after {
+  transform: scaleX(-1);
 }
 .narrate-stack {
   display: grid;
@@ -1144,11 +1194,37 @@
   opacity: 1;
   transform: none;
 }
+.fragment .narrate-line {
+  font-size: 1.4rem;
+  line-height: 1.6;
+  color: #f4e6c4;
+  text-shadow: 0 0 18px rgba(255, 214, 140, 0.35), 0 2px 6px #000;
+  filter: blur(6px);
+  transition: opacity 1.4s, transform 1.4s, filter 1.4s;
+}
 .fragment .narrate-line.show {
   font-style: italic;
+  filter: none;
+}
+.narrate-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1.2rem;
+}
+.narrate-dots i {
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 50%;
+  background: rgba(232, 182, 90, 0.25);
+  transition: background 0.6s, transform 0.6s;
+}
+.narrate-dots i.on {
+  background: var(--gold-soft);
+  transform: scale(1.3);
 }
 .narrate-more {
-  margin-top: 1.4rem;
+  margin-top: 1.2rem;
   font-size: 0.8rem;
   opacity: 0.55;
 }
@@ -1323,4 +1399,240 @@
   font-size: 1rem;
   pointer-events: auto;
   touch-action: none;
+}
+
+/* ---------- efeito do cogumelo mágico: a tela ondula e as cores giram ---------- */
+#screen.trip {
+  animation: trip-wobble 4.2s ease-in-out infinite, trip-hue 5s ease-in-out infinite alternate;
+}
+@keyframes trip-wobble {
+  0%, 100% { transform: scale(calc(1 + var(--trip, 0) * 0.03)) rotate(calc(var(--trip, 0) * -1.2deg)); }
+  25% { transform: scale(calc(1 + var(--trip, 0) * 0.05)) skewX(calc(var(--trip, 0) * 3deg)) rotate(calc(var(--trip, 0) * 0.6deg)); }
+  50% { transform: scale(calc(1 + var(--trip, 0) * 0.02)) rotate(calc(var(--trip, 0) * 1.4deg)); }
+  75% { transform: scale(calc(1 + var(--trip, 0) * 0.06)) skewY(calc(var(--trip, 0) * -2.5deg)); }
+}
+@keyframes trip-hue {
+  from { filter: hue-rotate(calc(var(--trip, 0) * -35deg)) saturate(calc(1 + var(--trip, 0) * 0.6)) blur(calc(var(--trip, 0) * 0.5px)); }
+  to { filter: hue-rotate(calc(var(--trip, 0) * 45deg)) saturate(calc(1 + var(--trip, 0) * 0.8)) blur(calc(var(--trip, 0) * 1.3px)); }
+}
+
+/* ---------- encomenda da Dona Pimenta: bancada de madeira, itens de verdade e cestos ---------- */
+.ingredient.art {
+  width: 4.6rem;
+  padding: 0.2rem 0.1rem;
+  border: 0;
+  background: none;
+  color: #3a2a14;
+  box-shadow: none;
+}
+.ing-art {
+  width: 3.4rem;
+  height: 3.4rem;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 3px 0 rgba(30, 16, 6, 0.45));
+  transition: transform 0.12s;
+}
+.ingredient.art:hover .ing-art {
+  transform: translateY(-3px) scale(1.06);
+}
+.ingredient.art .ing-name {
+  margin-top: 0.15rem;
+  padding: 0 0.35rem;
+  border-radius: 3px;
+  background: #f0e2b8;
+  color: #3a2a14;
+  font-size: 0.58rem;
+  line-height: 0.9rem;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+}
+.ingredient.art.dragging {
+  background: none;
+}
+.sort-counter {
+  /* a bancada: tábuas de madeira com os itens em cima */
+  gap: 0.2rem 0.5rem;
+  padding: 0.7rem 0.6rem 0.9rem;
+  border: 3px solid #3a2410;
+  border-radius: 8px;
+  background:
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.18) 0 2px, transparent 2px 64px),
+    linear-gradient(#9c6a3a, #8a5a2e 60%, #6a4422);
+  box-shadow: inset 0 3px 0 rgba(255, 220, 160, 0.25), inset 0 -8px 0 rgba(0, 0, 0, 0.25), 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+.sorting-box .sort-bin {
+  border-radius: 10px;
+  color: #2a1c0e;
+}
+.sorting-box .sort-bin-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: #fff2d0;
+  text-shadow: 0 1px 2px #000;
+}
+.bin-art {
+  width: 2.1rem;
+  height: 2.1rem;
+  image-rendering: pixelated;
+}
+.sorting-box .sort-bin.bin-provisoes {
+  /* cesto de vime */
+  border: 4px solid #6a4420;
+  background:
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.14) 0 3px, transparent 3px 8px),
+    repeating-linear-gradient(-45deg, rgba(255, 230, 170, 0.14) 0 3px, transparent 3px 8px),
+    #b8863e;
+}
+.sorting-box .sort-bin.bin-ferramentas {
+  /* caixa de ferramentas */
+  border: 4px solid #3a4258;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.2) 0 6px, transparent 6px calc(100% - 6px), rgba(0, 0, 0, 0.2) calc(100% - 6px)),
+    #5a6682;
+}
+.sorting-box .sort-bin.bin-prateleira {
+  /* prateleira: tábua embaixo */
+  border: 4px solid #4a2c14;
+  background:
+    linear-gradient(transparent calc(100% - 14px), #b07a44 calc(100% - 14px) calc(100% - 10px), #6a4424 calc(100% - 10px)),
+    #7a5230;
+}
+.sorting-box .sort-bin .ingredient.art .ing-name {
+  background: rgba(255, 242, 208, 0.9);
+}
+
+/* ---------- terreno do mapa e zoom ---------- */
+.map-svg {
+  touch-action: none;
+  cursor: grab;
+  max-height: 72vh;
+}
+.map-svg.zoomed {
+  cursor: move;
+}
+.map-zoom {
+  display: flex;
+  gap: 0.3rem;
+  margin-left: auto;
+  margin-right: 0.5rem;
+}
+.map-zbtn {
+  min-width: 2.2rem;
+  padding: 0.3rem 0.5rem;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+.map-svg .shore {
+  fill: none;
+  stroke: #e8f2ea;
+  stroke-width: 22;
+  stroke-linejoin: round;
+  opacity: 0.55;
+}
+.map-svg .land {
+  fill: url(#parch);
+  stroke: #5b3d1a;
+  stroke-width: 3.4;
+  stroke-linejoin: round;
+}
+.map-svg .sea-waves path {
+  fill: none;
+  stroke: #e8f2ea;
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.7;
+}
+.map-svg .ship path {
+  fill: #f0e1b5;
+  stroke: #4a3118;
+  stroke-width: 2.4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.map-svg .lake {
+  fill: #9cc8d2;
+  stroke: #4a7a8a;
+  stroke-width: 3;
+}
+.map-svg .water-line {
+  fill: none;
+  stroke: #e8f4f6;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.map-svg .river-edge {
+  fill: none;
+  stroke: #4a7a8a;
+  stroke-width: 10;
+  stroke-linecap: round;
+}
+.map-svg .river {
+  fill: none;
+  stroke: #9cc8d2;
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+.map-svg .hills path {
+  fill: none;
+  stroke: #8a6a3a;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  opacity: 0.75;
+}
+.map-svg .fields path {
+  fill: #e4cf8c;
+  stroke: #8a6a3a;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+.map-svg .fields .furrow {
+  fill: none;
+  stroke: #b89a54;
+  stroke-width: 1.4;
+}
+.map-svg .trees path {
+  fill: #7a9a5a;
+  stroke: #3a4a22;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+.map-svg .trees .tree2 {
+  fill: #8cae6a;
+}
+.map-svg .trees .trunk {
+  fill: none;
+  stroke: #5a3a1a;
+  stroke-width: 2;
+}
+.map-svg .m-l {
+  fill: #eddcae;
+  stroke: #4a3118;
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+}
+.map-svg .m-d {
+  fill: #b89a64;
+  stroke: #4a3118;
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+}
+.map-svg .m-s {
+  fill: none;
+  stroke: #4a3118;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.map-svg .region {
+  font-family: var(--title-font);
+  font-style: italic;
+  font-size: 17px;
+  letter-spacing: 0.12em;
+  fill: #6b4a22;
+  opacity: 0.8;
+  stroke: #f0e1b5;
+  stroke-width: 4;
+  paint-order: stroke;
 }

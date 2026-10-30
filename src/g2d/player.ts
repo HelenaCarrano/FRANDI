@@ -24,12 +24,16 @@ export class Player {
   frozen = false;
   readonly radius = 5;
   weapon: 'stick' | 'sword' | null = null;
+  /** Arma guardada (tecla 1 ou o inventário): some da mão e não bate. */
+  stowed = false;
   torchOn = false;
   /** A mochila e a espada nas costas (itens do jogo). */
   backpack = false;
   sword = false;
   /** Montado no cavalo: mais rápido, sentado em cima dele (sem pulinhos nem pernas). */
   riding = false;
+  /** Pose da abertura (caído / sentado). 'stand' = jogo normal. */
+  pose: 'stand' | 'lying' | 'lyingOpen' | 'sitting' = 'stand';
 
   private attackT = -1;
   private dodgeT = -1;
@@ -89,7 +93,7 @@ export class Player {
   }
 
   attack(): boolean {
-    if (!this.weapon || this.attackT >= 0 || this.dodgeT >= 0 || this.frozen) return false;
+    if (!this.weapon || this.stowed || this.attackT >= 0 || this.dodgeT >= 0 || this.frozen) return false;
     this.attackT = 0;
     this.swingId++;
     return true;
@@ -190,14 +194,19 @@ export class Player {
   }
 
   /** Luz da tocha (acesa no escuro) e um brilho acolhedor em volta do Matheus. */
+  private lastSparkT = 0;
+
   lights(out: Light[], time: number, dark: number) {
     const tA = this.torchOn ? Math.max(0, Math.min(1, (dark - 0.1) * 3)) : 0;
     const tp = this.torchPos();
     const tfl = 0.9 + 0.1 * Math.sin(time * 17) * Math.sin(time * 9);
     if (tA > 0.02) {
       out.push({ x: tp.x, y: tp.y, r: 108 * tfl, col: [255, 176, 100], a: tA * (0.16 + 0.42 * dark) * tfl });
-      if (Math.random() < 0.15) this.fx.spark(tp.x + (Math.random() - 0.5) * 3, tp.y - 2);
+      // faíscas raras e independentes da taxa de quadros (antes saía fogo sem parar)
+      const dt = Math.min(0.1, Math.max(0, time - this.lastSparkT));
+      if (Math.random() < dt * 1.2) this.fx.spark(tp.x + (Math.random() - 0.5) * 3, tp.y - 2);
     }
+    this.lastSparkT = time;
     out.push({ x: this.x, y: this.y - 12, r: 70, col: [255, 196, 140], a: 0.1 + 0.14 * dark });
   }
 
@@ -214,11 +223,24 @@ export class Player {
       y: this.y,
       shadow: (v, cx, cy) => {
         if (this.riding) return;
+        if (this.pose === 'lying' || this.pose === 'lyingOpen') {
+          v.beginPath();
+          v.ellipse(Math.round(this.x - cx), Math.round(this.y - cy) - 2, 16, 4, 0, 0, Math.PI * 2);
+          v.fill();
+          return;
+        }
         v.beginPath();
         v.ellipse(Math.round(this.x - cx), Math.round(this.y - cy), 8 - this.hopH * 0.9, 3 - this.hopH * 0.25, 0, 0, Math.PI * 2);
         v.fill();
       },
       draw: (v, cx, cy, t) => {
+        if (this.pose !== 'stand') {
+          const img = this.kit.poses[this.pose];
+          // respira devagar: o desenho sobe e desce 1 px
+          const breathe = Math.floor(t * 0.9) % 2;
+          v.drawImage(img, Math.round(this.x - cx - img.width / 2), Math.round(this.y - cy) - img.height + 3 - (this.pose === 'sitting' ? 0 : breathe));
+          return;
+        }
         if (this.invul > 0 && this.hurtT <= 0 && Math.floor(t * 14) % 2 === 0 && this.dodgeT < 0) return;
         const img = this.kit.matheus[this.spriteKey(t % 4.3 < 0.13)];
         const pdx = Math.round(this.x - cx - 12);
@@ -255,7 +277,7 @@ export class Player {
       v.fillStyle = '#c08a54';
       v.fillRect(bx, pdy + 16, 2, 9);
     }
-    if (this.sword && this.dir !== 'down' && this.weapon === 'sword') {
+    if (this.sword && !this.stowed && this.dir !== 'down' && this.weapon === 'sword') {
       v.fillStyle = '#d8dce6';
       v.fillRect(pdx + (this.dir === 'up' ? 16 : this.dir === 'right' ? 6 : 17), pdy + 6, 1, 9);
       v.fillStyle = '#e6c25a';
@@ -290,31 +312,40 @@ export class Player {
     v.globalAlpha = 1;
   }
 
-  /** Arma girando no golpe: série de pixels ao longo do ângulo. */
+  /** Arma na mão do lado oposto ao da tocha: parada na mão, e girando a partir dela no golpe. */
   private drawWeapon(v: CanvasRenderingContext2D, pdx: number, pdy: number) {
-    if (this.attackT < 0 || !this.weapon) return;
-    const k = Math.min(1, this.attackT / ATTACK_TIME);
-    const a = this.facing - 1.15 + 2.3 * k;
-    const px = pdx + 12 + Math.cos(this.facing) * 3;
-    const py = pdy + 24 + Math.sin(this.facing) * 2;
-    const len = this.weapon === 'sword' ? 17 : 14;
-    for (let i = 3; i < len; i++) {
-      const x = Math.round(px + Math.cos(a) * i);
-      const y = Math.round(py + Math.sin(a) * i);
+    if (!this.weapon || this.stowed || this.riding || this.dodgeT >= 0) return;
+    const attacking = this.attackT >= 0;
+    if (!attacking && this.weapon === 'sword') return; // a espada parada fica nas costas (drawBack)
+    const hx = this.dir === 'right' ? pdx + 7 : this.dir === 'left' ? pdx + 17 : pdx + 20;
+    const hy = pdy + 25;
+    const len = this.weapon === 'sword' ? 17 : 13;
+    let a: number;
+    if (attacking) {
+      const k = Math.min(1, this.attackT / ATTACK_TIME);
+      a = this.facing - 1.15 + 2.3 * k;
+    } else {
+      // parado: o graveto fica de pé na mão, inclinado um pouco para fora
+      a = -Math.PI / 2 + (this.dir === 'left' ? -0.25 : 0.25);
+    }
+    const reach = attacking ? len : 9;
+    const first = attacking ? 2 : -1;
+    for (let i = first; i < reach; i++) {
+      const x = Math.round(hx + Math.cos(a) * i);
+      const y = Math.round(hy + Math.sin(a) * i * (attacking ? 0.8 : 1));
       if (this.weapon === 'sword') {
-        v.fillStyle = i < 5 ? '#e6c25a' : i > len - 3 ? '#ffffff' : '#d8dce6';
-        v.fillRect(x, y, 2, 2);
+        v.fillStyle = i < 4 ? '#e6c25a' : i > len - 3 ? '#ffffff' : '#d8dce6';
       } else {
         v.fillStyle = i % 5 === 0 ? '#5a3a22' : '#7a5230';
-        v.fillRect(x, y, 2, 2);
       }
+      v.fillRect(x, y, 2, 2);
     }
     // arco do golpe, bem de leve
-    if (this.attackT > 0.06 && this.attackT < 0.26) {
+    if (attacking && this.attackT > 0.06 && this.attackT < 0.26) {
       v.fillStyle = 'rgba(255,255,255,0.35)';
       for (let j = 0; j < 8; j++) {
         const aa = a - j * 0.14;
-        v.fillRect(Math.round(px + Math.cos(aa) * (len + 1)), Math.round(py + Math.sin(aa) * (len + 1)), 1, 1);
+        v.fillRect(Math.round(hx + Math.cos(aa) * (len + 1)), Math.round(hy + Math.sin(aa) * (len + 1) * 0.8), 1, 1);
       }
     }
   }

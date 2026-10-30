@@ -157,7 +157,7 @@ export function shadedBalls(w: number, h: number, balls: Ball[], ramp: string[],
   return { c, ctx };
 }
 
-/** Pinheiro alto e fino: tronco aparecendo entre ramos longos que caem, mais curtos no topo e compridos embaixo. */
+/** Pinheiro cheio e cônico: tronco aparecendo entre ramos longos que caem, mais curtos no topo e compridos embaixo. */
 export function buildPineCanopy(w: number, h: number, scheme: { ramp: string[]; outline: string }, rng: Rng) {
   const { c, ctx } = makeCanvas(w, h);
   const cx = Math.floor(w / 2);
@@ -170,7 +170,7 @@ export function buildPineCanopy(w: number, h: number, scheme: { ramp: string[]; 
   };
   // tronco avermelhado
   for (let y = 8; y < h - 12; y++) {
-    const tw = y > h * 0.55 ? 4 : 3;
+    const tw = y > h * 0.55 ? 5 : 4;
     for (let i = 0; i < tw; i++) put(cx - 1 + i, y, i === 0 ? TRUNK[2] : i === tw - 1 ? TRUNK[0] : TRUNK[1]);
   }
   // ponta do topo
@@ -179,17 +179,17 @@ export function buildPineCanopy(w: number, h: number, scheme: { ramp: string[]; 
     for (let dx = -half; dx <= half; dx++) put(cx + dx, 2 + i, dx < 0 ? scheme.ramp[3] : dx > 0 ? scheme.ramp[1] : scheme.ramp[2]);
   }
   // ramos que caem, com a luz vindo de cima e da esquerda
-  const maxY = h - 14;
+  const maxY = h - 26;
   let y = 14;
   while (y < maxY) {
     const t = (y - 8) / (maxY - 8);
-    const L = Math.min(w / 2 - 2, Math.round(4 + t * (w / 2 - 7) * (0.78 + rng() * 0.4)));
+    const L = Math.min(w / 2 - 4, Math.round(7 + Math.pow(t, 0.8) * (w / 2 - 10) * (0.85 + rng() * 0.3)));
     for (const side of [-1, 1]) {
       const Ls = L - Math.floor(rng() * 4);
       for (let dx = 1; dx <= Ls; dx++) {
         const droop = Math.floor((dx * dx) / (Ls * 4.2));
         const yy = y + droop + Math.floor(dx * 0.1);
-        const thick = dx < Ls * 0.35 ? 4 : dx < Ls * 0.7 ? 3 : 2;
+        const thick = dx < Ls * 0.35 ? 7 : dx < Ls * 0.7 ? 5 : 3;
         for (let d = 0; d < thick; d++) {
           const lit = (d === 0 ? 0.55 : d === thick - 1 ? -0.5 : 0) + (side < 0 ? 0.25 : -0.25) + (rng() - 0.5) * 0.5;
           put(cx + side * dx, yy + d, scheme.ramp[lit > 0.45 ? 3 : lit > 0 ? 2 : lit > -0.45 ? 1 : 0]);
@@ -197,7 +197,7 @@ export function buildPineCanopy(w: number, h: number, scheme: { ramp: string[]; 
         if (dx > Ls * 0.6 && rng() < 0.45) put(cx + side * dx, yy + thick, scheme.ramp[0]);
       }
     }
-    y += 5 + Math.floor(rng() * 3);
+    y += 4 + Math.floor(rng() * 2);
   }
   // contorno escuro só por fora
   const edge: number[] = [];
@@ -279,9 +279,45 @@ export function buildTree(rng: Rng, scheme: { ramp: string[]; outline: string },
   return { trunk: trunk.c, canopy: canopy.c, footX: cx, footY: th - 2, canopyX: cw / 2, canopyY: pine ? ch + 18 - th : ch * 0.74, big, pine };
 }
 
+/** Pedra facetada: um bloco de arestas retas (topo claro, lado esquerdo médio, lado direito escuro), nada de bolinha. */
 export function buildRock(rng: Rng, w: number) {
-  const h = Math.round(w * 0.66);
-  return shadedBalls(w + 2, h + 2, [{ x: w / 2 + 1, y: h * 0.58 + 1, rx: w / 2, ry: h * 0.56 }], ROCK, OUTLINE, rng, 0.08).c;
+  const h = Math.max(6, Math.round(w * 0.78));
+  const W = w + 2;
+  const H = h + 2;
+  const { c, ctx } = makeCanvas(W, H);
+  const j = () => (rng() - 0.5) * 0.08;
+  const P = (x: number, y: number): [number, number] => [1 + (x + j()) * w, 1 + (y + j()) * h];
+  const body = [P(0.02, 0.96), P(0.0, 0.42), P(0.14, 0.2), P(0.4, 0.0), P(0.8, 0.06), P(1, 0.38), P(0.98, 0.96)];
+  const top = [P(0.14, 0.2), P(0.4, 0.0), P(0.8, 0.06), P(1, 0.38), P(0.6, 0.36), P(0.3, 0.4)];
+  const left = [P(0.0, 0.42), P(0.14, 0.2), P(0.3, 0.4), P(0.38, 0.97), P(0.02, 0.96)];
+  const right = [P(0.6, 0.36), P(1, 0.38), P(0.98, 0.96), P(0.7, 0.97)];
+  const inside = (poly: [number, number][], x: number, y: number) => {
+    let r = false;
+    for (let i = 0, k = poly.length - 1; i < poly.length; k = i++) {
+      const [xi, yi] = poly[i];
+      const [xk, yk] = poly[k];
+      if (yi > y !== yk > y && x < ((xk - xi) * (y - yi)) / (yk - yi) + xi) r = !r;
+    }
+    return r;
+  };
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if (!inside(body, x + 0.5, y + 0.5)) continue;
+      let col = ROCK[1];
+      if (inside(top, x + 0.5, y + 0.5)) col = ROCK[3];
+      else if (inside(left, x + 0.5, y + 0.5)) col = ROCK[2];
+      else if (inside(right, x + 0.5, y + 0.5)) col = ROCK[0];
+      if (y >= H - 3 && col !== ROCK[0]) col = ROCK[0];
+      ctx.fillStyle = col;
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+  if (w >= 18) {
+    ctx.fillStyle = ROCK[0];
+    ctx.fillRect(Math.round(W * 0.5), Math.round(H * 0.5), 1, 3);
+    ctx.fillRect(Math.round(W * 0.5) + 1, Math.round(H * 0.5) + 2, 2, 1);
+  }
+  return outlineSprite(c);
 }
 export function buildBush(rng: Rng, w: number, berries: string | null) {
   const h = Math.round(w * 0.7);
@@ -683,6 +719,42 @@ export function drawMatheus(dir: Dir, frame: number, blink = false) {
   return outlineSprite(c);
 }
 
+/** Matheus desacordado, deitado de lado como no Stardew (34x24, cabeça à esquerda): o mesmo sprite de pé, girado 90°. */
+export function drawMatheusLying(open: boolean) {
+  const front = drawMatheus('down', 0, !open);
+  const { c, ctx } = makeCanvas(34, 24);
+  ctx.translate(0, 24);
+  ctx.rotate(-Math.PI / 2);
+  ctx.drawImage(front, 0, 0);
+  return c;
+}
+
+/** Matheus sentado no chão, tonto, de frente (24x34, pés em 12,33): meio caminho entre deitado e em pé. */
+export function drawMatheusSitting(blink = false) {
+  const { c, ctx } = makeCanvas(28, 38);
+  const body = drawMatheus('down', 3, blink);
+  const px = (col: string, x: number, y: number, w = 1, h = 1) => {
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y, w, h);
+  };
+  // pernas finas e curtas à frente (como no Stardew), com tênis pequenos
+  px(PANTS, 8, 24, 3, 3);
+  px(PANTS, 16, 24, 3, 3);
+  px(PANTS_L, 8, 24, 1, 3);
+  px(PANTS_L, 16, 24, 1, 3);
+  px(SHOE, 7, 26, 5, 3);
+  px(SHOE, 15, 26, 5, 3);
+  px(SOLE, 7, 28, 5, 1);
+  px(SOLE, 15, 28, 5, 1);
+  px(HAIR_L, 0, 0, 0, 0);
+  const legs = outlineSprite(c);
+  const out = makeCanvas(28, 38);
+  // tronco por cima das coxas, 2 px mais baixo (o corpo afunda ao sentar)
+  out.ctx.drawImage(legs, 0, 0);
+  out.ctx.drawImage(body, 0, 0, 24, 24, 2, 1, 24, 24);
+  return out.c;
+}
+
 export function drawChicken(frame: number) {
   const { c, ctx } = makeCanvas(16, 14);
   const px = (col: string, x: number, y: number, w = 1, h = 1) => {
@@ -721,6 +793,8 @@ export function buildOverhang(rng: Rng, w: number, h: number, leafCols: string[]
         ctx.fillRect(Math.round(x), Math.round(y) + d - (th >> 1), 1, 1);
       }
       a += (rng() - 0.5) * 0.14;
+      if (y > h - 12) a -= 0.08;
+      if (x > w - 14) break;
       x += Math.cos(a);
       y += Math.sin(a);
       if (depth < 3 && i % 12 === 8 && th > 2 && rng() < 0.85) limb(x, y, a + (rng() < 0.5 ? -0.85 : 0.85), Math.floor(len * 0.5), th * 0.6, depth + 1);
@@ -728,13 +802,13 @@ export function buildOverhang(rng: Rng, w: number, h: number, leafCols: string[]
     }
     tips.push({ x, y });
   };
-  limb(-4, 5, 0.3, w * 0.95, 6, 0);
-  limb(-4, h * 0.42, 0.7, w * 0.5, 4, 1);
+  limb(-4, 11, 0.3, w * 0.85, 6, 0);
+  limb(-4, h * 0.42, 0.7, w * 0.45, 4, 1);
   for (const t of tips) {
     const n = 6 + Math.floor(rng() * 5);
     for (let k = 0; k < n; k++) {
-      const x = Math.round(t.x + (rng() - 0.5) * 12);
-      const y = Math.round(t.y + (rng() - 0.3) * 8);
+      const x = Math.max(0, Math.min(w - 4, Math.round(t.x + (rng() - 0.5) * 12)));
+      const y = Math.max(1, Math.min(h - 5, Math.round(t.y + (rng() - 0.3) * 8)));
       ctx.fillStyle = '#3a1c14';
       ctx.fillRect(x, y + 2, 3, 1);
       ctx.fillStyle = leafCols[Math.floor(rng() * leafCols.length)];
