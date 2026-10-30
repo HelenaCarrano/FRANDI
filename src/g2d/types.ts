@@ -2,8 +2,8 @@ import type { RGB, TreeSprite } from './art';
 import type { Collision } from './collision';
 import type { CombatSystem } from './combat';
 
-export type { AreaId } from '../scenes/types';
-import type { AreaId } from '../scenes/types';
+export type { AreaId } from '../core/areas';
+import type { AreaId } from '../core/areas';
 
 /** Algo desenhado em ordem de profundidade (quanto maior `y`, mais à frente). */
 export interface Drawable {

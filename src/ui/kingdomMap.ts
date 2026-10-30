@@ -1,6 +1,6 @@
 import { content, fmt } from '../content';
 import type { GameState } from '../core/gameState';
-import type { AreaId } from '../scenes/types';
+import type { AreaId } from '../core/areas';
 import type { UI } from './ui';
 
 /**

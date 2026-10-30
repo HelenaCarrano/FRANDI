@@ -3,7 +3,7 @@ import { content } from '../content';
 import type { GameState } from '../core/gameState';
 import { openKingdomMap } from '../ui/kingdomMap';
 import type { UI } from '../ui/ui';
-import { isUnlocked } from '../scenes/registry';
+import { isUnlocked } from '../core/areas';
 import type { Fx } from './fx';
 import type { Hen } from './hen';
 import type { Kit } from './kit';

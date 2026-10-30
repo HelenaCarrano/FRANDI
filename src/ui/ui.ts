@@ -426,7 +426,8 @@ export class UI {
       const card = el('div', 'letter', overlay);
       el('h2', 'letter-title', card).textContent = title;
       const paras = paragraphs.map((_, i) => {
-        const p = el('p', 'letter-p' + (i === paragraphs.length - 1 ? ' sign' : ''), card);
+        const t = paragraphs[i];
+        const p = el('p', 'letter-p' + (t.startsWith('• ') ? ' item' : i === paragraphs.length - 1 && t.startsWith('—') ? ' sign' : ''), card);
         p.textContent = '';
         return p;
       });
@@ -849,9 +850,9 @@ export class UI {
   toast(text: string) {
     const t = el('div', 'toast', this.toasts);
     t.textContent = text;
-    while (this.toasts.children.length > 4) this.toasts.firstElementChild?.remove();
-    setTimeout(() => t.classList.add('out'), 2600);
-    setTimeout(() => t.remove(), 3200);
+    while (this.toasts.children.length > 2) this.toasts.firstElementChild?.remove();
+    setTimeout(() => t.classList.add('out'), 1800);
+    setTimeout(() => t.remove(), 2400);
   }
 
   setInventory(entries: readonly InventoryEntry[], coins: number) {

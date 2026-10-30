@@ -426,6 +426,7 @@ export class CombatSystem {
   /** Depuração: não leva dano. */
   god = false;
   private readonly runs: Runtime[] = [];
+  private readonly warned = new WeakSet<Spirit>();
   private checkpoint: { x: number; y: number; dir?: Dir4 };
   private paused = false;
   private shown = false;
@@ -603,6 +604,12 @@ export class CombatSystem {
       }
       if (r.state !== 'active') continue;
       if (!this.paused) for (const s of r.spirits) s.update(dt, time, this.ctx);
+      // som assustador na primeira vez que um espírito chega perto
+      for (const s of r.spirits) {
+        if (s.dead || this.warned.has(s) || Math.hypot(s.x - player.x, s.y - player.y) > 130) continue;
+        this.warned.add(s);
+        audio.play('dread', s.kind === 'sombra' ? 1.3 : 1);
+      }
 
       // golpe do Matheus: cone à frente
       if (player.swinging && !this.paused) {

@@ -279,45 +279,116 @@ export function buildTree(rng: Rng, scheme: { ramp: string[]; outline: string },
   return { trunk: trunk.c, canopy: canopy.c, footX: cx, footY: th - 2, canopyX: cw / 2, canopyY: pine ? ch + 18 - th : ch * 0.74, big, pine };
 }
 
-/** Pedra facetada: um bloco de arestas retas (topo claro, lado esquerdo médio, lado direito escuro), nada de bolinha. */
-export function buildRock(rng: Rng, w: number) {
-  const h = Math.max(6, Math.round(w * 0.78));
-  const W = w + 2;
-  const H = h + 2;
+/**
+ * Pedra facetada: silhueta irregular de cantos firmes, dividida em planos que pegam a luz de cima à esquerda,
+ * com arestas escuras entre os planos, rachaduras, base na sombra e musgo no topo.
+ */
+function facetRock(rng: Rng, w: number, h: number, ramp: string[], cracks: number, moss: number) {
+  const W = w + 4;
+  const H = h + 4;
   const { c, ctx } = makeCanvas(W, H);
-  const j = () => (rng() - 0.5) * 0.08;
-  const P = (x: number, y: number): [number, number] => [1 + (x + j()) * w, 1 + (y + j()) * h];
-  const body = [P(0.02, 0.96), P(0.0, 0.42), P(0.14, 0.2), P(0.4, 0.0), P(0.8, 0.06), P(1, 0.38), P(0.98, 0.96)];
-  const top = [P(0.14, 0.2), P(0.4, 0.0), P(0.8, 0.06), P(1, 0.38), P(0.6, 0.36), P(0.3, 0.4)];
-  const left = [P(0.0, 0.42), P(0.14, 0.2), P(0.3, 0.4), P(0.38, 0.97), P(0.02, 0.96)];
-  const right = [P(0.6, 0.36), P(1, 0.38), P(0.98, 0.96), P(0.7, 0.97)];
-  const inside = (poly: [number, number][], x: number, y: number) => {
-    let r = false;
-    for (let i = 0, k = poly.length - 1; i < poly.length; k = i++) {
-      const [xi, yi] = poly[i];
-      const [xk, yk] = poly[k];
-      if (yi > y !== yk > y && x < ((xk - xi) * (y - yi)) / (yk - yi) + xi) r = !r;
-    }
-    return r;
-  };
+  const cx = W / 2;
+  const cy = 2 + h * 0.52;
+  const rx = (w / 2) * 0.9;
+  const ry = h * 0.5;
+  const p = 2.3 + rng() * 0.6;
+  const harm = [0, 1, 2].map((k) => ({ f: 2 + k, a: (0.05 + rng() * 0.06) / (1 + k * 0.4), ph: rng() * 6.28 }));
+  const radius = (ang: number) => 1 + harm.reduce((t, k) => t + Math.sin(ang * k.f + k.ph) * k.a, 0);
+  const L = [-0.55, -0.7, 0.45];
+  const n = 5 + Math.round(w / 14);
+  const seeds = Array.from({ length: n }, () => {
+    const u = (rng() - 0.5) * 1.5;
+    const v = (rng() - 0.5) * 1.4;
+    const nx = u * 0.6 + (rng() - 0.5) * 0.9;
+    const ny = v * 0.6 + (rng() - 0.5) * 0.9 - 0.15;
+    const nz = Math.sqrt(Math.max(0.05, 1 - nx * nx * 0.5 - ny * ny * 0.5));
+    return { x: cx + u * rx, y: cy + v * ry, lit: nx * L[0] + ny * L[1] + nz * L[2] };
+  });
+  const inside = new Uint8Array(W * H);
+  const cell = new Int8Array(W * H).fill(-1);
+  const tone = new Int8Array(W * H);
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
-      if (!inside(body, x + 0.5, y + 0.5)) continue;
-      let col = ROCK[1];
-      if (inside(top, x + 0.5, y + 0.5)) col = ROCK[3];
-      else if (inside(left, x + 0.5, y + 0.5)) col = ROCK[2];
-      else if (inside(right, x + 0.5, y + 0.5)) col = ROCK[0];
-      if (y >= H - 3 && col !== ROCK[0]) col = ROCK[0];
+      const u = (x + 0.5 - cx) / rx;
+      const v = (y + 0.5 - cy) / ry;
+      if (v > 0.92) continue;
+      const vv = v < 0 ? v : v * 0.85;
+      const d = Math.pow(Math.abs(u), p) + Math.pow(Math.abs(vv), p);
+      const ang = Math.atan2(vv, u);
+      if (d > Math.pow(radius(ang), p)) continue;
+      inside[y * W + x] = 1;
+      let bi = 0;
+      let bd = Infinity;
+      seeds.forEach((sd, i) => {
+        const dd = (sd.x - x) ** 2 + ((sd.y - y) * 1.2) ** 2;
+        if (dd < bd) {
+          bd = dd;
+          bi = i;
+        }
+      });
+      cell[y * W + x] = bi;
+      const dz = Math.sqrt(Math.max(0, 1 - Math.min(1, u * u * 0.8 + v * v * 0.8)));
+      const dome = u * 0.5 * L[0] + v * 0.5 * L[1] + dz * L[2];
+      const lit = seeds[bi].lit * 0.6 + dome * 0.5 + (rng() - 0.5) * 0.05;
+      tone[y * W + x] = lit > 0.5 ? 3 : lit > 0.18 ? 2 : lit > -0.12 ? 1 : 0;
+    }
+  }
+  const ins = (x: number, y: number) => x >= 0 && y >= 0 && x < W && y < H && inside[y * W + x] === 1;
+  // arestas entre planos: o lado mais escuro do encontro ganha uma linha um tom abaixo
+  const t2 = Int8Array.from(tone);
+  for (let y = 1; y < H; y++) {
+    for (let x = 1; x < W; x++) {
+      const i = y * W + x;
+      if (!inside[i]) continue;
+      for (const j of [i - 1, i - W]) {
+        if (inside[j] && cell[j] !== cell[i] && tone[i] <= tone[j] && tone[i] > 0) t2[i] = tone[i] - 1;
+      }
+    }
+  }
+  // musgo e rachaduras
+  const mossy = new Uint8Array(W * H);
+  for (let k = 0; k < moss; k++) {
+    const mx = cx + (rng() - 0.5) * rx * 1.4;
+    const my = cy - ry * (0.15 + rng() * 0.6);
+    const mr = 1.2 + rng() * Math.max(1, w / 18);
+    for (let y = Math.floor(my - mr); y <= my + mr; y++) {
+      for (let x = Math.floor(mx - mr * 1.6); x <= mx + mr * 1.6; x++) {
+        if (!ins(x, y) || t2[y * W + x] < 2) continue;
+        if (((x - mx) / 1.6) ** 2 + (y - my) ** 2 < mr * mr * (0.55 + rng() * 0.45)) mossy[y * W + x] = 1;
+      }
+    }
+  }
+  const crack = new Uint8Array(W * H);
+  for (let k = 0; k < cracks; k++) {
+    let x = Math.round(cx + (rng() - 0.5) * rx * 1.1);
+    let y = Math.round(cy - ry * (0.3 + rng() * 0.3));
+    const len = Math.round(ry * (0.5 + rng() * 0.5));
+    for (let i = 0; i < len; i++) {
+      if (ins(x, y)) crack[y * W + x] = 1;
+      y++;
+      if (rng() < 0.45) x += rng() < 0.5 ? -1 : 1;
+    }
+  }
+  const MOSS = ['#2f4a1e', '#486e2a', '#659638', '#8abc4c'];
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const i = y * W + x;
+      if (!inside[i]) continue;
+      let col = ramp[t2[i]];
+      if (mossy[i]) col = MOSS[Math.min(3, t2[i])];
+      if (crack[i]) col = ramp[0];
+      // base na sombra: a pedra assenta no chão
+      if (!ins(x, y + 2)) col = ramp[0];
       ctx.fillStyle = col;
       ctx.fillRect(x, y, 1, 1);
     }
   }
-  if (w >= 18) {
-    ctx.fillStyle = ROCK[0];
-    ctx.fillRect(Math.round(W * 0.5), Math.round(H * 0.5), 1, 3);
-    ctx.fillRect(Math.round(W * 0.5) + 1, Math.round(H * 0.5) + 2, 2, 1);
-  }
   return outlineSprite(c);
+}
+
+export function buildRock(rng: Rng, w: number) {
+  const h = Math.max(6, Math.round(w * 0.72));
+  return facetRock(rng, w, h, ROCK, w >= 18 ? 1 : 0, w >= 12 ? 1 : 0);
 }
 export function buildBush(rng: Rng, w: number, berries: string | null) {
   const h = Math.round(w * 0.7);
@@ -366,37 +437,7 @@ export function buildMushroom(glow: boolean) {
 }
 
 export function buildBoulder(rng: Rng, w: number) {
-  const h = Math.round(w * 0.82);
-  const { c, ctx } = shadedBalls(
-    w + 2,
-    h + 2,
-    [
-      { x: w * 0.3, y: h * 0.62, rx: w * 0.3, ry: h * 0.4 },
-      { x: w * 0.68, y: h * 0.6, rx: w * 0.32, ry: h * 0.42 },
-      { x: w * 0.5, y: h * 0.4, rx: w * 0.36, ry: h * 0.4 },
-    ],
-    CLIFF,
-    '#1e1a30',
-    rng,
-    0.22,
-  );
-  // rachaduras e musgo
-  ctx.fillStyle = '#26223c';
-  for (let i = 0; i < 4; i++) {
-    const x = Math.floor(w * (0.2 + rng() * 0.6));
-    const y = Math.floor(h * (0.35 + rng() * 0.4));
-    ctx.fillRect(x, y, 1, 3 + Math.floor(rng() * 4));
-    ctx.fillRect(x + 1, y + 2, 2, 1);
-  }
-  for (let i = 0; i < Math.round(w / 3); i++) {
-    const x = Math.floor(3 + rng() * (w - 6));
-    const y = Math.floor(2 + rng() * h * 0.5);
-    if (ctx.getImageData(x, y, 1, 1).data[3] === 0) continue;
-    ctx.fillStyle = rng() < 0.5 ? '#5f9a3a' : '#86c05a';
-    ctx.fillRect(x, y, 3, 1);
-    if (rng() < 0.5) ctx.fillRect(x + 1, y + 1, 2, 1);
-  }
-  return c;
+  return facetRock(rng, w, Math.round(w * 0.78), CLIFF, 3, 2 + Math.round(w / 24));
 }
 
 export function buildStone(rng: Rng, tall: number) {

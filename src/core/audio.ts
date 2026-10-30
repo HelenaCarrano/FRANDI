@@ -9,7 +9,7 @@
 
 export type Sfx =
   | 'step' | 'stepStone' | 'hoof' | 'swing' | 'hit' | 'kill' | 'hurt' | 'dodge' | 'pickup' | 'coin' | 'cluck' | 'egg'
-  | 'chest' | 'tick' | 'select' | 'memory' | 'whoosh' | 'clang' | 'defeat' | 'mount' | 'rise' | 'rest'
+  | 'chest' | 'tick' | 'select' | 'memory' | 'whoosh' | 'clang' | 'defeat' | 'mount' | 'rise' | 'rest' | 'dread'
   | 'hammer' | 'sizzle' | 'gear' | 'gearLock' | 'crank' | 'grind';
 
 type Surface = 'grass' | 'stone';
@@ -551,6 +551,16 @@ class AudioEngine {
         this.burst(0.7, 'lowpass', 300, 1200, 0.1 * v, 0.6);
         this.tone('sine', 110, 190, 0.7, 0.07 * v, 0.1, 0, 0.4);
         break;
+      case 'dread': {
+        // aproximação de um espírito: zumbido grave dissonante que cresce, com sussurro e um gemido que desafina
+        const f = rnd(52, 68);
+        this.tone('sine', f, f * 0.94, 2.2, 0.11 * v, 0.9, 0, 0.8);
+        this.tone('sine', f * 1.414, f * 1.33, 2.2, 0.06 * v, 1.1, 0.1, 0.8);
+        this.tone('sawtooth', f * 3, f * 2.7, 1.8, 0.018 * v, 1, 0.2, 0.6);
+        this.burst(1.8, 'bandpass', rnd(700, 1100), rnd(350, 500), 0.07 * v, 6, 0.3);
+        this.tone('triangle', rnd(300, 340), rnd(140, 170), 1.4, 0.035 * v, 0.7, 0.6, 0.9);
+        break;
+      }
       case 'rest':
         [392, 523, 659].forEach((f, i) => this.tone('sine', f, f, 1.4, 0.05 * v, 0.03, i * 0.1, 0.7));
         break;

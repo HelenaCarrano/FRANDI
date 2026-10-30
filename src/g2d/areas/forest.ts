@@ -1,6 +1,6 @@
 import { audio } from '../../core/audio';
 import { content, fmt } from '../../content';
-import { doneFlag } from '../../scenes/registry';
+import { doneFlag } from '../../core/areas';
 import { OUTLINE, mulberry32 } from '../art';
 import { Collision } from '../collision';
 import { CombatSystem } from '../combat';
@@ -312,6 +312,9 @@ export function create(ctx: AreaContext): Area2D {
     torchLit: () => dark > 0.12 && !introOn,
   });
   const armed = () => game.has('galho') || game.has('espada');
+  /** Depois de pegar o galho, os espíritos só aparecem um tempo depois (se já estava armado ao entrar, sem espera). */
+  let spiritsAt = armed() ? 0 : Infinity;
+  const spiritsReady = () => armed() && performance.now() >= spiritsAt;
   const mistWall = (f: number, span = 44) => {
     const pts: { x: number; y: number }[] = [];
     for (let o = -span; o <= span + 0.01; o += 14) {
@@ -336,7 +339,7 @@ export function create(ctx: AreaContext): Area2D {
       }),
       barrier: mistWall(wallF),
       checkpoint: { x: w.x - w.tx * 30, y: w.y - w.ty * 30, dir: 'up' },
-      enabled: armed,
+      enabled: spiritsReady,
       onStart,
     });
   };
@@ -371,6 +374,7 @@ export function create(ctx: AreaContext): Area2D {
   async function useStick() {
     await ui.tell(T.stick.lines);
     game.addItem('galho');
+    spiritsAt = performance.now() + 12000;
     ui.toast(fmt(content.ui.gotItem, { name: content.items.galho.name }));
   }
   add(ARCH.x, ARCH.y + 70, 70, T.portal.prompt, () => void usePortal(), undefined, () => !game.flag(doneFlag('forest')));

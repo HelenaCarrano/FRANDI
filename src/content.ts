@@ -57,9 +57,9 @@ export const content = {
     owned: 'Comprado',
     notEnough: 'Faltam moedas',
     notEnoughToast: 'Moedas insuficientes. Ajude os moradores para ganhar mais.',
-    newQuest: 'Nova missão: {title}',
-    questDone: 'Missão concluída: {title}',
-    gotItem: 'Item recebido: {name}',
+    newQuest: 'Missão: {title}',
+    questDone: 'Concluída: {title}',
+    gotItem: '+ {name}',
     gotCoins: '+{n} moedas',
     spentCoins: '-{n} moedas',
     usedIn: 'Usado em: {where}',
@@ -91,8 +91,8 @@ export const content = {
   // ---------- combate ----------
   combat: {
     defeat: 'Tudo fica escuro de novo…',
-    wake: 'Você acorda tonto, mas inteiro. Respire fundo e tente outra vez.',
-    rest: 'Você respira fundo. Os corações se enchem de novo.',
+    wake: 'Você acorda tonto.',
+    rest: 'Corações recuperados',
     tutorialDesktop: 'Clique do mouse para golpear · Ctrl para esquivar · Shift para correr',
     tutorialTouch: 'Toque em ⚔️ para golpear e em 💨 para esquivar',
     foesNear: 'Algo se mexe na névoa à sua frente…',
@@ -113,8 +113,13 @@ export const content = {
 
     letter: {
       title: 'O bilhete da Helena',
+      // linhas começando com "• " viram itens da lista
       paragraphs: [
-        'Oi amor, bilhete da lista de coisas para trazer da vila: ferradura nova para o Armin, farinha fresca do Seu Alvim e a encomenda da Dona Pimenta.',
+        'Oi amor,',
+        'Bilhete da lista de coisas para trazer da vila:',
+        '• Ferradura nova para o Armin',
+        '• Farinha fresca do Seu Alvim',
+        '• A encomenda da Dona Pimenta',
         'Te amo, não demora muito. Estou esperando por você com uma surpresa.',
       ],
       close: 'Guardar o bilhete',
@@ -169,7 +174,7 @@ export const content = {
       no: 'Preciso de um minuto',
       decline: ['Sem pressa. Ele também não tem.'],
       accepted: ['Isso! Passo de caracol, voz baixa e a maçã à mostra. Ele vai decidir.'],
-      waiting: ['Ele está no cercado, de olho na estrada. Vá lá, o Armin já sabe quem você é.'],
+      waiting: ['Ele está no cercado, de olho na estrada. Vá lá, ele já sabe quem você é.'],
       afterTrust: [
         'Nunca vi um cavalo tão feliz de rever alguém. Dá para ver a saudade dele daqui. Ele é seu mesmo, hein.',
         'Só tem um detalhe: ele veio de longe e está sem ferraduras. Assim não passa muito da cerca.',
@@ -299,7 +304,7 @@ export const content = {
         'E quando precisar de ovos, é só dizer. Quer dizer... pelo jeito você já tem fornecedora própria.',
       ],
       done: ['A Beyoncé conta pra todo mundo da fuga. Ela é dramática como a dona.'],
-      penToast: 'Galinha no cercado: {n} de {total}',
+      penToast: 'Cercado: {n}/{total}',
     },
 
     // ----- a galinha companheira -----
@@ -321,7 +326,7 @@ export const content = {
         '"Você vem comigo, me segue por todo lugar e ainda me dá provisões? Acho que encontrei a melhor companheira de viagem possível."',
       ],
       eggMore: ['Mais um ovo! A {name} não para.', 'Outro ovo quentinho na mochila.', 'A {name} cacareja, orgulhosa: ovo novo!'],
-      eggToast: 'Ovo da {name} guardado na mochila',
+      eggToast: 'Ovo da {name}',
     },
 
     // ----- Dona Pimenta e a loja -----
@@ -409,9 +414,9 @@ export const content = {
     },
 
     mutters: {
-      villagerA: ['Bom dia! O Armin é seu, não é? Ele não parava de olhar a estrada.', 'Que manhã bonita para procurar presente.'],
+      villagerA: ['Bom dia! O cavalo do cercado é seu, não é? Ele não parava de olhar a estrada.', 'Que manhã bonita para procurar presente.'],
       villagerB: ['Dizem que o Brutus chora quando termina uma ferradura.', 'Eu não falei nada...'],
-      kid: ['Posso fazer carinho no cavalo?', 'A Beyoncé é a galinha mais fofoqueira da vila!'],
+      kid: ['Queria fazer carinho no cavalo que chegou hoje, mas ele é muito bravo.', 'A Beyoncé é a galinha mais fofoqueira da vila!'],
     },
 
     objective: {
@@ -1054,7 +1059,7 @@ export const content = {
     preparing: 'Este caminho ainda está sendo preparado',
     done: 'Concluído',
     /** Aviso quando uma área nova se revela no pergaminho. */
-    newPath: 'Novo caminho: {name}',
+    newPath: '{name}',
     firstOpen: [
       'Você desdobra o mapa. É um pergaminho velho, riscado a tinta, com uma estrada de terra saindo da vila.',
       'A maior parte do reino está coberta de nuvens pintadas. Elas vão sumindo conforme você avança.',
