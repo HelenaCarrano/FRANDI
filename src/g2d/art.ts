@@ -21,7 +21,7 @@ export function makeCanvas(w: number, h: number) {
   const c = document.createElement('canvas');
   c.width = w;
   c.height = h;
-  const ctx = c.getContext('2d')!;
+  const ctx = c.getContext('2d', { willReadFrequently: true })!;
   ctx.imageSmoothingEnabled = false;
   return { c, ctx };
 }
