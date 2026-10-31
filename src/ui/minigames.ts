@@ -6,7 +6,6 @@ import { itemArt } from './itemArt';
  * Minijogos em janelas HTML sobre o jogo. Nenhum trava o progresso: errar só gera uma fala e outra tentativa.
  *  - Forja: um brilho vai e volta numa barra; toque no momento em que ele passa pela faixa verde (3 acertos).
  *  - Engrenagens: três rodas; tocar numa gira ela e a vizinha ao contrário, até todas as marcas apontarem para cima.
- *  - Ordem das lembranças: toque nas cartas na ordem em que aconteceram (Castelo).
  *  - Anéis de símbolos: três discos de pedra com seis símbolos; tocar num gira ele e o vizinho ao contrário, até o ✦ ficar no alto de todos.
  */
 
@@ -398,7 +397,7 @@ export interface MillText {
   done: string;
 }
 
-const MILL_TURNS = 8;
+const MILL_TURNS = 20;
 
 /**
  * Moer a farinha: gire a manivela da mó arrastando em círculo (ou aperte E/Espaço várias vezes).
@@ -577,127 +576,6 @@ export function playMilling(ui: UI, text: MillText, onSpeed: (v: number) => void
       requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
-  });
-}
-
-export interface PlatingIngredient {
-  id: string;
-  icon: string;
-  name: string;
-}
-
-export interface PlatingText {
-  title: string;
-  hint: string;
-  empty: string;
-  serve: string;
-  clear: string;
-  missing: string;
-  extra: string;
-  emptyPlate: string;
-}
-
-/**
- * Montar o prato: arraste fichas da prateleira para o prato (mouse ou dedo); tocar numa ficha do prato a tira.
- * `check` diz se o prato servido está certo; errar só mostra a dica e deixa o jogador corrigir.
- * Resolve com os ids do prato certo.
- */
-export function playPlating(
-  ui: UI,
-  text: PlatingText,
-  shelf: readonly PlatingIngredient[],
-  check: (plate: readonly string[]) => 'ok' | 'missing' | 'extra',
-): Promise<string[]> {
-  return ui.modal<string[]>('plating-box', (box, close) => {
-    h('h3', 'mg-title', box, text.title);
-    h('p', 'mg-hint', box, text.hint);
-    const shelfEl = h('div', 'plate-shelf', box);
-    const plateEl = h('div', 'plate', box);
-    const status = h('p', 'mg-status', box);
-    const actions = h('div', 'plate-actions', box);
-    const clearBtn = h('button', 'btn', actions, text.clear);
-    const serveBtn = h('button', 'btn primary', actions, text.serve);
-
-    const byId = new Map(shelf.map((s) => [s.id, s]));
-    const plate: string[] = [];
-    let done = false;
-
-    const drawPlate = () => {
-      plateEl.replaceChildren();
-      if (!plate.length) {
-        h('span', 'plate-empty', plateEl, text.empty);
-        return;
-      }
-      plate.forEach((id, i) => {
-        const chip = h('button', 'ingredient on-plate', plateEl);
-        chip.innerHTML = `<span class="ing-icon">${byId.get(id)!.icon}</span><span class="ing-name">${byId.get(id)!.name}</span>`;
-        chip.addEventListener('pointerdown', (e) => {
-          e.preventDefault();
-          if (done) return;
-          plate.splice(i, 1);
-          status.textContent = '';
-          drawPlate();
-        });
-      });
-    };
-    drawPlate();
-
-    shelf.forEach((ing) => {
-      const chip = h('button', 'ingredient', shelfEl);
-      chip.innerHTML = `<span class="ing-icon">${ing.icon}</span><span class="ing-name">${ing.name}</span>`;
-      chip.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        if (done) return;
-        const ghost = h('div', 'ingredient dragging', document.body);
-        ghost.innerHTML = chip.innerHTML;
-        const move = (x: number, y: number) => {
-          ghost.style.left = `${x}px`;
-          ghost.style.top = `${y}px`;
-        };
-        move(e.clientX, e.clientY);
-        const onMove = (ev: PointerEvent) => move(ev.clientX, ev.clientY);
-        const end = (ev: PointerEvent) => {
-          window.removeEventListener('pointermove', onMove);
-          window.removeEventListener('pointerup', end);
-          window.removeEventListener('pointercancel', end);
-          ghost.remove();
-          const r = plateEl.getBoundingClientRect();
-          const over = ev.type === 'pointerup' && ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
-          if (over && !plate.includes(ing.id)) {
-            plate.push(ing.id);
-            status.textContent = '';
-            drawPlate();
-          }
-        };
-        window.addEventListener('pointermove', onMove);
-        window.addEventListener('pointerup', end);
-        window.addEventListener('pointercancel', end);
-      });
-    });
-
-    clearBtn.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      if (done) return;
-      plate.length = 0;
-      status.textContent = '';
-      drawPlate();
-    });
-    serveBtn.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      if (done) return;
-      if (!plate.length) {
-        status.textContent = text.emptyPlate;
-        return;
-      }
-      const result = check(plate);
-      if (result === 'ok') {
-        done = true;
-        plateEl.classList.add('ok');
-        setTimeout(() => close([...plate]), 900);
-      } else {
-        status.textContent = result === 'missing' ? text.missing : text.extra;
-      }
-    });
   });
 }
 
@@ -932,8 +810,8 @@ export function playBlend(
   grapes: readonly BlendGrape[],
   targets: Record<BlendAxis, readonly [number, number]>,
   max = 6,
-): Promise<void> {
-  return ui.modal<void>('blend-box', (box, close) => {
+): Promise<string[]> {
+  return ui.modal<string[]>('blend-box', (box, close) => {
     h('h3', 'mg-title', box, text.title);
     h('p', 'mg-hint', box, text.hint);
     const shelfEl = h('div', 'plate-shelf', box);
@@ -1022,100 +900,8 @@ export function playBlend(
       done = true;
       barrelEl.classList.add('ok');
       status.textContent = text.ok;
-      setTimeout(() => close(), 1200);
+      setTimeout(() => close([...barrel]), 1200);
     });
   });
 }
 
-export interface OrderCard {
-  id: string;
-  icon: string;
-  name: string;
-}
-
-export interface OrderText {
-  title: string;
-  hint: string;
-  empty: string;
-  confirm: string;
-  clear: string;
-  incomplete: string;
-  /** Usa {n} para quantas estão no lugar certo. */
-  wrong: string;
-}
-
-/**
- * Ordenar lembranças (Castelo): toque nas cartas na ordem certa; tocar numa carta já escolhida a tira.
- * Errar só diz quantas estão no lugar certo e deixa tentar de novo. Resolve quando a ordem bate com `correct`.
- */
-export function playMemoryOrder(ui: UI, text: OrderText, cards: readonly OrderCard[], correct: readonly string[]): Promise<void> {
-  return ui.modal<void>('plating-box order-box', (box, close) => {
-    h('h3', 'mg-title', box, text.title);
-    h('p', 'mg-hint', box, text.hint);
-    const shelfEl = h('div', 'plate-shelf', box);
-    const plateEl = h('div', 'plate', box);
-    const status = h('p', 'mg-status', box);
-    const actions = h('div', 'plate-actions', box);
-    const clearBtn = h('button', 'btn', actions, text.clear);
-    const confirmBtn = h('button', 'btn primary', actions, text.confirm);
-
-    const byId = new Map(cards.map((c) => [c.id, c]));
-    const picked: string[] = [];
-    let done = false;
-
-    const draw = () => {
-      shelfEl.replaceChildren();
-      for (const card of cards) {
-        if (picked.includes(card.id)) continue;
-        const chip = h('button', 'ingredient', shelfEl);
-        chip.innerHTML = `<span class="ing-icon">${card.icon}</span><span class="ing-name">${card.name}</span>`;
-        chip.addEventListener('pointerdown', (e) => {
-          e.preventDefault();
-          if (done) return;
-          picked.push(card.id);
-          status.textContent = '';
-          draw();
-        });
-      }
-      plateEl.replaceChildren();
-      if (!picked.length) h('span', 'plate-empty', plateEl, text.empty);
-      picked.forEach((id, i) => {
-        const card = byId.get(id)!;
-        const chip = h('button', 'ingredient on-plate', plateEl);
-        chip.innerHTML = `<span class="ing-icon">${card.icon}</span><span class="ing-name">${i + 1}. ${card.name}</span>`;
-        chip.addEventListener('pointerdown', (e) => {
-          e.preventDefault();
-          if (done) return;
-          picked.splice(i, 1);
-          status.textContent = '';
-          draw();
-        });
-      });
-    };
-    draw();
-
-    clearBtn.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      if (done) return;
-      picked.length = 0;
-      status.textContent = '';
-      draw();
-    });
-    confirmBtn.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      if (done) return;
-      if (picked.length < correct.length) {
-        status.textContent = text.incomplete;
-        return;
-      }
-      const hits = correct.filter((id, i) => picked[i] === id).length;
-      if (hits === correct.length) {
-        done = true;
-        plateEl.classList.add('ok');
-        setTimeout(() => close(), 900);
-      } else {
-        status.textContent = text.wrong.replace('{n}', String(hits));
-      }
-    });
-  });
-}

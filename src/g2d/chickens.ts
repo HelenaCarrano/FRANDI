@@ -66,6 +66,10 @@ export class Chick {
   private vx = 0;
   private vy = 0;
   private stuck = 0;
+  /** Lado para onde ela costuma desviar de obstáculos (evita ficar trocando de lado na cerca). */
+  private bias: 1 | -1 = 1;
+  /** Lado escolhido para contornar o cercado, mantido até acabar o susto. */
+  private orbit: 1 | -1 | 0 = 0;
   private lastX: number;
   private lastY: number;
 
@@ -95,11 +99,32 @@ export class Chick {
     const pd = Math.hypot(this.x - pen.x, this.y - pen.y);
     const off = angDiff(ang, 0);
     // na frente da boca (dentro do cone): entra direto, com um "ímã" que vence o susto
-    if (Math.abs(off) < PEN_MOUTH * 0.9 && pd < pen.r + 70) return { x: pen.x, y: pen.y, pull: pd < pen.r + 40 ? 1.6 : 1 };
-    // do lado de fora e longe da boca: contorna o cercado pelo caminho mais curto
+    if (Math.abs(off) < PEN_MOUTH * 0.9 && pd < pen.r + 70) {
+      this.orbit = 0;
+      return { x: pen.x, y: pen.y, pull: pd < pen.r + 40 ? 2.4 : 1.2 };
+    }
+    // do lado de fora e longe da boca: contorna o cercado pelo caminho mais curto (e não troca de lado no meio)
     const ringR = pen.r + 28;
-    const step = off > 0 ? -0.55 : 0.55;
+    if (!this.orbit) this.orbit = off > 0 ? -1 : 1;
+    const step = this.orbit * 0.55;
     return { x: pen.x + Math.cos(ang + step) * ringR, y: pen.y + Math.sin(ang + step) * ringR, pull: 0.8 };
+  }
+
+  /** Escolhe, perto da direção desejada, uma direção que não bate na cerca (olha 10 px à frente). */
+  private steer(wx: number, wy: number, col: Collision): [number, number] {
+    const base = Math.atan2(wy, wx);
+    for (const off of [0, 0.5, 1, 1.5, 2.1, 2.7]) {
+      for (const sgn of off === 0 ? [1] : [this.bias, -this.bias]) {
+        const a = base + off * sgn;
+        const cx = Math.cos(a);
+        const cy = Math.sin(a);
+        if (col.free(this.x + cx * 10, this.y + cy * 10, 3.5) && col.free(this.x + cx * 5, this.y + cy * 5, 3.5)) {
+          if (off > 0) this.bias = sgn as 1 | -1;
+          return [cx, cy];
+        }
+      }
+    }
+    return [0, 0];
   }
 
   update(dt: number, player: { x: number; y: number; vx: number; vy: number }, scareR: number, col: Collision) {
@@ -114,7 +139,7 @@ export class Chick {
       let ax = dx / (dist || 1);
       let ay = dy / (dist || 1);
       const pd = Math.hypot(this.x - this.pen.x, this.y - this.pen.y);
-      if (pd < 220) {
+      if (pd < 260) {
         const g = this.penGoal();
         const gx = g.x - this.x;
         const gy = g.y - this.y;
@@ -128,6 +153,12 @@ export class Chick {
       wx = ax;
       wy = ay;
       sp = 60;
+    } else if (!this.penned && this.pen && dist < scareR * 1.7 && this.inMouth(50)) {
+      // na boca do cercado: entra sozinha, sem precisar de mais susto
+      const pd = Math.hypot(this.x - this.pen.x, this.y - this.pen.y) || 1;
+      wx = (this.pen.x - this.x) / pd;
+      wy = (this.pen.y - this.y) / pd;
+      sp = 44;
     } else if (this.penned) {
       // já no cercado: se algo a empurrar para fora, volta para dentro
       const pd = Math.hypot(this.x - this.pen!.x, this.y - this.pen!.y);
@@ -170,6 +201,19 @@ export class Chick {
         sp = 14;
       }
     }
+    if (!this.penned && dist >= scareR) this.orbit = 0;
+    if (sp > 0) {
+      const l = Math.hypot(wx, wy) || 1;
+      const [sx, sy] = this.steer(wx / l, wy / l, col);
+      wx = sx;
+      wy = sy;
+      if (sx === 0 && sy === 0) {
+        sp = 0;
+        this.tx = this.x;
+        this.ty = this.y;
+        this.pause = 0.4;
+      }
+    }
     // suaviza a direção e a velocidade
     const k = 1 - Math.exp(-9 * dt);
     this.vx += (wx * sp - this.vx) * k;
@@ -202,7 +246,18 @@ export class Chick {
     } else this.stuck = 0;
     this.lastX = this.x;
     this.lastY = this.y;
-    if (this.pen && !this.penned && Math.hypot(this.x - this.pen.x, this.y - this.pen.y) < this.pen.r - 8) this.enterPen();
+    // entrou: cruzou a boca do cercado ou passou da cerca por dentro
+    if (this.pen && !this.penned) {
+      const pd = Math.hypot(this.x - this.pen.x, this.y - this.pen.y);
+      if (pd < this.pen.r - 12 || (pd < this.pen.r + 2 && this.inMouth(this.pen.r + 2))) this.enterPen();
+    }
+  }
+
+  /** Está na frente da boca do cercado, a menos de `reach` do centro? */
+  private inMouth(reach: number) {
+    const pen = this.pen!;
+    const pd = Math.hypot(this.x - pen.x, this.y - pen.y);
+    return pd < pen.r + reach && Math.abs(angDiff(Math.atan2(this.y - pen.y, this.x - pen.x), 0)) < PEN_MOUTH * 0.9;
   }
 
   drawable(): Drawable {

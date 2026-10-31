@@ -1,5 +1,13 @@
 # Plano de implementação — A Aventura do Matheus
 
+> **Atualização (30/out/2026): o jogo agora é todo em 2D e o Castelo foi removido.** Percurso atual: Floresta → Vila → Ruínas / Taverna /
+> Vinhedo (em qualquer ordem) → Nossa Fazenda (`farm`) → Casa (`home`). Só dá para voltar para casa depois de concluir as três áreas do
+> meio (`done_ruins`, `done_tavern`, `done_vineyard`, ver `src/core/areas.ts`). A fazenda chega anoitecendo (animais, casinha, horta) e a
+> casa tem a cena final: a Helena de avental, os ingredientes e o vinho na mesa, o rolo de massa, o voucher do workshop na La Mia Cuzina e o
+> espelho (easter egg). A Taverna dá um queijo curado (antes a chave de cobre) e o Vinhedo, a garrafa; a farinha e os ovos vêm da Vila.
+> Tudo o que está abaixo sobre Castelo, Sala do Tesouro, chaves de castelo e Poção de Coragem é histórico e **não existe mais**.
+> Cada área está em `src/g2d/areas/<id>.ts`; os minijogos novos são `src/ui/kitchen.ts` (cozinha da taverna) e a tina do vinhedo (dentro de `vineyard.ts`).
+
 ## Arquitetura
 
 ```

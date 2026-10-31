@@ -414,6 +414,52 @@ export function create(ctx: AreaContext): Area2D {
   });
   add(shroomSpot.x, shroomSpot.y, 34, T.shroom.prompt, () => void eatMushroom(), shroomAvail);
 
+  // ---------- caixa de abelhas na segunda clareira sem saída (abelhas mansas) ----------
+  const hiveSpot = { x: deadEnds[1].x + 22, y: deadEnds[1].y + 8 };
+  const BEES = Array.from({ length: 7 }, (_, i) => ({ a: 0.9 + (i % 3) * 0.35, b: 1.3 + (i % 4) * 0.28, r: 7 + (i % 5) * 4, ph: i * 1.7 }));
+  props.push({
+    kind: 'custom',
+    x: hiveSpot.x,
+    y: hiveSpot.y,
+    shadowRx: 11,
+    shadowRy: 3,
+    draw: (v, sx, sy, t) => {
+      const r = (col: string, x: number, y: number, w: number, h: number) => {
+        v.fillStyle = col;
+        v.fillRect(sx + x, sy + y, w, h);
+      };
+      // pés, três caixas empilhadas e telhado
+      r(OUTLINE, -8, -5, 4, 5);
+      r(OUTLINE, 4, -5, 4, 5);
+      r('#6a4428', -7, -4, 2, 4);
+      r('#6a4428', 5, -4, 2, 4);
+      const boxes = ['#e6cf94', '#d9b45a', '#e6cf94'];
+      boxes.forEach((col, i) => {
+        const y = -9 - i * 6;
+        r(OUTLINE, -9, y - 1, 18, 7);
+        r(col, -8, y, 16, 5);
+        r('#f6e6b4', -8, y, 16, 1);
+        r('#b8923e', -8, y + 4, 16, 1);
+      });
+      r(OUTLINE, -11, -29, 22, 5);
+      r('#8a5a3a', -10, -28, 20, 3);
+      r('#a8744a', -10, -28, 20, 1);
+      // entrada e tábua de pouso
+      r('#2a1a14', -3, -6, 6, 2);
+      r('#6a4428', -5, -4, 10, 1);
+      // as abelhas voam em volta da caixa, sem pressa
+      for (const b of BEES) {
+        const x = Math.round(Math.cos(t * b.a + b.ph) * b.r);
+        const y = Math.round(-14 + Math.sin(t * b.b + b.ph * 1.3) * (b.r * 0.6));
+        const flap = Math.floor(t * 18 + b.ph * 3) % 2;
+        r('#f2c230', x, y, 2, 1);
+        r('#2a1a14', x + 1, y, 1, 1);
+        r('#ffffff', x, y - 1 - flap, 1, 1);
+      }
+    },
+  });
+  add(hiveSpot.x, hiveSpot.y, 38, T.hive.prompt, () => void ui.tell(T.hive.lines));
+
   // efeito: a tela ondula e muda de cor; um gnomo passa correndo enquanto o Matheus está parado
   let trip = 0;
   let tripTarget = 0;

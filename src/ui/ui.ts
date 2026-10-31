@@ -1,3 +1,4 @@
+import { startCover } from './coverArt';
 import { content } from '../content';
 import { debug } from '../core/quality';
 import { audio } from '../core/audio';
@@ -117,6 +118,9 @@ export class UI {
   private readonly inventory: HTMLDivElement;
   private readonly coinsBadge: HTMLDivElement;
   private readonly popover: HTMLDivElement;
+  /** Painel da mochila: guarda os itens que não são usados no dia a dia (só aparecem quando ela é aberta). */
+  private readonly bag: HTMLDivElement;
+  private bagEntries: readonly InventoryEntry[] = [];
   private readonly toasts: HTMLDivElement;
   private readonly fps: HTMLDivElement | null = null;
 
@@ -157,6 +161,9 @@ export class UI {
 
     this.inventory = el('div', 'inventory', root);
     this.coinsBadge = el('div', 'coins', this.inventory);
+    this.bag = el('div', 'bag-panel', root);
+    this.bag.hidden = true;
+    this.bag.addEventListener('pointerdown', (e) => e.stopPropagation());
     this.popover = el('div', 'item-popover', root);
     this.popover.hidden = true;
     this.popover.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -225,24 +232,33 @@ export class UI {
   showStartScreen(ready: Promise<unknown>, hasSave = false): Promise<'continue' | 'new'> {
     return new Promise((resolve) => {
       const screen = el('div', 'start-screen', document.body);
-      const title = el('h1', 'start-title', screen);
+      const stopArt = startCover(screen);
+      const top = el('div', 'start-top', screen);
+      el('div', 'start-tagline', top).textContent = content.game.tagline;
+      const title = el('h1', 'start-title', top);
       title.textContent = content.game.title;
-      const sub = el('p', 'start-sub', screen);
+      const orn = el('div', 'start-ornament', top);
+      orn.innerHTML = '<span></span><i>✦</i><span></span>';
+      const sub = el('p', 'start-sub', top);
       sub.textContent = content.game.subtitle;
-      const cta = el('p', 'start-cta', screen);
+      const bottom = el('div', 'start-bottom', screen);
+      const cta = el('p', 'start-cta', bottom);
       cta.textContent = content.game.loading;
       cta.classList.add('loading');
       this.startCta = cta;
-      const track = el('div', 'loading-track', screen);
+      const track = el('div', 'loading-track', bottom);
       this.loadingBar = el('div', 'loading-bar', track);
-      const choices = el('div', 'start-choices', screen);
+      const choices = el('div', 'start-choices', bottom);
       choices.hidden = true;
 
       const go = (choice: 'continue' | 'new') => {
         window.removeEventListener('keydown', onKey);
         screen.removeEventListener('pointerdown', onTap);
         screen.classList.add('fade-out');
-        setTimeout(() => screen.remove(), 900);
+        setTimeout(() => {
+          stopArt();
+          screen.remove();
+        }, 900);
         resolve(choice);
       };
       const onKey = () => go('continue');
@@ -557,6 +573,12 @@ export class UI {
         img.addEventListener('load', () => {
           img.hidden = false;
           empty.hidden = true;
+          // foto em pé: a moldura acompanha a proporção (sem cortar a cabeça nem o prato), limitada à altura da tela
+          if (img.naturalHeight > img.naturalWidth) {
+            frame.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+            frame.style.maxHeight = '52vh';
+            frame.style.margin = '0 auto 0.5rem';
+          }
         });
         img.src = `${import.meta.env.BASE_URL}photos/${mem.photo}`;
       }
@@ -855,21 +877,60 @@ export class UI {
     setTimeout(() => t.remove(), 2400);
   }
 
+  /**
+   * A barra de baixo mostra só o que está em uso (arma e chapéu, com atalho) e a mochila.
+   * Todo o resto fica dentro da mochila e só aparece quando ela é aberta.
+   */
   setInventory(entries: readonly InventoryEntry[], coins: number) {
     this.coinsBadge.textContent = `🪙 ${coins}`;
     this.inventory.querySelectorAll('.slot').forEach((n) => n.remove());
-    for (const e of entries) {
-      const slot = el('button', 'slot', this.inventory);
-      const art = itemArt(e.id);
-      if (art) slot.innerHTML = `<img class="slot-art" src="${art}" alt="">`;
-      else slot.textContent = e.icon;
-      slot.setAttribute('aria-label', e.name);
-      if (e.count > 1) el('span', 'slot-count', slot).textContent = String(e.count);
-      if (e.hotkey) el('span', 'slot-key', slot).textContent = e.hotkey;
-      if (e.hotkey) slot.classList.toggle('active', !!e.active);
-      slot.addEventListener('pointerdown', (ev) => ev.stopPropagation());
+    const quick = entries.filter((e) => e.hotkey || e.onUse);
+    this.bagEntries = entries.filter((e) => !(e.hotkey || e.onUse) && e.id !== 'mochila');
+    for (const e of quick) {
+      const slot = this.makeSlot(e, this.inventory);
       slot.addEventListener('click', () => (e.onUse ? e.onUse() : this.showPopover(e)));
     }
+    const hasBag = entries.some((e) => e.id === 'mochila') || this.bagEntries.length > 0;
+    if (hasBag) {
+      const btn = el('button', 'slot bag-btn', this.inventory);
+      btn.textContent = '🎒';
+      btn.setAttribute('aria-label', content.ui.inventory);
+      if (this.bagEntries.length) el('span', 'slot-count', btn).textContent = String(this.bagEntries.length);
+      btn.classList.toggle('active', !this.bag.hidden);
+      btn.addEventListener('pointerdown', (ev) => ev.stopPropagation());
+      btn.addEventListener('click', () => this.toggleBag());
+    }
+    if (!this.bag.hidden) this.renderBag();
+  }
+
+  private makeSlot(e: InventoryEntry, parent: HTMLElement) {
+    const slot = el('button', 'slot', parent);
+    const art = itemArt(e.id);
+    if (art) slot.innerHTML = `<img class="slot-art" src="${art}" alt="">`;
+    else slot.textContent = e.icon;
+    slot.setAttribute('aria-label', e.name);
+    if (e.count > 1) el('span', 'slot-count', slot).textContent = String(e.count);
+    if (e.hotkey) {
+      el('span', 'slot-key', slot).textContent = e.hotkey;
+      slot.classList.toggle('active', !!e.active);
+    }
+    slot.addEventListener('pointerdown', (ev) => ev.stopPropagation());
+    return slot;
+  }
+
+  private toggleBag() {
+    this.bag.hidden = !this.bag.hidden;
+    if (this.bag.hidden) this.hidePopover();
+    else this.renderBag();
+    this.inventory.querySelector('.bag-btn')?.classList.toggle('active', !this.bag.hidden);
+  }
+
+  private renderBag() {
+    this.bag.replaceChildren();
+    el('div', 'bag-title', this.bag).textContent = `🎒 ${content.ui.inventory}`;
+    const grid = el('div', 'bag-grid', this.bag);
+    if (!this.bagEntries.length) el('div', 'bag-empty', this.bag).textContent = 'Vazia por enquanto.';
+    for (const e of this.bagEntries) this.makeSlot(e, grid).addEventListener('click', () => this.showPopover(e));
   }
 
   private showPopover(e: InventoryEntry) {
@@ -880,6 +941,8 @@ export class UI {
     else popTitle.textContent = `${e.icon} ${e.name}`;
     el('div', 'pop-desc', this.popover).textContent = e.desc;
     el('div', 'pop-used', this.popover).textContent = content.ui.usedIn.replace('{where}', e.usedIn);
+    // com a mochila aberta, a descrição aparece acima dela
+    this.popover.style.bottom = this.bag.hidden ? '' : `calc(env(safe-area-inset-bottom, 0px) + 5rem + ${this.bag.offsetHeight}px)`;
     this.popover.hidden = false;
     clearTimeout(this.popoverTimer);
     this.popoverTimer = window.setTimeout(() => this.hidePopover(), 6000);
@@ -896,8 +959,11 @@ export class UI {
     if (this.asking && /^Digit[1-4]$/.test(e.code)) {
       const i = Number(e.code.slice(5)) - 1;
       if (i < this.optionButtons.length) this.choose(i);
+    } else if ((e.code === 'KeyB' || e.code === 'KeyI') && !e.repeat && !this.inDialog && this.inventory.querySelector('.bag-btn')) {
+      this.toggleBag();
     } else if (e.code === 'Escape') {
       if (this.shopClose) this.shopClose();
+      else if (!this.bag.hidden) this.toggleBag();
       else this.hidePopover();
     }
   }

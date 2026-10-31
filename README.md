@@ -8,7 +8,7 @@ npm run dev      # abre em http://localhost:5173 e também na rede local (para t
 npm run build    # gera dist/ para hospedagem estática
 ```
 
-Parâmetros de URL úteis: `?debug` (expõe o jogo em `window.__dev`), `?q=low` / `?q=high` (força qualidade), `?area=forest` ou `?area=village` (abre direto numa área; `&entry=...` escolhe o ponto de chegada), `?libera=tudo` (mapa com tudo aberto).
+Parâmetros de URL úteis: `?debug` (expõe o jogo em `window.__dev`), `?q=low` / `?q=high` (força qualidade), `?area=floresta|vila|ruinas|taverna|vinhedo|fazenda|casa` (abre direto numa área; `&entry=...` escolhe o ponto de chegada), `?libera=tudo` (mapa com tudo aberto).
 O progresso é salvo no navegador; a tela inicial oferece Continuar ou Recomeçar.
 
 `forest2d.html` é um teste de estilo da floresta (só no `npm run dev`).

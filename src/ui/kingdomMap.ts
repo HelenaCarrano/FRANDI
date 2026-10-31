@@ -9,38 +9,43 @@ import type { UI } from './ui';
  * de viajar; ao viajar, um cavalinho percorre a estrada desenhada e a tela escurece (quem chama faz a troca).
  */
 
-type PlaceId = Exclude<AreaId, 'map' | 'ending' | 'visual'>;
-const PLACES: PlaceId[] = ['village', 'forest', 'ruins', 'tavern', 'vineyard', 'castle'];
+type PlaceId = Exclude<AreaId, 'map' | 'home' | 'visual'>;
+const PLACES: PlaceId[] = ['village', 'forest', 'ruins', 'tavern', 'vineyard', 'farm'];
 
 const POS: Record<PlaceId, [number, number]> = {
-  village: [500, 598],
-  forest: [500, 452],
+  forest: [430, 592],
+  village: [500, 478],
   ruins: [185, 345],
   tavern: [300, 192],
   vineyard: [700, 192],
-  castle: [500, 122],
+  farm: [500, 122],
 };
 const HUB: [number, number] = [500, 372];
+/** Etapa da jornada mostrada em cada lugar: 1 começo, 2 vila, 3 os lugares do meio (em qualquer ordem), 4 a fazenda (voltar para casa). */
+const STEP: Record<PlaceId, number> = { forest: 1, village: 2, ruins: 3, tavern: 3, vineyard: 3, farm: 4 };
 
-/** Pontos de cada estrada, saindo do cruzamento (e, para a vila, saindo da floresta). */
-const ROAD: Record<Exclude<PlaceId, 'village'> | 'village', [number, number][]> = {
-  forest: [HUB, [491, 410], POS.forest],
-  village: [POS.forest, [512, 520], POS.village],
+/** Pontos de cada estrada, saindo do cruzamento (e, para a floresta, saindo da vila: a jornada começa lá embaixo). */
+const ROAD: Record<PlaceId, [number, number][]> = {
+  village: [HUB, [497, 425], POS.village],
+  forest: [POS.village, [492, 530], [462, 566], POS.forest],
   ruins: [HUB, [402, 376], [300, 330], POS.ruins],
   tavern: [HUB, [440, 305], [362, 240], POS.tavern],
   vineyard: [HUB, [560, 305], [638, 240], POS.vineyard],
-  castle: [HUB, [506, 296], [494, 210], POS.castle],
+  farm: [HUB, [506, 296], [494, 210], POS.farm],
 };
 
-/** Do cruzamento até o lugar (a vila passa pela floresta). */
+/** Do cruzamento até o lugar (a floresta, lá no começo da jornada, passa pela vila). */
 function chain(id: PlaceId): [number, number][] {
-  if (id === 'village') return [...ROAD.forest, ...ROAD.village.slice(1)];
+  if (id === 'forest') return [...ROAD.village, ...ROAD.forest.slice(1)];
   return ROAD[id];
 }
+/** Caminho entre dois lugares sem voltar pelo que as duas estradas têm em comum. */
 function route(from: PlaceId, to: PlaceId): [number, number][] {
-  const a = chain(from).slice().reverse();
+  const a = chain(from);
   const b = chain(to);
-  return [...a, ...b.slice(1)];
+  let k = 0;
+  while (k < a.length && k < b.length && a[k][0] === b[k][0] && a[k][1] === b[k][1]) k++;
+  return [...a.slice(k - 1).reverse(), ...b.slice(k)];
 }
 
 function smooth(pts: readonly [number, number][]): string {
@@ -63,7 +68,7 @@ const ICON: Record<PlaceId, string> = {
   ruins: `<path d="M-56 26 v-44 h14 v44z"/><path d="M-22 26 v-62 l7 -6 l7 8 v60z"/><path d="M14 26 v-30 l10 -7 v37z"/><path d="M40 26 v-20 h14 v20z"/><path d="M-62 26 h124" class="ground"/>`,
   tavern: `<path d="M-52 26 v-40 l52 -28 l52 28 v40z"/><path d="M-12 26 v-24 h24 v24" class="door"/><path d="M-40 -2 h16 v14 h-16z" class="door"/><path d="M26 -2 h16 v14 h-16z" class="door"/><path d="M34 -52 v-16 h12 v22" class="trunk"/>`,
   vineyard: `<path d="M-56 24 h112 M-56 4 h112 M-56 -16 h112" class="ground"/><circle cx="-40" cy="14" r="6"/><circle cx="-18" cy="14" r="6"/><circle cx="6" cy="14" r="6"/><circle cx="30" cy="14" r="6"/><circle cx="-30" cy="-6" r="6"/><circle cx="-6" cy="-6" r="6"/><circle cx="18" cy="-6" r="6"/><circle cx="42" cy="-6" r="6"/><path d="M-56 -30 v54 M56 -30 v54" class="trunk"/>`,
-  castle: `<path d="M-60 30 v-60 h20 v-14 h12 v14 h16 v-30 l14 -14 l14 14 v30 h16 v-14 h12 v14 h20 v60z"/><path d="M-12 30 v-26 q12 -16 24 0 v26" class="door"/><path d="M0 -74 v-26 l22 8 l-22 8" class="flag"/>`,
+  farm: `<path d="M-58 24 v-34 l30 -26 l30 26 v34z"/><path d="M-14 24 v-16 h14 v16" class="door"/><path d="M-46 -2 h12 v12 h-12z" class="door"/><path d="M-4 -2 h0" class="door"/><path d="M12 24 v-46 l26 -22 l26 22 v46z"/><path d="M28 24 v-18 h20 v18" class="door"/><path d="M24 -28 h28" class="ground"/><path d="M-62 30 h128" class="ground"/><path d="M-58 -36 v-18 h10 v22" class="trunk"/>`,
 };
 
 // ---------- terreno: ilha com costa, rios, lagos, montanhas, bosques e colinas ----------
@@ -137,7 +142,7 @@ function terrainSvg(): string {
   const rnd = mulberry(11);
   const roads = roadSamples();
   const free = (x: number, y: number, r = 26) => {
-    for (const id of PLACES) if (Math.hypot(x - POS[id][0], y - POS[id][1]) < (id === 'castle' ? 112 : 92)) return false;
+    for (const id of PLACES) if (Math.hypot(x - POS[id][0], y - POS[id][1]) < 92) return false;
     if (Math.hypot(x - HUB[0], y - HUB[1]) < 40) return false;
     for (const [rx, ry] of roads) if (Math.hypot(x - rx, y - ry) < r) return false;
     for (const [lx, ly, rx, ry] of LAKES) if (((x - lx) / (rx + 18)) ** 2 + ((y - ly) / (ry + 18)) ** 2 < 1) return false;
@@ -148,7 +153,7 @@ function terrainSvg(): string {
   let out = '';
   // mar: ondinhas na água em volta da ilha e um barquinho
   let waves = '';
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < 46; i++) {
     const x = 50 + rnd() * 900;
     const y = 50 + rnd() * 620;
     if (inLand(x, y, 1.06)) continue;
@@ -164,7 +169,7 @@ function terrainSvg(): string {
   out += `<path class="river-edge" d="${smooth(RIVER_B)}"/><path class="river" d="${smooth(RIVER_B)}"/>`;
   // colinas
   let hills = '';
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 34; i++) {
     const x = 70 + rnd() * 860;
     const y = 70 + rnd() * 590;
     if (!inLand(x, y, 0.93) || !free(x, y, 32)) continue;
@@ -260,14 +265,18 @@ export function openKingdomMap(ui: UI, o: MapOptions): Promise<AreaId | null> {
     const svg = document.createElementNS(NS, 'svg');
     svg.setAttribute('viewBox', '0 0 1000 720');
     svg.setAttribute('class', 'map-svg');
-    const roads = PLACES.map((id) => `<path id="road-${id}" class="road" data-for="${id}" d="${smooth(ROAD[id])}"/>`).join('');
+    const roads = PLACES.map((id) => `<g id="road-${id}" class="road" data-for="${id}"><path class="bed" d="${smooth(ROAD[id])}"/><path class="dots" d="${smooth(ROAD[id])}"/></g>`).join('');
     const places = PLACES.map((id) => {
       const [x, y] = POS[id];
-      const big = id === 'castle' ? 1.25 : 1;
+      const big = 1;
+      const name = o.names[id];
+      const bw = Math.max(76, name.length * 12.4 + 28);
       return `<g class="place" data-id="${id}" transform="translate(${x} ${y}) scale(${big})">
+        <ellipse class="base" cx="0" cy="26" rx="70" ry="17"/>
         <g class="icon">${ICON[id]}</g>
-        <text class="place-name" y="62" text-anchor="middle">${o.names[id]}</text>
-        <g class="cloud ${id === 'castle' ? 'dark' : ''}" transform="translate(0 -6) scale(${id === 'castle' ? 1.35 : 1.25})">${CLOUD}</g>
+        <g class="banner"><rect x="${-bw / 2}" y="40" width="${bw}" height="31" rx="9"/><text class="place-name" y="62" text-anchor="middle">${name}</text></g>
+        <g class="step"><circle cx="-56" cy="-44" r="13"/><text x="-56" y="-38" text-anchor="middle">${STEP[id]}</text></g>
+        <g class="cloud" transform="translate(0 -6) scale(1.25)">${CLOUD}</g>
         <g class="done-mark"><circle r="15" cx="52" cy="-42"/><path d="M45 -42 l5 6 l10 -12"/></g>
       </g>`;
     }).join('');
@@ -295,7 +304,7 @@ export function openKingdomMap(ui: UI, o: MapOptions): Promise<AreaId | null> {
     box.appendChild(card);
 
     const place = (id: PlaceId) => svg.querySelector<SVGGElement>(`.place[data-id="${id}"]`)!;
-    const roadEl = (id: PlaceId) => svg.querySelector<SVGPathElement>(`#road-${id}`)!;
+    const roadEl = (id: PlaceId) => svg.querySelector<SVGElement>(`#road-${id}`)!;
     const pin = svg.querySelector<SVGGElement>('.pin')!;
     const status = (id: PlaceId) => ({ open: o.isUnlocked(id), done: doneOf(id, game), built: o.isBuilt(id), here: id === cur });
 
@@ -310,7 +319,6 @@ export function openKingdomMap(ui: UI, o: MapOptions): Promise<AreaId | null> {
       roadEl(id).classList.toggle('open', open);
       place(id).classList.toggle('done', s.done);
       place(id).classList.toggle('here', s.here);
-      if (id === 'village') roadEl(id).classList.toggle('open', s.open);
     }
     const [px, py] = POS[cur];
     pin.setAttribute('transform', `translate(${px + 40} ${py - 58})`);
@@ -318,7 +326,7 @@ export function openKingdomMap(ui: UI, o: MapOptions): Promise<AreaId | null> {
 
     let traveling = false;
 
-    const lockedText = (id: PlaceId) => (id === 'forest' ? T.locked.forest : id === 'castle' ? T.locked.castle : T.locked.middle);
+    const lockedText = (id: PlaceId) => (id === 'village' ? T.locked.forest : id === 'farm' ? T.locked.farm : T.locked.middle);
 
     const showCard = (id: PlaceId) => {
       svg.querySelectorAll('.place').forEach((p) => p.classList.toggle('selected', p === place(id)));
@@ -337,11 +345,12 @@ export function openKingdomMap(ui: UI, o: MapOptions): Promise<AreaId | null> {
       else if (!s.built) text.textContent = T.preparing;
       else {
         text.textContent = s.done ? T.done : '';
-        btn.textContent = fmt(T.travel, { name: o.names[id] });
+        btn.innerHTML = `<span class="go-horse">🐴</span><span class="go-text"></span><span class="go-arrow">➜</span>`;
+        btn.querySelector('.go-text')!.textContent = fmt(T.travel, { name: o.names[id] });
         btn.addEventListener('click', () => travel(id));
       }
       card.appendChild(text);
-      if (btn.textContent) card.appendChild(btn);
+      if (btn.childElementCount) card.appendChild(btn);
       card.classList.add('show');
     };
 

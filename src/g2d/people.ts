@@ -10,7 +10,9 @@ import type { Dir4, Drawable } from './types';
 export interface PersonSpec {
   skin: string;
   hair: string;
-  hairStyle: 'short' | 'long' | 'hood' | 'bun' | 'bald';
+  hairStyle: 'short' | 'long' | 'bob' | 'hood' | 'bun' | 'bald';
+  /** Cor dos olhos (se não vier, ficam escuros). */
+  eyes?: string;
   /** Cor da roupa de cima: [base, luz, sombra]. */
   top: [string, string, string];
   pants: string;
@@ -115,6 +117,7 @@ export function drawPerson(s: PersonSpec, view: View, frame: number, blink = fal
     if (blink) px(ctx, '#1c1210', 12, headTop + 5, 2, 1);
     else {
       px(ctx, '#1c1210', 12, headTop + 4, 2, 3);
+      if (s.eyes) px(ctx, s.eyes, 12, headTop + 5, 2, 2);
       px(ctx, '#ffffff', 12, headTop + 4, 1, 1);
     }
     px(ctx, '#f09a96', 10, headTop + 7, 2, 1);
@@ -133,7 +136,7 @@ export function drawPerson(s: PersonSpec, view: View, frame: number, blink = fal
       span(ctx, s.hair, headTop - 1, 8, 14);
       span(ctx, s.hair, headTop, 7, 15);
       span(ctx, s.hair, headTop + 1, 6, 15);
-      px(ctx, s.hair, 6, headTop + 2, 5, s.hairStyle === 'long' ? 13 : 5);
+      px(ctx, s.hair, 6, headTop + 2, 5, s.hairStyle === 'long' ? 13 : s.hairStyle === 'bob' ? 9 : 5);
       px(ctx, s.hair, 11, headTop + 2, 4, 1);
       px(ctx, s.hair, 13, headTop + 3, 2, 1);
       px(ctx, hairL, 9, headTop - 1, 3, 1);
@@ -215,10 +218,14 @@ export function drawPerson(s: PersonSpec, view: View, frame: number, blink = fal
       } else {
         px(ctx, '#1c1210', 7, headTop + 4, 2, 3);
         px(ctx, '#1c1210', 13, headTop + 4, 2, 3);
+        if (s.eyes) {
+          px(ctx, s.eyes, 7, headTop + 5, 2, 2);
+          px(ctx, s.eyes, 13, headTop + 5, 2, 2);
+        }
         px(ctx, '#ffffff', 7, headTop + 4, 1, 1);
         px(ctx, '#ffffff', 13, headTop + 4, 1, 1);
-        px(ctx, '#5a3a7a', 8, headTop + 6, 1, 1);
-        px(ctx, '#5a3a7a', 14, headTop + 6, 1, 1);
+        px(ctx, s.eyes ? shade(s.eyes, 1.35) : '#5a3a7a', 8, headTop + 6, 1, 1);
+        px(ctx, s.eyes ? shade(s.eyes, 1.35) : '#5a3a7a', 14, headTop + 6, 1, 1);
       }
       px(ctx, '#f4a09a', 6, headTop + 7, 2, 1);
       px(ctx, '#f4a09a', 14, headTop + 7, 2, 1);
@@ -252,14 +259,20 @@ export function drawPerson(s: PersonSpec, view: View, frame: number, blink = fal
         px(ctx, s.hair, 5, headTop + 3, 4, 1);
         px(ctx, s.hair, 12, headTop + 3, 5, 1);
         px(ctx, s.hair, 10, headTop + 3, 1, 1);
-        px(ctx, s.hair, 5, headTop + 4, 1, s.hairStyle === 'long' ? 12 : 2);
-        px(ctx, s.hair, 16, headTop + 4, 1, s.hairStyle === 'long' ? 12 : 2);
+        px(ctx, s.hair, 5, headTop + 4, 1, s.hairStyle === 'long' ? 12 : s.hairStyle === 'bob' ? 7 : 2);
+        px(ctx, s.hair, 16, headTop + 4, 1, s.hairStyle === 'long' ? 12 : s.hairStyle === 'bob' ? 7 : 2);
+        if (s.hairStyle === 'bob') {
+          // chanel curtinho: as pontas viram para dentro, na altura da orelha
+          px(ctx, s.hair, 6, headTop + 10, 1, 1);
+          px(ctx, s.hair, 15, headTop + 10, 1, 1);
+          px(ctx, hairL, 5, headTop + 4, 1, 2);
+        }
         if (s.hairStyle === 'long') {
           px(ctx, s.hair, 4, headTop + 6, 1, 10);
           px(ctx, s.hair, 17, headTop + 6, 1, 10);
         }
       } else {
-        px(ctx, s.hair, 5, headTop + 3, 12, s.hairStyle === 'long' ? 14 : 5);
+        px(ctx, s.hair, 5, headTop + 3, 12, s.hairStyle === 'long' ? 14 : s.hairStyle === 'bob' ? 8 : 5);
         span(ctx, s.hair, headTop + 8, 7, 14);
       }
       px(ctx, hairL, 8, headTop - 1, 3, 1);
@@ -389,6 +402,36 @@ export class Person {
   /** Um gesto curto (falar, mexer em algo). */
   gesture() {
     this.hop = 0.55;
+  }
+
+  /** Anda em linha reta até (tx, ty), para cenas roteirizadas (ex.: o garçom levando o prato). Devolve true ao chegar. */
+  walkToward(tx: number, ty: number, dt: number, speed = 36): boolean {
+    const dx = tx - this.x;
+    const dy = ty - this.y;
+    const d = Math.hypot(dx, dy);
+    if (d < 1.5) {
+      this.moving = false;
+      this.vx = this.vy = 0;
+      this.anim = 0;
+      return true;
+    }
+    const step = Math.min(d, speed * dt);
+    this.x += (dx / d) * step;
+    this.y += (dy / d) * step;
+    this.vx = (dx / d) * speed;
+    this.vy = (dy / d) * speed;
+    this.moving = true;
+    this.anim += step / 7.5;
+    this.dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : dy < 0 ? 'up' : 'down';
+    return false;
+  }
+
+  /** Para de andar e olha para onde `facing` manda. */
+  stand(dir: Dir4) {
+    this.moving = false;
+    this.vx = this.vy = 0;
+    this.anim = 0;
+    this.dir = dir;
   }
 
   faceToward(tx: number, ty: number) {

@@ -746,11 +746,15 @@ export function create(ctx: AreaContext): Area2D {
     for (let i = 0; i < 40 && Math.hypot(player.x - horse.x, player.y - horse.y) > 52; i++) await new Promise((r) => setTimeout(r, 100));
     player.frozen = false;
     audio.play('cluck');
+    // de frente para quem joga enquanto a bolsa se abre
+    horse.behavior = { kind: 'wander', x: horse.x, y: horse.y, rx: 0, ry: 0, skittish: false };
+    horse.front = true;
     await ui.tell(named(T.horse.reunion));
     await ui.letter(T.letter.title, T.letter.paragraphs, T.letter.close);
     game.setFlag('letterRead');
     giveItem('bilhete');
     finishQuest('horse');
+    horse.front = false;
     horse.behavior = wanderIn();
     await ui.tell(T.stable.afterTrust, T.npcs.stable.name);
     reuniting = false;

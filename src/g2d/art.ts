@@ -543,8 +543,13 @@ export const RED = '#d0443a';
 export const SHOE = '#1b1b22';
 export const SOLE = '#6c6c7c';
 
+/** Como o Matheus está vestido: normal, descalço de calça arregaçada (pisando uvas) ou com a barra da calça manchada de roxo. */
+export type Look = 'normal' | 'bare' | 'stain';
+const STAIN = '#5a2a7a';
+const STAIN_L = '#8a4aae';
+
 /** Matheus em 24x34 (pés em 12,33): cabeção fofo, cabelo cacheado, barba curta, tatuagens, moletom preto e tênis branco. */
-export function drawMatheus(dir: Dir, frame: number, blink = false) {
+export function drawMatheus(dir: Dir, frame: number, blink = false, look: Look = 'normal') {
   const { c, ctx } = makeCanvas(24, 34);
   const px = (col: string, x: number, y: number, w = 1, h = 1) => {
     ctx.fillStyle = col;
@@ -554,6 +559,13 @@ export function drawMatheus(dir: Dir, frame: number, blink = false) {
   const bob = frame === 3 ? 1 : 0; // só a respiração sobe o tronco; o pulo é feito no desenho
   /** Quadro 4 = passagem: os pés se encontram no meio do passo (o corpo sobe 1 px no desenho). */
   const passing = frame === 4;
+  const bare = look === 'bare';
+  const stain = look === 'stain';
+  /** Barra da calça (parte de baixo da perna), tênis e sola conforme o visual. */
+  const hem = bare ? SKIN : stain ? STAIN : PANTS;
+  const hemL = bare ? '#f6c8a0' : stain ? STAIN_L : PANTS_L;
+  const shoeCol = bare ? SKIN : stain ? '#2a1838' : SHOE;
+  const soleCol = bare ? SKIN_S : stain ? '#5a4a6c' : SOLE;
 
   // pernas e tênis
   if (dir === 'side') {
@@ -563,13 +575,19 @@ export function drawMatheus(dir: Dir, frame: number, blink = false) {
     const farX = step === 1 ? 6 : step === -1 ? 14 : passing ? 10 : 8;
     const nearX = step === 1 ? 14 : step === -1 ? 6 : passing ? 10 : 11;
     const nearUp = passing ? 1 : 0;
-    px('#24242c', farX + 1, 28, 3, 2);
-    px('#16161c', farX, 29, 6, 3);
-    px('#46465a', farX, 31, 6, 1);
-    px(PANTS, nearX + 1, 28 - nearUp, 3, 2);
-    px(PANTS_L, nearX + 1, 28 - nearUp, 1, 2);
-    px(SHOE, nearX, 29 - nearUp, 6, 3);
-    px(SOLE, nearX, 31 - nearUp, 6, 1);
+    px(bare ? SKIN_S : stain ? '#3a1e4e' : '#24242c', farX + 1, 28, 3, 2);
+    px(bare ? SKIN_S : stain ? '#1e1028' : '#16161c', farX, 29, 6, 3);
+    px(bare ? '#a87858' : '#46465a', farX, 31, 6, 1);
+    px(hem, nearX + 1, 28 - nearUp, 3, 2);
+    px(hemL, nearX + 1, 28 - nearUp, 1, 2);
+    if (bare) px('#4a4a58', nearX + 1, 27 - nearUp, 3, 1);
+    px(shoeCol, nearX, 29 - nearUp, 6, 3);
+    px(soleCol, nearX, 31 - nearUp, 6, 1);
+    if (bare) for (const d of [3, 4, 5]) px('#f6c8a0', nearX + d, 29 - nearUp, 1, 1);
+    if (stain) {
+      px(STAIN_L, nearX + 1, 29 - nearUp, 2, 1);
+      px(STAIN, nearX + 4, 30 - nearUp, 2, 1);
+    }
   } else {
     px(PANTS, 8, 25, 8, 4);
     px(PANTS_L, 8, 26, 1, 3);
@@ -577,12 +595,38 @@ export function drawMatheus(dir: Dir, frame: number, blink = false) {
     px(HOOD_D, 11, 27, 2, 2);
     const lf = step === 1 ? -1 : 0;
     const rf = step === -1 ? -1 : 0;
-    px(PANTS, 8, 28 + lf, 3, 1);
-    px(PANTS, 13, 28 + rf, 3, 1);
-    px(SHOE, 7, 29 + lf, 5, 3);
-    px(SOLE, 7, 31 + lf, 5, 1);
-    px(SHOE, 12, 29 + rf, 5, 3);
-    px(SOLE, 12, 31 + rf, 5, 1);
+    if (bare) {
+      // calça arregaçada: a barra dobrada no joelho e as canelas de fora
+      px('#4a4a58', 8, 26, 3, 1);
+      px('#4a4a58', 13, 26, 3, 1);
+      px(SKIN, 8, 27, 3, 2);
+      px(SKIN, 13, 27, 3, 2);
+    }
+    if (stain) {
+      // a barra da calça manchada de roxo, com pingos escorrendo
+      px(STAIN, 8, 27, 3, 2);
+      px(STAIN, 13, 27, 3, 2);
+      px(STAIN_L, 8, 27, 1, 2);
+      px(STAIN_L, 13, 27, 1, 2);
+      px(STAIN, 9, 26, 1, 1);
+      px(STAIN, 14, 26, 1, 1);
+    }
+    px(hem, 8, 28 + lf, 3, 1);
+    px(hem, 13, 28 + rf, 3, 1);
+    px(shoeCol, 7, 29 + lf, 5, 3);
+    px(soleCol, 7, 31 + lf, 5, 1);
+    px(shoeCol, 12, 29 + rf, 5, 3);
+    px(soleCol, 12, 31 + rf, 5, 1);
+    if (bare) {
+      for (const x of [7, 9, 11]) px('#f6c8a0', x, 29 + lf, 1, 1);
+      for (const x of [12, 14, 16]) px('#f6c8a0', x, 29 + rf, 1, 1);
+    }
+    if (stain) {
+      px(STAIN_L, 8, 29 + lf, 2, 1);
+      px(STAIN_L, 14, 29 + rf, 2, 1);
+      px(STAIN, 10, 30 + lf, 1, 1);
+      px(STAIN, 13, 30 + rf, 1, 1);
+    }
   }
 
   ctx.save();

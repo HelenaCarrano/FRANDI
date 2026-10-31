@@ -19,7 +19,7 @@ import type { AreaId, Drawable, Interactable, Light } from './types';
  * ?area=floresta&entry=portal abre direto numa área; ?debug expõe o jogo em window.__dev.
  */
 
-const AREA_ALIASES: Record<string, AreaId> = { vila: 'village', floresta: 'forest', ruinas: 'ruins', taverna: 'tavern', vinhedo: 'vineyard', castelo: 'castle', final: 'ending' };
+const AREA_ALIASES: Record<string, AreaId> = { vila: 'village', floresta: 'forest', ruinas: 'ruins', taverna: 'tavern', vinhedo: 'vineyard', fazenda: 'farm', casa: 'home', final: 'home' };
 
 export async function boot() {
   const screen = document.getElementById('screen') as HTMLCanvasElement;
@@ -117,6 +117,11 @@ export async function boot() {
       if (e.code === 'Digit2' && !e.repeat && !ui.inDialog && !manager.busy) toggleHat();
       if (e.code === 'Digit1' && !e.repeat && !ui.inDialog && !manager.busy) toggleWeapon();
     });
+    /** Depois de pisar as uvas, a barra da calça fica manchada de roxo até o fim do jogo (descalço só durante a pisada). */
+    const syncLook = () => {
+      if (player.look === 'bare') return;
+      player.look = game.flag('pantsStained') || game.flag('vineyard_blended') ? 'stain' : 'normal';
+    };
     syncInventory();
     game.onChange(() => {
       syncInventory();
@@ -124,6 +129,7 @@ export async function boot() {
       player.backpack = game.has('mochila');
       player.sword = game.has('espada');
       player.hat = game.has('chapeu_palha') && game.data.equipped.hat;
+      syncLook();
     });
     const syncMapButton = () => ui.setMapButton(game.has('mapa') && !manager.busy);
     ui.setMapButton(false, () => void manager.openMap());
@@ -131,6 +137,7 @@ export async function boot() {
     player.backpack = game.has('mochila');
     player.sword = game.has('espada');
     player.hat = game.has('chapeu_palha') && game.data.equipped.hat;
+    syncLook();
 
     await manager.start(startId, startEntry);
     if (debug) {

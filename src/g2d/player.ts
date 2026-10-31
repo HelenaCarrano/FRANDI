@@ -1,4 +1,4 @@
-import { OUTLINE, PANTS, PANTS_L, SHOE, SOLE } from './art';
+import { OUTLINE, PANTS, PANTS_L, SHOE, SKIN, SKIN_S, SOLE, type Look } from './art';
 import type { Collision } from './collision';
 import type { Fx } from './fx';
 import type { Kit } from './kit';
@@ -36,8 +36,13 @@ export class Player {
   sword = false;
   /** Montado no cavalo: mais rápido, sentado em cima dele (sem pulinhos nem pernas). */
   riding = false;
+  /** Visual do Matheus: normal, descalço (pisando uvas) ou com a barra da calça manchada de roxo (depois do vinhedo, até o fim). */
+  look: Look = 'normal';
   /** Pose da abertura (caído / sentado). 'stand' = jogo normal. */
   pose: 'stand' | 'lying' | 'lyingOpen' | 'sitting' = 'stand';
+
+  /** Anda sozinho até (x, y) numa cena (ignora o controle); `done` roda ao chegar. */
+  auto: { x: number; y: number; run: boolean; done?: () => void } | null = null;
 
   private attackT = -1;
   private dodgeT = -1;
@@ -136,6 +141,21 @@ export class Player {
 
     let mx = this.frozen ? 0 : move.x;
     let my = this.frozen ? 0 : -move.y;
+    if (this.auto) {
+      const dx = this.auto.x - this.x;
+      const dy = this.auto.y - this.y;
+      const d = Math.hypot(dx, dy);
+      if (d < 3) {
+        const cb = this.auto.done;
+        this.auto = null;
+        mx = my = 0;
+        cb?.();
+      } else {
+        const k = this.auto.run ? 1 : 0.8;
+        mx = (dx / d) * k;
+        my = (dy / d) * k;
+      }
+    }
     const m = Math.hypot(mx, my);
     const wants = m > 0.12;
     const running = wants && m > 0.9;
@@ -214,6 +234,10 @@ export class Player {
     out.push({ x: this.x, y: this.y - 12, r: 70, col: [255, 196, 140], a: 0.1 + 0.14 * dark });
   }
 
+  private sheet() {
+    return this.look === 'normal' ? this.kit.matheus : this.kit.looks[this.look];
+  }
+
   private spriteKey(blinkNow: boolean) {
     const d = this.dir === 'right' ? 'side' : this.dir;
     let f = 0;
@@ -246,7 +270,7 @@ export class Player {
           return;
         }
         if (this.invul > 0 && this.hurtT <= 0 && Math.floor(t * 14) % 2 === 0 && this.dodgeT < 0) return;
-        const img = this.kit.matheus[this.spriteKey(t % 4.3 < 0.13)];
+        const img = this.sheet()[this.spriteKey(t % 4.3 < 0.13)];
         const pdx = Math.round(this.x - cx - 12);
         const dodging = this.dodgeT >= 0;
         const pdy = Math.round(this.y - cy - 33) + (dodging ? 4 : 0);
@@ -283,7 +307,7 @@ export class Player {
     const bob = this.moving && Math.floor(this.anim * 1.3) % 2 === 1 ? 1 : 0;
     const sx = Math.round(this.x - cx);
     const sy = Math.round(this.y - cy) - bob;
-    const img = this.kit.matheus[`${f > 0 ? 'side' : 'left'}0`];
+    const img = this.sheet()[`${f > 0 ? 'side' : 'left'}0`];
     const pdx = sx - 12 - f;
     const pdy = sy - 50;
     if (this.hurtT > 0) v.globalAlpha = 0.65;
@@ -292,19 +316,27 @@ export class Player {
       v.fillStyle = col;
       v.fillRect(f > 0 ? sx + x : sx - x - w, sy + y, w, h);
     };
-    px(OUTLINE, -3, -26, 11, 5);
+    const bare = this.look === 'bare';
+    const stain = this.look === 'stain';
+    px(OUTLINE, 3, -17, 6, 6);
+    px(bare ? SKIN : stain ? '#2a1838' : SHOE, 4, -16, 4, 4);
     // tronco sentado na sela
     v.drawImage(img, 0, 0, 24, 25, pdx, pdy, 24, 25);
-    // coxa sobre a sela e perna de perto caindo pelo flanco, com o pé no estribo
-    px(OUTLINE, -5, -27, 15, 6);
-    px(PANTS, -4, -26, 13, 4);
-    px(PANTS_L, -4, -26, 13, 1);
-    px(OUTLINE, 1, -23, 7, 11);
-    px(PANTS, 2, -22, 5, 9);
-    px(PANTS_L, 2, -22, 1, 8);
-    px(OUTLINE, 0, -14, 9, 5);
-    px(SHOE, 1, -13, 7, 3);
-    px(SOLE, 1, -11, 7, 1);
+    // coxa sobre a sela, joelho dobrado e canela inclinada para trás, com o pé no estribo
+    px(OUTLINE, -5, -28, 15, 7);
+    px(PANTS, -4, -27, 13, 5);
+    px(PANTS_L, -4, -27, 13, 1);
+    for (let i = 0; i < 7; i++) {
+      const x = 3 - (i >> 1);
+      px(OUTLINE, x - 1, -22 + i, 7, 1);
+      // a barra da calça (parte de baixo da canela) fica roxa ou, descalço, mostra a pele
+      const low = i >= 4;
+      px(low && bare ? SKIN : low && stain ? '#5a2a7a' : PANTS, x, -22 + i, 5, 1);
+      px(low && bare ? '#f6c8a0' : low && stain ? '#8a4aae' : PANTS_L, x, -22 + i, 1, 1);
+    }
+    px(OUTLINE, -1, -15, 9, 5);
+    px(bare ? SKIN : stain ? '#2a1838' : SHOE, 0, -14, 7, 3);
+    px(bare ? SKIN_S : stain ? '#5a4a6c' : SOLE, 0, -12, 7, 1);
     v.globalAlpha = 1;
     this.drawHat(v, pdx, pdy);
     // mochila, espada, tocha e arma acompanham o tronco
@@ -323,19 +355,48 @@ export class Player {
     const off = this.dir === 'right' ? 1 : this.dir === 'left' ? -1 : 0;
     const bx = pdx + (side ? 4 : 3) + off;
     const bw = side ? 16 : 18;
-    v.fillStyle = OUTLINE;
-    v.fillRect(bx - 1, pdy + 1, bw + 2, 5);
-    v.fillRect(bx + 3, pdy - 5, bw - 6, 7);
-    v.fillStyle = '#d9b45a';
-    v.fillRect(bx, pdy + 2, bw, 3);
-    v.fillRect(bx + 4, pdy - 4, bw - 8, 6);
+    // formas arredondadas: [linha, recuo lateral]; o contorno é a mesma forma uma casa maior
+    const brim: [number, number][] = [[1, 2], [2, 0], [3, 0], [4, 1], [5, 3]];
+    const crown: [number, number][] = [[-5, 5], [-4, 3], [-3, 2], [-2, 1], [-1, 1], [0, 1]];
+    const cx = bx + 3;
+    const cw = bw - 6;
+    const fill = (rows: [number, number][], x: number, w: number, col: string, grow: number) => {
+      v.fillStyle = col;
+      for (const [r, i] of rows) v.fillRect(x + i - grow, pdy + r, w - i * 2 + grow * 2, 1);
+    };
+    const outline = (rows: [number, number][], x: number, w: number) => {
+      fill(rows, x, w, OUTLINE, 1);
+      const f = rows[0], l = rows[rows.length - 1];
+      v.fillStyle = OUTLINE;
+      v.fillRect(x + f[1], pdy + f[0] - 1, w - f[1] * 2, 1);
+      v.fillRect(x + l[1], pdy + l[0] + 1, w - l[1] * 2, 1);
+    };
+    outline(brim, bx, bw);
+    outline(crown, cx, cw);
+    // aba: palha clara em cima, sombra embaixo
+    fill(brim, bx, bw, '#d9b45a', 0);
     v.fillStyle = '#f0d078';
-    v.fillRect(bx, pdy + 2, bw, 1);
-    v.fillRect(bx + 4, pdy - 4, bw - 8, 1);
-    v.fillStyle = '#b8442c';
-    v.fillRect(bx + 4, pdy, bw - 8, 2);
+    v.fillRect(bx + 2, pdy + 1, bw - 4, 1);
     v.fillStyle = '#a8802a';
-    v.fillRect(bx + 2, pdy + 4, bw - 4, 1);
+    v.fillRect(bx + 3, pdy + 5, bw - 6, 1);
+    // copa em cúpula, com brilho de um lado
+    fill(crown, cx, cw, '#e4c068', 0);
+    v.fillStyle = '#f6dc8e';
+    v.fillRect(cx + 3, pdy - 5, cw - 7, 1);
+    v.fillRect(cx + 2, pdy - 4, 2, 2);
+    v.fillStyle = '#c29a44';
+    v.fillRect(cx + cw - 3, pdy - 3, 2, 3);
+    // trama da palha
+    v.fillStyle = '#b88f3c';
+    for (let x = 0; x < cw - 2; x += 2) v.fillRect(cx + 1 + x, pdy - 3 + (x % 4 ? 1 : 0), 1, 1);
+    for (let x = 1; x < bw - 3; x += 3) v.fillRect(bx + 1 + x, pdy + 3, 1, 1);
+    // fita vermelha na base da copa
+    v.fillStyle = '#b8442c';
+    v.fillRect(cx, pdy, cw, 2);
+    v.fillStyle = '#d0584a';
+    v.fillRect(cx, pdy, cw, 1);
+    v.fillStyle = '#8a2e1c';
+    v.fillRect(cx, pdy + 1, cw, 1);
   }
 
   /** Mochila e cabo da espada aparecendo atrás dos ombros. */

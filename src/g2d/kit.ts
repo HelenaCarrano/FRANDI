@@ -17,6 +17,7 @@ import {
   makeCanvas,
   mulberry32,
   type Dir,
+  type Look,
   type TreeSprite,
 } from './art';
 
@@ -33,6 +34,8 @@ export interface Kit {
   stones: HTMLCanvasElement[];
   /** Matheus: chave `${dir}${frame}${b}` com dir = down | up | side | left. */
   matheus: Record<string, HTMLCanvasElement>;
+  /** O mesmo Matheus descalço (pisando uvas) e com a barra da calça manchada de roxo. */
+  looks: Record<'bare' | 'stain', Record<string, HTMLCanvasElement>>;
   chicken: HTMLCanvasElement[];
   /** Poses da abertura: deitado de olhos fechados, deitado de olhos abertos, sentado. */
   poses: { lying: HTMLCanvasElement; lyingOpen: HTMLCanvasElement; sitting: HTMLCanvasElement };
@@ -64,18 +67,23 @@ export function buildKit(): Kit {
   const stones = [buildStone(rng, 28), buildStone(rng, 22)];
   const ferns = [buildFern(rng), buildFern(rng), buildFern(rng)];
 
-  const matheus: Record<string, HTMLCanvasElement> = {};
-  for (const d of ['down', 'up', 'side'] as Dir[]) for (const f of [0, 1, 2, 3, 4]) for (const b of [false, true]) matheus[`${d}${f}${b ? 'b' : ''}`] = drawMatheus(d, f, b);
-  for (const f of [0, 1, 2, 3, 4]) {
-    for (const b of ['', 'b']) {
-      const src = matheus[`side${f}${b}`];
-      const { c, ctx } = makeCanvas(src.width, src.height);
-      ctx.translate(src.width, 0);
-      ctx.scale(-1, 1);
-      ctx.drawImage(src, 0, 0);
-      matheus[`left${f}${b}`] = c;
+  const sheet = (look: Look) => {
+    const m: Record<string, HTMLCanvasElement> = {};
+    for (const d of ['down', 'up', 'side'] as Dir[]) for (const f of [0, 1, 2, 3, 4]) for (const b of [false, true]) m[`${d}${f}${b ? 'b' : ''}`] = drawMatheus(d, f, b, look);
+    for (const f of [0, 1, 2, 3, 4]) {
+      for (const b of ['', 'b']) {
+        const src = m[`side${f}${b}`];
+        const { c, ctx } = makeCanvas(src.width, src.height);
+        ctx.translate(src.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(src, 0, 0);
+        m[`left${f}${b}`] = c;
+      }
     }
-  }
+    return m;
+  };
+  const matheus = sheet('normal');
+  const looks = { bare: sheet('bare'), stain: sheet('stain') };
   const leafCols = PAL.trees.flatMap((t) => [t.ramp[2], t.ramp[3], t.ramp[1]]);
   return {
     trees,
@@ -88,6 +96,7 @@ export function buildKit(): Kit {
     boulders,
     stones,
     matheus,
+    looks,
     chicken: [drawChicken(0), drawChicken(1)],
     poses: { lying: drawMatheusLying(false), lyingOpen: drawMatheusLying(true), sitting: drawMatheusSitting() },
     overL: buildOverhang(rng, 104, 56, leafCols),

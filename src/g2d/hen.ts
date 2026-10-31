@@ -19,7 +19,7 @@ const EGGS: [string, (g: GameState) => boolean][] = [
   ['egg_ruins', (g) => g.flag('ruins_seen')],
   ['egg_tavern', (g) => g.flag('tavern_seen')],
   ['egg_vineyard', (g) => g.flag('vineyard_seen')],
-  ['egg_castle', (g) => g.flag('castle_seen')],
+  ['egg_farm', (g) => g.flag('farm_seen')],
 ];
 const COOLDOWN = 7;
 

@@ -39,6 +39,11 @@ type AreaModule = { create: (ctx: AreaContext) => Area2D };
 const LOADERS: Partial<Record<AreaId, () => Promise<AreaModule>>> = {
   forest: () => import('./areas/forest'),
   village: () => import('./areas/village'),
+  ruins: () => import('./areas/ruins'),
+  tavern: () => import('./areas/tavern'),
+  vineyard: () => import('./areas/vineyard'),
+  farm: () => import('./areas/farm'),
+  home: () => import('./areas/home'),
 };
 
 export const isBuilt = (id: string): id is AreaId => id in LOADERS;

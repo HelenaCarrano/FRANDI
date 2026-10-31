@@ -315,3 +315,116 @@ export function paintGround(spec: GroundSpec): GroundResult {
   spec.decor?.(ctx, rng, info);
   return { canvas: c, ...info };
 }
+
+// ---------------------------------------------------------------- interiores
+
+export interface InteriorSpec {
+  w: number;
+  h: number;
+  seed: number;
+  floor: 'wood' | 'stone';
+  /** Altura da parede do fundo (px); as paredes de baixo e dos lados são faixas finas. */
+  wallH?: number;
+  /** Tapetes: centro, tamanho e cores [borda, miolo]. */
+  rugs?: { x: number; y: number; w: number; h: number; col: [string, string] }[];
+  /** Desenho extra depois da pintura (janelas, sombras, rachaduras...). */
+  decor?: (ctx: CanvasRenderingContext2D, rng: Rng) => void;
+}
+
+/**
+ * Chão e paredes de ambientes fechados (taverna, casa): tábuas ou lajes, parede de fundo com rodapé,
+ * faixas de parede nas laterais e tapetes. Devolve o mesmo formato do `paintGround` (sem trilhas nem água).
+ */
+export function paintInterior(spec: InteriorSpec): GroundResult {
+  const { w, h } = spec;
+  const rng = mulberry32(spec.seed);
+  const { c, ctx } = makeCanvas(w, h);
+  const wallH = spec.wallH ?? 64;
+  const side = 14;
+  const wood = spec.floor === 'wood';
+  const base = wood ? ['#7a4e2e', '#8a5a36', '#6e4428'] : ['#6c6678', '#78728a', '#605a6c'];
+  const seam = wood ? '#4a2c18' : '#3e3a4a';
+  const hi = wood ? '#a2703f' : '#938ca6';
+  const f = (col: string, x: number, y: number, ww = 1, hh = 1) => {
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y, ww, hh);
+  };
+
+  // piso
+  f(base[0], 0, 0, w, h);
+  if (wood) {
+    // tábuas horizontais de 8 px, com emendas desencontradas
+    for (let y = wallH, row = 0; y < h; y += 8, row++) {
+      f(base[Math.floor(rng() * 3)], 0, y, w, 8);
+      f(seam, 0, y + 7, w, 1);
+      f(hi, 0, y, w, 1);
+      let x = -Math.floor(rng() * 40);
+      while (x < w) {
+        const len = 40 + Math.floor(rng() * 40);
+        f(base[Math.floor(rng() * 3)], x, y + 1, len - 1, 6);
+        f(seam, x + len - 1, y, 1, 8);
+        for (let k = 0; k < 2; k++) if (rng() < 0.5) f(seam, x + 4 + Math.floor(rng() * (len - 8)), y + 2 + Math.floor(rng() * 4), 2 + Math.floor(rng() * 3), 1);
+        x += len;
+      }
+    }
+  } else {
+    // lajes quadradas de 16 px, cada uma com um tom
+    for (let y = wallH; y < h; y += 16) {
+      for (let x = 0; x < w; x += 16) {
+        f(base[Math.floor(rng() * 3)], x, y, 16, 16);
+        f(hi, x + 1, y + 1, 14, 1);
+        f(seam, x, y + 15, 16, 1);
+        f(seam, x + 15, y, 1, 16);
+        if (rng() < 0.18) f(seam, x + 3 + Math.floor(rng() * 8), y + 4 + Math.floor(rng() * 8), 3, 1);
+      }
+    }
+  }
+
+  // tapetes
+  for (const r of spec.rugs ?? []) {
+    const x0 = Math.round(r.x - r.w / 2);
+    const y0 = Math.round(r.y - r.h / 2);
+    f('#2a1a14', x0 - 1, y0 - 1, r.w + 2, r.h + 2);
+    f(r.col[0], x0, y0, r.w, r.h);
+    f(r.col[1], x0 + 3, y0 + 3, r.w - 6, r.h - 6);
+    for (let x = x0 + 5; x < x0 + r.w - 5; x += 6) f(r.col[0], x, y0 + Math.floor(r.h / 2) - 1, 3, 3);
+    for (let y = y0 + 2; y < y0 + r.h - 2; y += 3) {
+      f(r.col[0], x0 - 2, y, 2, 1);
+      f(r.col[0], x0 + r.w, y, 2, 1);
+    }
+  }
+
+  // parede do fundo: pedra rebocada com junta e rodapé de madeira
+  const wallBase = wood ? ['#a8855a', '#b8946a', '#98774e'] : ['#585268', '#645e76', '#4c465c'];
+  for (let y = 0; y < wallH - 8; y += 8) {
+    const off = (y / 8) % 2 ? 8 : 0;
+    for (let x = -off; x < w; x += 16) {
+      f(wallBase[Math.floor(rng() * 3)], x, y, 16, 8);
+      f('#2a1a14', x + 15, y, 1, 8);
+      f('#2a1a14', x, y + 7, 16, 1);
+      f('#ffffff22', x + 1, y + 1, 12, 1);
+    }
+  }
+  f('#2a1a14', 0, wallH - 9, w, 1);
+  f('#6a4428', 0, wallH - 8, w, 8);
+  f('#8a5a36', 0, wallH - 8, w, 2);
+  f('#4a2c18', 0, wallH - 1, w, 1);
+  // sombra da parede no chão
+  for (let i = 0; i < 6; i++) {
+    ctx.fillStyle = `rgba(20,10,6,${0.28 - i * 0.045})`;
+    ctx.fillRect(0, wallH + i, w, 1);
+  }
+
+  // faixas laterais e de baixo
+  for (const [x, ww] of [[0, side], [w - side, side]]) {
+    f('#2a1a14', x, wallH - 9, ww, h - wallH + 9);
+    f(wallBase[0], x + (x ? 0 : 0), wallH - 8, ww - 1, h - wallH + 8);
+    f(wallBase[2], x ? x : ww - 3, wallH - 8, 3, h - wallH + 8);
+  }
+  f('#2a1a14', 0, h - 10, w, 10);
+  f(wallBase[2], 0, h - 9, w, 8);
+  f('#6a4428', 0, h - 9, w, 2);
+
+  spec.decor?.(ctx, rng);
+  return { canvas: c, w, h, isPath: () => false, inWater: () => false, inClear: () => false };
+}

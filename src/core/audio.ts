@@ -34,8 +34,8 @@ const SCENES: Record<string, SceneAudio> = {
   ruins: { root: 50, chords: [[0, 7, 12, 15], [-2, 5, 10, 14], [-4, 3, 8, 12], [-7, 0, 5, 8]], bar: 9, wave: 'sine', cutoff: 700, pad: 0.1, pluck: { scale: [0, 3, 7, 10, 12, 15], every: [4, 8], gain: 0.04, wave: 'sine' }, ambience: ['wind', 'crickets', 'owl'], wind: 0.05, surface: 'stone' },
   tavern: { root: 62, chords: [[0, 4, 7, 12], [5, 9, 12, 17], [7, 11, 14, 19], [0, 4, 7, 12]], bar: 5, wave: 'triangle', cutoff: 1400, pad: 0.05, pluck: { scale: [0, 2, 4, 7, 9, 12], every: [0.5, 1.4], gain: 0.06, wave: 'triangle' }, ambience: ['murmur', 'fire'], wind: 0, surface: 'stone' },
   vineyard: { root: 57, chords: [[0, 4, 7, 12], [5, 9, 12, 17], [7, 11, 14, 19], [-3, 0, 4, 9]], bar: 8, wave: 'triangle', cutoff: 1500, pad: 0.07, pluck: { scale: [0, 2, 4, 7, 9, 12], every: [1.5, 3.5], gain: 0.045, wave: 'sine' }, ambience: ['wind', 'birds'], wind: 0.02, surface: 'grass' },
-  castle: { root: 45, chords: [[0, 7, 12, 15], [1, 8, 13, 16], [-2, 5, 10, 13], [0, 7, 12, 15]], bar: 10, wave: 'sawtooth', cutoff: 380, pad: 0.05, ambience: ['wind', 'fire'], wind: 0.035, surface: 'stone' },
-  ending: { root: 60, chords: [[0, 4, 7, 12], [-3, 0, 4, 9], [-7, -3, 0, 5], [-5, -1, 2, 7]], bar: 6, wave: 'triangle', cutoff: 2200, pad: 0.08, pluck: { scale: [0, 4, 7, 12, 16, 19, 24], every: [0.35, 0.9], gain: 0.055, wave: 'sine' }, ambience: ['fire'], wind: 0, surface: 'stone' },
+  farm: { root: 62, chords: [[0, 4, 7, 12], [-3, 0, 4, 9], [5, 9, 12, 17], [-5, -1, 2, 7]], bar: 7, wave: 'triangle', cutoff: 1800, pad: 0.07, pluck: { scale: [0, 2, 4, 7, 9, 12, 14, 16], every: [0.9, 2.4], gain: 0.05, wave: 'triangle' }, ambience: ['wind', 'birds'], wind: 0.02, surface: 'grass' },
+  home: { root: 60, chords: [[0, 4, 7, 12], [-3, 0, 4, 9], [-7, -3, 0, 5], [-5, -1, 2, 7]], bar: 6, wave: 'triangle', cutoff: 2200, pad: 0.08, pluck: { scale: [0, 4, 7, 12, 16, 19, 24], every: [0.35, 0.9], gain: 0.055, wave: 'sine' }, ambience: ['fire'], wind: 0, surface: 'stone' },
 };
 
 const midi = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
@@ -147,7 +147,7 @@ class AudioEngine {
     const cfg = SCENES[id];
     if (cfg) this.surface = cfg.surface;
     // noite (grilos, coruja) nas áreas escuras; a Floresta atualiza `mood` a cada quadro
-    this.mood = ['forest', 'ruins', 'castle', 'ending'].includes(id) ? 1 : 0;
+    this.mood = ['forest', 'ruins'].includes(id) ? 1 : 0;
     if (!this.ctx) {
       this.pending = id;
       return;

@@ -82,7 +82,70 @@ export function drawHorse(frame: number, saddle: boolean) {
   return outlineSprite(c);
 }
 
+/** O cavalo de frente (olhando para quem joga), usado quando a bolsa da sela se abre. Quadro 1 = cabeça mais baixa. */
+export function drawHorseFront(frame: number, saddle: boolean) {
+  const { c, ctx } = makeCanvas(52, 40);
+  const g = 38;
+  const hd = frame === 1 ? 1 : 0;
+  // pernas da frente, com meia branca e casco
+  for (const x of [18, 29]) {
+    px(ctx, BODY, x, 28, 5, g - 28 - 3);
+    px(ctx, BODY_D, x + 4, 28, 1, g - 28 - 3);
+    px(ctx, '#e8dcc4', x, g - 7, 5, 4);
+    px(ctx, HOOF, x - 1, g - 3, 7, 3);
+  }
+  // peito e flancos
+  px(ctx, BODY, 15, 14, 22, 16);
+  px(ctx, BODY_L, 17, 14, 8, 3);
+  px(ctx, BODY_D, 15, 26, 22, 4);
+  px(ctx, BODY_D, 33, 16, 4, 10);
+  if (saddle) {
+    // manta da sela aparecendo dos dois lados e a bolsa pendurada
+    px(ctx, '#a83a2a', 12, 14, 4, 10);
+    px(ctx, '#a83a2a', 36, 14, 4, 10);
+    px(ctx, '#d0584a', 12, 14, 4, 1);
+    px(ctx, '#d0584a', 36, 14, 4, 1);
+    px(ctx, '#7a5230', 11, 22, 5, 6);
+    px(ctx, '#a8784a', 11, 22, 5, 2);
+    px(ctx, '#f4ecd8', 12, 21, 3, 2);
+  }
+  // pescoço e crina
+  px(ctx, MANE, 19, 6 + hd, 14, 12);
+  px(ctx, BODY, 20, 8 + hd, 12, 10);
+  px(ctx, BODY_L, 21, 8 + hd, 3, 8);
+  // cabeça: testa larga, focinho mais estreito
+  px(ctx, BODY, 20, 3 + hd, 12, 10);
+  px(ctx, BODY_L, 21, 3 + hd, 5, 2);
+  px(ctx, BODY, 22, 12 + hd, 8, 7);
+  px(ctx, '#a07858', 22, 15 + hd, 8, 4);
+  px(ctx, '#f0e6d2', 25, 3 + hd, 2, 13);
+  px(ctx, '#f0e6d2', 24, 14 + hd, 4, 3);
+  px(ctx, '#2a1a14', 23, 17 + hd, 1, 1);
+  px(ctx, '#2a1a14', 28, 17 + hd, 1, 1);
+  // olhos
+  px(ctx, '#1c1210', 21, 7 + hd, 2, 2);
+  px(ctx, '#1c1210', 29, 7 + hd, 2, 2);
+  px(ctx, '#ffffff', 21, 7 + hd, 1, 1);
+  px(ctx, '#ffffff', 29, 7 + hd, 1, 1);
+  // orelhas e topete
+  px(ctx, BODY_D, 20, 0 + hd, 3, 4);
+  px(ctx, BODY_D, 29, 0 + hd, 3, 4);
+  px(ctx, '#d08a70', 21, 1 + hd, 1, 2);
+  px(ctx, '#d08a70', 30, 1 + hd, 1, 2);
+  px(ctx, MANE, 23, 1 + hd, 6, 4);
+  return outlineSprite(c);
+}
+
 const SPRITES = new Map<string, HTMLCanvasElement[]>();
+const FRONT = new Map<boolean, HTMLCanvasElement[]>();
+function frontFrames(saddle: boolean) {
+  let f = FRONT.get(saddle);
+  if (!f) {
+    f = [0, 1].map((i) => drawHorseFront(i, saddle));
+    FRONT.set(saddle, f);
+  }
+  return f;
+}
 function frames(saddle: boolean) {
   const key = saddle ? 's' : 'n';
   let f = SPRITES.get(key);
@@ -99,6 +162,8 @@ export class Horse {
   face: 1 | -1 = 1;
   behavior: HorseBehavior = { kind: 'follow' };
   saddled = false;
+  /** De frente para quem joga (só vale parado). */
+  front = false;
   /** 0..1: confiança ganha com a aproximação calma. */
   trust = 0;
   private anim = 0;
@@ -192,6 +257,10 @@ export class Horse {
         v.fill();
       },
       draw: (v, cx, cy, t) => {
+        if (this.front && !this.moving && this.behavior.kind !== 'ridden') {
+          v.drawImage(frontFrames(this.saddled)[Math.floor(t * 0.7) % 2], Math.round(this.x - cx) - 26, Math.round(this.y - cy) - 38 + 1);
+          return;
+        }
         const set = frames(this.saddled);
         // trote em 4 quadros: par diagonal A, passagem (sobe 1 px), par diagonal B, passagem
         const phase = Math.floor(this.anim) % 4;
